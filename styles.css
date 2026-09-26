@@ -80,6 +80,10 @@
   padding: 0;
 }
 
+[hidden] {
+  display: none !important;
+}
+
 html {
   scroll-behavior: smooth;
   color-scheme: dark;
@@ -1553,6 +1557,10 @@ img, svg {
   justify-content: center;
   padding: 24px;
   cursor: zoom-out;
+}
+
+.lightbox-modal[hidden] {
+  display: none !important;
 }
 .lightbox-modal img {
   max-width: 90vw;

@@ -1187,12 +1187,18 @@ function openLightbox(src) {
   if (modal && img) {
     img.src = src;
     modal.hidden = false;
+    modal.style.display = 'flex';
   }
 }
 
 function closeLightbox() {
   const modal = document.getElementById('globalLightboxModal');
-  if (modal) modal.hidden = true;
+  const img = document.getElementById('globalLightboxImg');
+  if (modal) {
+    modal.hidden = true;
+    modal.style.display = 'none';
+  }
+  if (img) img.src = '';
 }
 
 // ==========================================================================
