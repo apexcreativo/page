@@ -1,0 +1,192 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Apex Workspace · Portal de Clientes & Equipo</title>
+  <link rel="stylesheet" href="styles.css">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <style>
+    /* El portal en app.html ocupa toda la ventana como una app SaaS */
+    body {
+      background: var(--bg-surface);
+      display: flex;
+      flex-direction: column;
+      height: 100vh;
+      overflow: hidden;
+    }
+    .portal-standalone {
+      display: flex;
+      flex-direction: column;
+      height: 100vh;
+      width: 100%;
+    }
+  </style>
+</head>
+<body>
+
+  <div class="portal-standalone">
+    <!-- Barra Superior -->
+    <div class="portal-topbar">
+      <div class="portal-brand">
+        <a href="index.html" class="brand-logo" style="text-decoration:none;">
+          <div class="logo-symbol" style="width:32px;height:32px;font-size:16px;">A</div>
+          <div class="brand-name" style="font-size:16px;">
+            APEX <span>Workspace</span>
+          </div>
+        </a>
+        <span class="portal-mode-badge" id="portalRoleBadge">Portal Privado</span>
+      </div>
+
+      <!-- Selector de Cliente (Solo modo equipo) -->
+      <div id="clientSwitcherWrap" hidden>
+        <select id="clientSwitcherSelect" class="form-control" style="font-size:12px;padding:6px 12px;background:var(--bg-surface);">
+          <!-- Dinámico -->
+        </select>
+      </div>
+
+      <div class="portal-actions">
+        <a href="index.html" class="btn btn-sm btn-secondary">🌐 Ver Web Pública</a>
+        <button class="btn btn-sm btn-secondary" onclick="logout()" title="Cerrar sesión">Salir</button>
+      </div>
+    </div>
+
+    <!-- PANTALLA DE AUTENTICACIÓN / PIN -->
+    <div class="auth-container" id="portalAuthScreen">
+      <div class="auth-card">
+        <div class="logo-symbol" style="margin: 0 auto 16px; width:48px; height:48px; font-size:24px;">A</div>
+        <h3 style="font-family:var(--font-display);font-size:22px;color:#fff;margin-bottom:6px;">Acceso al Workspace</h3>
+        <p style="font-size:13px;color:var(--text-muted);margin-bottom:20px;">Revisa tu parrilla de contenido, aprueba guiones y consulta tus resultados mensuales.</p>
+
+        <div class="auth-tabs">
+          <button class="auth-tab-btn active" id="authTabClient">Acceso Clientes</button>
+          <button class="auth-tab-btn" id="authTabTeam">Equipo Apex</button>
+        </div>
+
+        <div class="auth-input-group" id="authGroupClientSelect">
+          <label class="auth-label">Selecciona tu Marca / Negocio</label>
+          <select id="authClientSelect" class="auth-select">
+            <!-- Dinámico -->
+          </select>
+        </div>
+
+        <div class="auth-input-group">
+          <label class="auth-label" id="authPinLabel">Ingresa el PIN de tu Marca (4 dígitos)</label>
+          <input type="password" id="authPinInput" class="auth-input pin-input" maxlength="8" placeholder="••••">
+          <small style="display:block;font-size:11px;color:var(--text-dim);margin-top:4px;">PIN por defecto: 1234 (Clientes) · 0000 (Equipo)</small>
+        </div>
+
+        <div id="authErrorMsg" style="color:#f87171;font-size:12px;margin-bottom:14px;" hidden></div>
+
+        <button class="btn btn-primary" id="authSubmitBtn" style="width:100%;padding:12px;">
+          Ingresar al Workspace
+        </button>
+      </div>
+    </div>
+
+    <!-- PANTALLA PRINCIPAL DEL WORKSPACE -->
+    <div class="workspace-body" id="portalWorkspaceBody" hidden>
+      
+      <!-- Encabezado de Cliente -->
+      <div class="workspace-header">
+        <div class="client-active-info">
+          <div class="client-avatar" id="currentClientAvatar">🍽️</div>
+          <div class="client-meta">
+            <h2 id="currentClientName">Restaurante Palato</h2>
+            <p id="currentClientSector">Gastronomía de Autor · Guanajuato, MX</p>
+          </div>
+        </div>
+
+        <div style="display:flex;gap:8px;">
+          <button class="btn btn-sm btn-secondary" onclick="downloadBackupJson()">
+            📥 Respaldo JSON
+          </button>
+        </div>
+      </div>
+
+      <!-- Pestañas de Navegación -->
+      <nav class="portal-tabs">
+        <button class="portal-tab active" data-tab="parrilla">📅 Parrilla de Contenido</button>
+        <button class="portal-tab" data-tab="produccion">🎬 Plan de Producción & Guiones</button>
+        <button class="portal-tab" data-tab="tareas" id="tabBtnTareas">📋 Tablero de Colaboradores</button>
+        <button class="portal-tab" data-tab="resultados">📊 Resumen de Resultados</button>
+        <button class="portal-tab" data-tab="ajustes" id="tabBtnAjustes">⚙️ Ajustes de Agencia</button>
+      </nav>
+
+      <!-- Pestaña 1: Parrilla -->
+      <div class="tab-content" id="viewTab_parrilla">
+        <div class="cal-toolbar">
+          <div class="cal-nav">
+            <button class="btn btn-sm btn-secondary" id="calPrevMonthBtn">‹</button>
+            <div class="cal-title-display" id="calMonthDisplay">Septiembre 2026</div>
+            <button class="btn btn-sm btn-secondary" id="calNextMonthBtn">›</button>
+            <button class="btn btn-sm btn-secondary" id="calTodayBtn">Hoy</button>
+          </div>
+          <div class="mono" style="font-size:12px;color:var(--text-muted);" id="calSummaryDisplay">
+            0 piezas programadas
+          </div>
+        </div>
+
+        <div class="cal-container">
+          <div class="cal-days-header">
+            <div class="cal-day-label">Lun</div>
+            <div class="cal-day-label">Mar</div>
+            <div class="cal-day-label">Mié</div>
+            <div class="cal-day-label">Jue</div>
+            <div class="cal-day-label">Vie</div>
+            <div class="cal-day-label">Sáb</div>
+            <div class="cal-day-label">Dom</div>
+          </div>
+          <div class="cal-grid-body" id="calGridBody">
+            <!-- Dinámico -->
+          </div>
+        </div>
+
+        <div id="dayDetailPanel" hidden></div>
+      </div>
+
+      <!-- Pestaña 2: Producción & Guiones -->
+      <div class="tab-content" id="viewTab_produccion" hidden>
+        <div class="prod-layout">
+          <div class="prod-sidebar">
+            <div class="sidebar-header">
+              <span class="mono" style="font-size:11px;color:var(--text-dim);text-transform:uppercase;">Producciones del Mes</span>
+            </div>
+            <div class="prod-items-list" id="prodSidebarList">
+              <!-- Dinámico -->
+            </div>
+          </div>
+          <div class="prod-main-editor" id="prodMainEditor">
+            <!-- Dinámico -->
+          </div>
+        </div>
+      </div>
+
+      <!-- Pestaña 3: Tareas de Colaboradores (Equipo) -->
+      <div class="tab-content" id="viewTab_tareas" hidden>
+        <!-- Dinámico -->
+      </div>
+
+      <!-- Pestaña 4: Resultados Mensuales -->
+      <div class="tab-content" id="viewTab_resultados" hidden>
+        <!-- Dinámico -->
+      </div>
+
+      <!-- Pestaña 5: Ajustes de Agencia (Equipo) -->
+      <div class="tab-content" id="viewTab_ajustes" hidden>
+        <!-- Dinámico -->
+      </div>
+
+    </div>
+  </div>
+
+  <!-- LIGHTBOX DE CAPTURAS -->
+  <div class="lightbox-modal" id="globalLightboxModal" hidden onclick="closeLightbox()">
+    <img id="globalLightboxImg" src="" alt="Captura ampliada">
+  </div>
+
+  <!-- SCRIPTS -->
+  <script src="app.js"></script>
+</body>
+</html>
