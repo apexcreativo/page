@@ -6,87 +6,94 @@
 
 'use strict';
 
-const STORAGE_KEY = 'apex_creativo_db_v1';
-const MASTER_PIN = '0000'; // PIN de Dirección General (Alejandra y Equipo)
+const STORAGE_KEY = 'apex_creativo_db_v2';
+
+// Miembros de equipo y sus PINs específicos
+const TEAM_MEMBERS = [
+  { id: 'ale', nombre: 'Alejandra', rol: 'Dirección General & Estrategia', pin: '0007' },
+  { id: 'pablo', nombre: 'Pablo', rol: 'Dirección Operativa & Modelos', pin: '0028' },
+  { id: 'mitzi', nombre: 'Mitzi', rol: 'Levantamiento, Edición y Foto/Video', pin: '3197' },
+  { id: 'extra', nombre: 'Colaborador adicional', rol: 'Producción & Apoyo', pin: '0000' }
+];
 
 // Base de datos inicial con clientes reales de México y Colombia
 const DEFAULT_DATABASE = {
-  version: '1.0',
+  version: '2.0',
   updatedAt: new Date().toISOString(),
-  masterPin: MASTER_PIN,
   
-  // Lista de Colaboradores Dinámica (se pueden agregar o editar)
+  // Lista de Colaboradores Dinámica
   colaboradores: [
     { id: 'c_ale', nombre: 'Alejandra', rol: 'Dirección Estratégica & Pauta', color: '#ff4d28' },
+    { id: 'c_pablo', nombre: 'Pablo', rol: 'Dirección Operativa & Modelos', color: '#3b82f6' },
     { id: 'c_mitzi', nombre: 'Mitzi', rol: 'Levantamiento, Edición y Foto/Video', color: '#8b5cf6' },
-    { id: 'c_alexa', nombre: 'Alexa', rol: 'Grabación de video & Actuación', color: '#3b82f6' },
+    { id: 'c_alexa', nombre: 'Alexa', rol: 'Grabación de video & Actuación', color: '#ec4899' },
     { id: 'c_infl', nombre: 'Influencers / Externos', rol: 'Generación de contenido en alianza', color: '#f59e0b' }
   ],
 
-  // Clientes Reales Actuales
+  // Clientes Reales Actuales con sus PINs exactos
   clientes: [
+    {
+      slug: 'tasca',
+      nombre: 'La Tasca de la Paz',
+      sector: 'Gastronomía Tradicional & Eventos',
+      pais: 'México',
+      pin: '1010',
+      avatar: '🥘',
+      color: '#f59e0b'
+    },
     {
       slug: 'palato',
       nombre: 'Restaurante Palato',
       sector: 'Gastronomía de Autor',
-      pais: 'México (GTO)',
-      pin: '1234',
+      pais: 'México',
+      pin: '0030',
       avatar: '🍽️',
       color: '#ff4d28'
-    },
-    {
-      slug: 'tazca',
-      nombre: 'La Tazca de la Paz',
-      sector: 'Gastronomía Tradicional & Eventos',
-      pais: 'México (GTO)',
-      pin: '1234',
-      avatar: '🥘',
-      color: '#f59e0b'
     },
     {
       slug: 'elfaro',
       nombre: 'Restaurante & Micheladas El Faro',
       sector: 'Bares & Vida Nocturna',
-      pais: 'México (GTO)',
-      pin: '1234',
+      pais: 'México',
+      pin: '0020',
       avatar: '🍻',
       color: '#3b82f6'
     },
     {
       slug: 'canirac',
-      nombre: 'CANIRAC Guanajuato',
+      nombre: 'CANIRAC',
       sector: 'Cámara Restaurantera Institucional',
-      pais: 'México (GTO)',
-      pin: '1234',
+      pais: 'México',
+      pin: '1001',
       avatar: '🏛️',
       color: '#10b981'
-    },
-    {
-      slug: 'blucare',
-      nombre: 'Blucare Bucaramanga',
-      sector: 'Salud, Belleza & Cuidado Personal',
-      pais: 'Colombia (BGA)',
-      pin: '1234',
-      avatar: '✨',
-      color: '#ec4899'
-    },
-    {
-      slug: 'hidrogeo',
-      nombre: 'HidroGeo Consultoría',
-      sector: 'Modelos Matemáticos & Gestión del Agua',
-      pais: 'México',
-      pin: '1234',
-      avatar: '💧',
-      color: '#06b6d4'
     },
     {
       slug: 'galerenas',
       nombre: 'Club Satélite Galereñas',
       sector: 'Impacto Social & Comunidad',
-      pais: 'México (GTO)',
-      pin: '1234',
+      pais: 'México',
+      pin: '2000',
       avatar: '🤝',
       color: '#8b5cf6'
+    },
+    {
+      slug: 'blucare',
+      nombre: 'Blucare',
+      sector: 'Salud, Belleza & Cuidado Personal',
+      pais: 'Colombia',
+      pin: '0001',
+      avatar: '✨',
+      color: '#ec4899'
+    },
+    {
+      slug: 'hidrogeo',
+      nombre: 'HidroGeo',
+      sector: 'Modelos Matemáticos & Gestión del Agua',
+      pais: 'México',
+      pin: '0002',
+      avatar: '💧',
+      color: '#06b6d4'
     }
   ],
 
@@ -150,13 +157,13 @@ const DEFAULT_DATABASE = {
       comentarioCliente: 'Aprobado para pauta el viernes.',
       guion: [
         { ve: 'Primer plano del fuego y sartén flameando', dice: 'El secreto de un gran risotto no está en la prisa, está en la paciencia.', como: 'Voz en off envolvente', texto: 'ALTA GASTRONOMÍA', seg: '6' },
-        { ve: 'Mantequilla y caldo reduciendo', dice: 'Hongos silvestres de temporada, vino blanco y 22 minutos de mimo constante.', como: 'Sensorial', texto: 'Palato · Guanajuato', seg: '12' },
+        { ve: 'Mantequilla y caldo reduciendo', dice: 'Hongos silvestres de temporada, vino blanco y 22 minutos de mimo constante.', como: 'Sensorial', texto: 'Palato · México', seg: '12' },
         { ve: 'Platillo servido en mesa con copa de vino', dice: 'Ven a probar la experiencia esta noche.', como: 'Invitación cálida', texto: 'Reserva por WhatsApp', seg: '7' }
       ],
       requerimientos: 'Luz cálida de cocina y tomas en cámara lenta',
-      notas: 'Pautar jueves a sábado en Guanajuato capital y León'
+      notas: 'Pautar jueves a sábado en México'
     },
-    // Blucare Bucaramanga (Colombia)
+    // Blucare (Colombia)
     {
       id: 'p_blu_01',
       clienteSlug: 'blucare',
@@ -172,7 +179,7 @@ const DEFAULT_DATABASE = {
       guion: [
         { ve: 'Slide 1: Portada impactante con tipografía bold', dice: 'Mito 1: En días nublados no necesitas bloqueador. FALSO: El 80% de la radiación UV atraviesa las nubes.', como: '', texto: '5 MITOS DEL CUIDADO SOLAR', seg: '' },
         { ve: 'Slide 2: Gráfico de aplicación de 2 dedos', dice: 'Mito 2: Con una sola aplicación en la mañana es suficiente. FALSO: Debe reaplicarse cada 3 a 4 horas.', como: '', texto: 'REAPLICACIÓN CONSTANTE', seg: '' },
-        { ve: 'Slide 3: Foto producto Blucare con textura fluida', dice: 'Descubre nuestra fórmula con ácido hialurónico y acabado mate.', como: '', texto: 'Envíos a toda Colombia · Bucaramanga', seg: '' }
+        { ve: 'Slide 3: Foto producto Blucare con textura fluida', dice: 'Descubre nuestra fórmula con ácido hialurónico y acabado mate.', como: '', texto: 'Envíos a toda Colombia', seg: '' }
       ],
       requerimientos: 'Paleta rosa pastel y renders oficiales de producto',
       notas: 'Copy enfocado en compra en línea para Colombia'
@@ -202,7 +209,7 @@ const DEFAULT_DATABASE = {
   resultados: {
     'palato': {
       '2026-09': {
-        resumen: 'Mes histórico en reservaciones digitales. Los dos Reels gastronómicos superaron los 48,000 views orgánicos en el Bajío.',
+        resumen: 'Mes histórico en reservaciones digitales. Los dos Reels gastronómicos superaron los 48,000 views orgánicos en México.',
         kpis: [
           { nombre: 'Alcance Total', valor: '64,200', comparativo: '+28% vs agosto', positivo: true },
           { nombre: 'Interacciones', valor: '5,840', comparativo: '+42% vs agosto', positivo: true },
@@ -216,7 +223,7 @@ const DEFAULT_DATABASE = {
       '2026-09': {
         resumen: 'Campaña de difusión del proyecto del agua con excelente tracción en socias y donantes.',
         kpis: [
-          { nombre: 'Alcance en Guanajuato', valor: '18,500', comparativo: '+14%', positivo: true },
+          { nombre: 'Alcance en México', valor: '18,500', comparativo: '+14%', positivo: true },
           { nombre: 'Compartidos de Video', valor: '410', comparativo: '+85%', positivo: true },
           { nombre: 'Donaciones / Contactos Bazar', valor: '38', comparativo: '+20%', positivo: true }
         ],
@@ -296,8 +303,10 @@ function verifyClientPin(slug, pin) {
   return client.pin === pin.trim();
 }
 
-function verifyMasterPin(pin) {
-  return (db.masterPin || MASTER_PIN) === pin.trim();
+function verifyTeamPin(memberId, pin) {
+  const member = TEAM_MEMBERS.find(m => m.id === memberId);
+  if (!member) return false;
+  return member.pin === pin.trim();
 }
 
 function loginAsClient(slug, pin) {
@@ -311,14 +320,16 @@ function loginAsClient(slug, pin) {
   return { success: false, message: 'PIN incorrecto para este cliente.' };
 }
 
-function loginAsTeam(pin) {
-  if (verifyMasterPin(pin)) {
+function loginAsTeam(memberId, pin) {
+  if (verifyTeamPin(memberId, pin)) {
+    const member = TEAM_MEMBERS.find(m => m.id === memberId);
     state.currentRole = 'team';
+    state.currentTeamMember = member;
     state.activeTab = 'parrilla';
     openPortalWorkspace();
     return { success: true };
   }
-  return { success: false, message: 'PIN maestro incorrecto.' };
+  return { success: false, message: 'PIN incorrecto para el colaborador seleccionado.' };
 }
 
 function logout() {
@@ -379,9 +390,9 @@ function renderPortalWorkspace() {
   const roleBadge = document.getElementById('portalRoleBadge');
   if (roleBadge) {
     if (state.currentRole === 'team') {
-      roleBadge.textContent = 'Modo Equipo Apex (Master)';
-      roleBadge.style.background = 'rgba(255, 77, 40, 0.2)';
-      roleBadge.style.color = '#ff856b';
+      roleBadge.textContent = `Modo Equipo: ${state.currentTeamMember ? state.currentTeamMember.nombre : 'Apex'}`;
+      roleBadge.style.background = 'rgba(192, 132, 252, 0.2)';
+      roleBadge.style.color = '#e9d5ff';
     } else {
       roleBadge.textContent = `Portal Cliente: ${activeClient.nombre}`;
       roleBadge.style.background = 'rgba(16, 185, 129, 0.2)';
@@ -1394,6 +1405,12 @@ function renderAuthSelectOptions() {
       `<option value="${c.slug}">${c.avatar} ${c.nombre} (${c.pais})</option>`
     ).join('');
   }
+  const teamSelect = document.getElementById('authTeamSelect');
+  if (teamSelect) {
+    teamSelect.innerHTML = TEAM_MEMBERS.map(m =>
+      `<option value="${m.id}">${m.nombre} (${m.rol})</option>`
+    ).join('');
+  }
 }
 
 // Inicialización de Eventos DOM al cargar la página
@@ -1404,6 +1421,7 @@ document.addEventListener('DOMContentLoaded', () => {
   const tabClientBtn = document.getElementById('authTabClient');
   const tabTeamBtn = document.getElementById('authTabTeam');
   const groupClientSelect = document.getElementById('authGroupClientSelect');
+  const groupTeamSelect = document.getElementById('authGroupTeamSelect');
   const pinLabel = document.getElementById('authPinLabel');
   const authPinInput = document.getElementById('authPinInput');
   const authSubmitBtn = document.getElementById('authSubmitBtn');
@@ -1415,8 +1433,10 @@ document.addEventListener('DOMContentLoaded', () => {
       tabClientBtn.classList.add('active');
       tabTeamBtn.classList.remove('active');
       if (groupClientSelect) groupClientSelect.hidden = false;
-      if (pinLabel) pinLabel.textContent = 'Ingresa el PIN de tu Marca (4 dígitos)';
+      if (groupTeamSelect) groupTeamSelect.hidden = true;
+      if (pinLabel) pinLabel.textContent = 'Ingresa el PIN de tu Marca';
       if (authErrorMsg) authErrorMsg.hidden = true;
+      if (authPinInput) authPinInput.value = '';
     });
 
     tabTeamBtn.addEventListener('click', () => {
@@ -1424,8 +1444,10 @@ document.addEventListener('DOMContentLoaded', () => {
       tabTeamBtn.classList.add('active');
       tabClientBtn.classList.remove('active');
       if (groupClientSelect) groupClientSelect.hidden = true;
-      if (pinLabel) pinLabel.textContent = 'PIN Maestro del Equipo Apex';
+      if (groupTeamSelect) groupTeamSelect.hidden = false;
+      if (pinLabel) pinLabel.textContent = 'Ingresa tu PIN de Colaborador';
       if (authErrorMsg) authErrorMsg.hidden = true;
+      if (authPinInput) authPinInput.value = '';
     });
   }
 
@@ -1445,7 +1467,9 @@ document.addEventListener('DOMContentLoaded', () => {
         if (!res.success) showAuthError(res.message);
         else authPinInput.value = '';
       } else {
-        const res = loginAsTeam(pin);
+        const teamSelect = document.getElementById('authTeamSelect');
+        const memberId = teamSelect ? teamSelect.value : TEAM_MEMBERS[0].id;
+        const res = loginAsTeam(memberId, pin);
         if (!res.success) showAuthError(res.message);
         else authPinInput.value = '';
       }
@@ -1526,11 +1550,15 @@ document.addEventListener('DOMContentLoaded', () => {
   const urlParams = new URLSearchParams(window.location.search);
   const paramCliente = urlParams.get('cliente');
   const paramPin = urlParams.get('pin');
+  const paramTeam = urlParams.get('equipo');
   const paramPortal = urlParams.get('portal');
 
   if (paramCliente && paramPin) {
     openPortalModal();
     loginAsClient(paramCliente, paramPin);
+  } else if (paramTeam && paramPin) {
+    openPortalModal();
+    loginAsTeam(paramTeam, paramPin);
   } else if (paramPortal) {
     openPortalModal();
   }

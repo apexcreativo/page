@@ -7,47 +7,49 @@
 @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap');
 
 :root {
-  /* Paleta cromática principal */
-  --bg-dark: #0a0e14;
-  --bg-surface: #121822;
-  --bg-surface-elevated: #1a2230;
-  --bg-card: rgba(18, 24, 34, 0.75);
-  --bg-glass: rgba(26, 34, 48, 0.6);
+  /* Paleta cromática principal: Morado Eggplant #311432 & Blanco */
+  --bg-dark: #1e0920;
+  --bg-surface: #311432;
+  --bg-surface-elevated: #441a46;
+  --bg-card: rgba(49, 20, 50, 0.9);
+  --bg-glass: rgba(68, 26, 70, 0.72);
   
-  --border-subtle: rgba(255, 255, 255, 0.08);
-  --border-medium: rgba(255, 255, 255, 0.16);
-  --border-focus: #ff4d28;
+  --border-subtle: rgba(255, 255, 255, 0.14);
+  --border-medium: rgba(255, 255, 255, 0.28);
+  --border-focus: #ffffff;
   
-  --text-main: #f8fafc;
-  --text-muted: #94a3b8;
-  --text-dim: #64748b;
+  --text-main: #ffffff;
+  --text-muted: #f2e7f3;
+  --text-dim: #c5adc7;
   
   /* Acentos de marca */
-  --apex-orange: #ff4d28;
-  --apex-orange-glow: rgba(255, 77, 40, 0.25);
-  --apex-orange-hover: #ff6544;
+  --apex-eggplant: #311432;
+  --apex-eggplant-light: #522254;
+  --apex-purple: #c084fc;
+  --apex-purple-glow: rgba(192, 132, 252, 0.3);
+  
+  --apex-orange: #ff5733;
+  --apex-orange-glow: rgba(255, 87, 51, 0.25);
+  --apex-orange-hover: #ff6e4e;
   
   --apex-emerald: #10b981;
   --apex-emerald-soft: rgba(16, 185, 129, 0.15);
   
-  --apex-purple: #8b5cf6;
-  --apex-purple-soft: rgba(139, 92, 246, 0.15);
+  --apex-blue: #38bdf8;
+  --apex-blue-soft: rgba(56, 189, 248, 0.15);
   
-  --apex-blue: #3b82f6;
-  --apex-blue-soft: rgba(59, 130, 246, 0.15);
-  
-  --apex-amber: #f59e0b;
-  --apex-amber-soft: rgba(245, 158, 11, 0.15);
+  --apex-amber: #fbbf24;
+  --apex-amber-soft: rgba(251, 191, 36, 0.15);
 
   /* Formatos y estados */
-  --color-reel: #ff4d28;
-  --color-carrusel: #8b5cf6;
-  --color-post: #3b82f6;
+  --color-reel: #f43f5e;
+  --color-carrusel: #c084fc;
+  --color-post: #38bdf8;
   --color-historia: #ec4899;
   
-  --status-pendiente: #64748b;
-  --status-grabado: #f59e0b;
-  --status-editado: #8b5cf6;
+  --status-pendiente: #9a7d9d;
+  --status-grabado: #fbbf24;
+  --status-editado: #c084fc;
   --status-aprobado: #10b981;
   --status-publicado: #059669;
 
@@ -188,24 +190,26 @@ img, svg {
 }
 
 .btn-primary {
-  background: var(--apex-orange);
-  color: #ffffff;
-  box-shadow: 0 4px 18px var(--apex-orange-glow);
+  background: #ffffff;
+  color: #311432;
+  font-weight: 700;
+  box-shadow: 0 4px 20px rgba(255, 255, 255, 0.2);
 }
 .btn-primary:hover {
-  background: var(--apex-orange-hover);
+  background: #fbf4fc;
+  color: #240a25;
   transform: translateY(-1px);
-  box-shadow: 0 6px 24px rgba(255, 77, 40, 0.35);
+  box-shadow: 0 6px 26px rgba(255, 255, 255, 0.32);
 }
 
 .btn-secondary {
-  background: var(--bg-surface-elevated);
+  background: rgba(255, 255, 255, 0.08);
   border: 1px solid var(--border-medium);
-  color: var(--text-main);
+  color: #ffffff;
 }
 .btn-secondary:hover {
-  background: rgba(255, 255, 255, 0.1);
-  border-color: rgba(255, 255, 255, 0.3);
+  background: rgba(255, 255, 255, 0.16);
+  border-color: #ffffff;
   transform: translateY(-1px);
 }
 
@@ -216,14 +220,14 @@ img, svg {
 }
 
 .btn-portal {
-  background: linear-gradient(135deg, rgba(255, 77, 40, 0.15), rgba(139, 92, 246, 0.15));
-  border: 1px solid rgba(255, 77, 40, 0.4);
+  background: rgba(255, 255, 255, 0.1);
+  border: 1px solid rgba(255, 255, 255, 0.4);
   color: #ffffff;
 }
 .btn-portal:hover {
-  border-color: var(--apex-orange);
-  background: linear-gradient(135deg, rgba(255, 77, 40, 0.25), rgba(139, 92, 246, 0.25));
-  box-shadow: 0 0 20px var(--apex-orange-glow);
+  border-color: #ffffff;
+  background: rgba(255, 255, 255, 0.2);
+  box-shadow: 0 0 20px rgba(255, 255, 255, 0.25);
 }
 
 /* ==========================================================================
@@ -233,7 +237,7 @@ img, svg {
   position: sticky;
   top: 0;
   z-index: 100;
-  background: rgba(10, 14, 20, 0.85);
+  background: rgba(30, 9, 32, 0.88);
   backdrop-filter: blur(16px);
   -webkit-backdrop-filter: blur(16px);
   border-bottom: 1px solid var(--border-subtle);
@@ -256,7 +260,8 @@ img, svg {
 .logo-symbol {
   width: 38px;
   height: 38px;
-  background: linear-gradient(135deg, var(--apex-orange), #ff8c42);
+  background: linear-gradient(135deg, #5c205e, #311432);
+  border: 1px solid rgba(255, 255, 255, 0.3);
   border-radius: var(--radius-md);
   display: flex;
   align-items: center;
@@ -266,7 +271,7 @@ img, svg {
   font-weight: 800;
   font-size: 20px;
   letter-spacing: -0.05em;
-  box-shadow: 0 4px 14px var(--apex-orange-glow);
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.4);
   position: relative;
   overflow: hidden;
 }
@@ -346,7 +351,7 @@ img, svg {
   transform: translateX(-50%);
   width: 700px;
   height: 400px;
-  background: radial-gradient(circle, rgba(255, 77, 40, 0.15) 0%, rgba(139, 92, 246, 0.08) 50%, transparent 70%);
+  background: radial-gradient(circle, rgba(192, 132, 252, 0.22) 0%, rgba(49, 20, 50, 0.55) 50%, transparent 70%);
   filter: blur(80px);
   pointer-events: none;
   z-index: 0;
@@ -375,7 +380,7 @@ img, svg {
 }
 
 .hero-title .gradient-text {
-  background: linear-gradient(135deg, #ffffff 40%, #ff8c6b 80%, var(--apex-orange) 100%);
+  background: linear-gradient(135deg, #ffffff 30%, #f3e8f4 65%, #c084fc 100%);
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
 }
@@ -722,12 +727,127 @@ img, svg {
 }
 
 /* ==========================================================================
+   COTIZACIONES / PLANES DE MERCADO
+   ========================================================================== */
+.pricing-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+  gap: 24px;
+  margin-top: 36px;
+}
+
+.pricing-card {
+  background: var(--bg-surface);
+  border: 1px solid var(--border-medium);
+  border-radius: var(--radius-lg);
+  padding: 36px 28px;
+  display: flex;
+  flex-direction: column;
+  position: relative;
+  transition: all var(--transition-normal);
+}
+
+.pricing-card:hover {
+  transform: translateY(-4px);
+  border-color: rgba(255, 255, 255, 0.4);
+  box-shadow: 0 16px 36px rgba(0, 0, 0, 0.5);
+}
+
+.pricing-card.featured {
+  background: linear-gradient(180deg, rgba(68, 26, 70, 0.95), rgba(49, 20, 50, 0.95));
+  border: 2px solid #ffffff;
+  box-shadow: 0 8px 32px rgba(255, 255, 255, 0.16);
+}
+
+.pricing-badge {
+  position: absolute;
+  top: -12px;
+  right: 24px;
+  background: #ffffff;
+  color: #311432;
+  font-family: var(--font-mono);
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  padding: 4px 12px;
+  border-radius: var(--radius-full);
+}
+
+.pricing-title {
+  font-family: var(--font-display);
+  font-size: 22px;
+  font-weight: 800;
+  color: #ffffff;
+  margin-bottom: 6px;
+}
+
+.pricing-subtitle {
+  font-size: 13.5px;
+  color: var(--text-dim);
+  margin-bottom: 20px;
+  line-height: 1.4;
+}
+
+.pricing-price {
+  font-family: var(--font-display);
+  font-size: 38px;
+  font-weight: 800;
+  color: #ffffff;
+  line-height: 1;
+  margin-bottom: 4px;
+  display: flex;
+  align-items: baseline;
+  gap: 4px;
+}
+
+.pricing-price span {
+  font-size: 14px;
+  font-family: var(--font-mono);
+  color: var(--text-dim);
+  font-weight: 500;
+}
+
+.pricing-note {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  color: var(--text-dim);
+  margin-bottom: 24px;
+}
+
+.pricing-features {
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  margin-bottom: 32px;
+  flex: 1;
+}
+
+.pricing-features li {
+  font-size: 14px;
+  color: var(--text-muted);
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  line-height: 1.4;
+}
+
+.pricing-features li::before {
+  content: '✓';
+  color: #ffffff;
+  font-weight: 700;
+  font-size: 14px;
+  flex-shrink: 0;
+}
+
+/* ==========================================================================
    FOOTER
    ========================================================================== */
 .site-footer {
   border-top: 1px solid var(--border-subtle);
   padding: 48px 0 32px;
-  background: #070a0f;
+  background: #19071a;
   margin-top: 60px;
 }
 
@@ -758,7 +878,7 @@ img, svg {
 .portal-overlay {
   position: fixed;
   inset: 0;
-  background: rgba(5, 7, 10, 0.88);
+  background: rgba(22, 7, 23, 0.92);
   backdrop-filter: blur(14px);
   -webkit-backdrop-filter: blur(14px);
   z-index: 1000;
