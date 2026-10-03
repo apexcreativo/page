@@ -7,6 +7,8 @@
 'use strict';
 
 const STORAGE_KEY = 'apex_creativo_db_v2';
+// PINs oficiales de cada cliente (se aplican siempre al cargar, aunque haya datos guardados)
+const CLIENT_PINS = { tasca: '1010', palato: '0030', elfaro: '0020', canirac: '1001', galerenas: '2000', blucare: '0001', hidrogeo: '0002' };
 
 // Miembros de equipo y sus PINs específicos
 const TEAM_MEMBERS = [
@@ -272,6 +274,7 @@ function loadDatabase() {
     if (raw) {
       const parsed = JSON.parse(raw);
       if (parsed && Array.isArray(parsed.clientes)) {
+        parsed.clientes.forEach(c => { if (CLIENT_PINS[c.slug]) c.pin = CLIENT_PINS[c.slug]; });
         return parsed;
       }
     }
@@ -1291,8 +1294,9 @@ function addNewClientPrompt() {
   const nombre = prompt('Nombre del nuevo cliente (ej. Restaurante El Rincón):');
   if (!nombre) return;
   const sector = prompt('Sector o giro (ej. Gastronomía, Belleza, etc.):', 'Comercial');
-  const pais = prompt('País / Ciudad (ej. México (GTO) o Colombia (BGA)):', 'México');
-  const pin = prompt('Código PIN de 4 dígitos para que el cliente ingrese:', '1234');
+  const pais = prompt('País (México o Colombia):', 'México');
+  const pin = prompt('Código PIN de 4 dígitos para que el cliente ingrese:');
+  if (!pin || !pin.trim()) { alert('El cliente necesita un PIN para poder ingresar.'); return; }
   const slug = nombre.toLowerCase().replace(/[^a-z0-9]/g, '');
 
   db.clientes.push({
@@ -1300,7 +1304,7 @@ function addNewClientPrompt() {
     nombre,
     sector: sector || 'Comercial',
     pais: pais || 'México',
-    pin: pin || '1234',
+    pin: pin.trim(),
     avatar: '🌟',
     color: '#ff4d28'
   });
@@ -1546,7 +1550,7 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 
   // Revisar si en la URL viene parámetro para abrir portal directo
-  // ej. ?portal=1 o ?cliente=palato&pin=1234
+  // ej. ?portal=1 o ?cliente=<slug>&pin=<PIN>
   const urlParams = new URLSearchParams(window.location.search);
   const paramCliente = urlParams.get('cliente');
   const paramPin = urlParams.get('pin');

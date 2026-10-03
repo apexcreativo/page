@@ -24,10 +24,10 @@ La plataforma cuenta con un sistema inteligente de acceso por PIN sin bases de d
 * **Cómo ingresa el cliente:**
   1. Entra a la web y da clic en **"Acceso Clientes"** (o va directo a `app.html`).
   2. Selecciona su negocio en la lista.
-  3. Ingresa su código PIN de 4 dígitos (PIN por defecto configurado: `1234`).
+  3. Ingresa el código PIN de 4 dígitos asignado a su marca (se configura en `app.js` → `CLIENT_PINS`).
 * **Enlace directo preautenticado:**
   Puedes enviarles un enlace de WhatsApp directo como este:  
-  `https://tu-sitio.com/?cliente=palato&pin=1234`  
+  `https://tu-sitio.com/?cliente=<slug>&pin=<PIN>`  
   *(Al dar clic, el cliente entra directamente a su parrilla sin tener que escribir nada).*
 * **Qué puede hacer el cliente:**
   * Ver su **Parrilla de Contenido** del mes con formatos (Reels, Carruseles, Posts) y fechas de publicación.
@@ -35,8 +35,8 @@ La plataforma cuenta con un sistema inteligente de acceso por PIN sin bases de d
   * **Aprobar Guiones con 1 clic** o dejar comentarios y ajustes para el equipo.
   * Consultar su **Reporte Mensual de Resultados** con gráficas, comparativas y capturas de pantalla de métricas.
 
-### 2. Acceso Equipo Apex (Alejandra, Mitzi, Alexa y Colaboradores)
-* **Pestaña "Equipo Apex"** ➔ Ingresar el **PIN Maestro**: `0000` (editable en `app.js`).
+### 2. Acceso Equipo Apex
+* **Pestaña "Equipo Apex"** ➔ Elegir quién ingresa (Alejandra, Pablo, Mitzi o Colaborador adicional) e ingresar su PIN personal (editable en `app.js` → `TEAM_MEMBERS`).
 * **Qué puede hacer el equipo:**
   * **Selector Multicliente:** Cambiar al instante entre Restaurante Palato, La Tazca de la Paz, El Faro, CANIRAC Gto, Blucare Bucaramanga, HidroGeo y Club Galereñas.
   * **Crear Nuevos Clientes:** Añadir cualquier marca nueva con su nombre, sector, país y PIN personalizado en 1 segundo.
