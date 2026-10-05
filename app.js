@@ -121,8 +121,11 @@ const state = {
   // Tablero de tareas
   taskFilterAssignee: 'todos',
   
-  // Resultados
-  resultsMonth: `${new Date().getFullYear()}-${String(new Date().getMonth() + 1).padStart(2, '0')}`
+  // Resultados (mes elegido por cliente y edición en la página)
+  resultsMonth: `${new Date().getFullYear()}-${String(new Date().getMonth() + 1).padStart(2, '0')}`,
+  mesResultados: {},
+  kpiEditando: null,
+  resumenEditando: false
 };
 
 // ==========================================================================
@@ -895,91 +898,234 @@ function openProdFromKanban(clientSlug, prodId) {
 }
 
 // ==========================================================================
-// 4. MÓDULO RESULTADOS & MÉTRICAS
+// 4. MÓDULO RESULTADOS & MÉTRICAS (un reporte por mes)
 // ==========================================================================
+function mesActualIso() {
+  const h = new Date();
+  return `${h.getFullYear()}-${String(h.getMonth() + 1).padStart(2, '0')}`;
+}
+
+function nombreMes(iso) {
+  const partes = String(iso || '').split('-').map(Number);
+  if (!partes[0] || !partes[1]) return iso || '';
+  return `${MESES_NOMBRES[partes[1] - 1]} ${partes[0]}`;
+}
+
+function mesesConReporte(slug) {
+  return Object.keys((db.resultados && db.resultados[slug]) || {}).sort().reverse();
+}
+
+// Mes que se está viendo para el cliente activo (por defecto, el último con reporte)
+function mesResultados(slug) {
+  if (!state.mesResultados) state.mesResultados = {};
+  const meses = mesesConReporte(slug);
+  let mes = state.mesResultados[slug];
+  if (!mes || (state.currentRole !== 'team' && meses.indexOf(mes) === -1)) mes = meses[0] || mesActualIso();
+  state.mesResultados[slug] = mes;
+  return mes;
+}
+
+// Meses del selector: los que tienen reporte y, para el equipo, los últimos 12 meses y el siguiente
+function opcionesMeses(slug) {
+  const meses = new Set(mesesConReporte(slug));
+  if (state.currentRole === 'team') {
+    const h = new Date();
+    for (let i = -1; i < 12; i++) {
+      const d = new Date(h.getFullYear(), h.getMonth() - i, 1);
+      meses.add(`${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`);
+    }
+    meses.add(mesResultados(slug));
+  }
+  return Array.from(meses).sort().reverse();
+}
+
+function reporteMes(slug, mes, crear) {
+  if (!db.resultados) db.resultados = {};
+  if (!db.resultados[slug]) {
+    if (!crear) return null;
+    db.resultados[slug] = {};
+  }
+  if (!db.resultados[slug][mes]) {
+    if (!crear) return null;
+    db.resultados[slug][mes] = { resumen: '', kpis: [], imagenes: [] };
+  }
+  const r = db.resultados[slug][mes];
+  if (!Array.isArray(r.kpis)) r.kpis = [];
+  if (!Array.isArray(r.imagenes)) r.imagenes = [];
+  return r;
+}
+
+// Si un mes se queda sin nada, se quita para que el cliente no vea un reporte vacío
+function limpiarMesVacio(slug, mes) {
+  const r = db.resultados[slug] && db.resultados[slug][mes];
+  if (!r) return;
+  const vacio = !String(r.resumen || '').trim() && !(r.kpis || []).length && !(r.imagenes || []).length && !r.detalle && !r.tileFijo;
+  if (vacio) {
+    delete db.resultados[slug][mes];
+    if (!Object.keys(db.resultados[slug]).length) delete db.resultados[slug];
+  }
+}
+
+function enfocar(id) {
+  setTimeout(() => {
+    const el = document.getElementById(id);
+    if (el) el.focus();
+  }, 0);
+}
+
+function claseTendencia(kpi) {
+  if (kpi.positivo === true) return 'positive';
+  if (kpi.positivo === false) return 'negative';
+  return 'neutral';
+}
+
+function formularioKpi(kpi, idx) {
+  const k = kpi || { nombre: '', valor: '', comparativo: '', positivo: true };
+  const tendencia = k.positivo === true ? 'sube' : (k.positivo === false ? 'baja' : 'neutral');
+  const campo = 'display:block;width:100%;box-sizing:border-box;font-size:12px;padding:6px 8px;margin-bottom:8px;';
+  return `
+    <div class="kpi-tile" style="border:1px solid var(--apex-orange);">
+      <label class="form-label" for="kpiNombre" style="display:block;font-size:10px;margin-bottom:3px;">Indicador</label>
+      <input id="kpiNombre" class="form-control" style="${campo}" value="${escapeHtml(k.nombre)}" placeholder="Ej. Alcance · Instagram">
+      <label class="form-label" for="kpiValor" style="display:block;font-size:10px;margin-bottom:3px;">Valor</label>
+      <input id="kpiValor" class="form-control" style="${campo}" value="${escapeHtml(k.valor)}" placeholder="Ej. 21,052">
+      <label class="form-label" for="kpiComparativo" style="display:block;font-size:10px;margin-bottom:3px;">Comparativo</label>
+      <input id="kpiComparativo" class="form-control" style="${campo}" value="${escapeHtml(k.comparativo)}" placeholder="Ej. +12% vs mes anterior">
+      ${idx === 'fijo' ? '' : `
+      <label class="form-label" for="kpiTendencia" style="display:block;font-size:10px;margin-bottom:3px;">Tendencia</label>
+      <select id="kpiTendencia" class="form-control" style="${campo}margin-bottom:8px;">
+        <option value="sube" ${tendencia === 'sube' ? 'selected' : ''}>Sube (verde)</option>
+        <option value="baja" ${tendencia === 'baja' ? 'selected' : ''}>Baja (rojo)</option>
+        <option value="neutral" ${tendencia === 'neutral' ? 'selected' : ''}>Sin cambio (gris)</option>
+      </select>`}
+      <div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:4px;">
+        <button class="btn btn-sm btn-primary" style="font-size:11px;padding:4px 10px;" onclick="guardarKpi()">Guardar</button>
+        <button class="btn btn-sm btn-secondary" style="font-size:11px;padding:4px 10px;" onclick="cancelarKpi()">Cancelar</button>
+        ${idx !== 'nuevo' ? `<button class="btn btn-sm btn-secondary" style="font-size:11px;padding:4px 10px;color:#f87171;" onclick="borrarKpi('${idx}')">Eliminar</button>` : ''}
+      </div>
+    </div>`;
+}
+
 function renderResultados() {
   const container = document.getElementById('viewTab_resultados');
   if (!container) return;
 
-  const clientResults = (db.resultados[state.activeClientSlug] && db.resultados[state.activeClientSlug]['2026-09']) || {
-    resumen: 'Mes en curso de ejecución y levantamiento de contenido.',
-    kpis: [
-      { nombre: 'Alcance Estimado', valor: '0', comparativo: 'En medición', positivo: true },
-      { nombre: 'Interacciones', valor: '0', comparativo: 'En medición', positivo: true },
-      { nombre: 'Piezas Producidas', valor: '0', comparativo: '0', positivo: true }
-    ],
-    imagenes: []
-  };
+  const slug = state.activeClientSlug;
+  const esEquipo = state.currentRole === 'team';
+  const conReporte = mesesConReporte(slug);
 
-  const piezasMes = db.producciones.filter(p => p.clienteSlug === state.activeClientSlug && (p.fecha || '').startsWith('2026-09'));
+  if (!esEquipo && !conReporte.length) {
+    container.innerHTML = `
+      <div class="editor-card" style="text-align:center;padding:40px 20px;">
+        <h3 style="font-family:var(--font-display);font-size:18px;color:#fff;margin-bottom:8px;">Todavía no hay reportes publicados</h3>
+        <p style="font-size:13.5px;color:var(--text-muted);">Aquí verás tus resultados de cada mes en cuanto el equipo los publique.</p>
+      </div>`;
+    return;
+  }
+
+  const mes = mesResultados(slug);
+  const reporte = reporteMes(slug, mes, false);
+  const datos = reporte || { resumen: '', kpis: [], imagenes: [] };
+  const kpis = Array.isArray(datos.kpis) ? datos.kpis : [];
+  const imagenes = Array.isArray(datos.imagenes) ? datos.imagenes : [];
+  const piezasMes = db.producciones.filter(p => p.clienteSlug === slug && (p.fecha || '').startsWith(mes));
   const pubCount = piezasMes.filter(p => p.estado === 'Publicado').length;
+  const editando = state.kpiEditando;
 
-  container.innerHTML = `
-    <div class="results-header">
-      <div>
-        <h3 style="font-family:var(--font-display);font-size:20px;color:#fff;margin-bottom:4px;">Reporte de Resultados · Septiembre 2026</h3>
-        <p style="font-size:13px;color:var(--text-muted);">Métricas verificadas de impacto, interacciones y conversiones para la marca.</p>
-      </div>
-      <div>
-        ${state.currentRole === 'team' ? `
-          <button class="btn btn-sm btn-primary" onclick="addCustomKpi()">+ Agregar Indicador</button>
-        ` : ''}
-      </div>
-    </div>
+  const selector = `
+    <select class="form-control" style="width:auto;min-width:200px;font-size:13px;padding:6px 12px;" onchange="cambiarMesResultados(this.value)" aria-label="Mes del reporte">
+      ${opcionesMeses(slug).map(m => `<option value="${m}" ${m === mes ? 'selected' : ''}>${nombreMes(m)}${esEquipo && conReporte.indexOf(m) === -1 ? ' · sin reporte' : ''}</option>`).join('')}
+    </select>`;
 
-    <!-- Tarjetas de Métricas -->
-    <div class="kpi-tiles-grid">
-      ${clientResults.tileFijo ? `
+  let tileFijo;
+  if (datos.tileFijo && esEquipo && editando === 'fijo') {
+    tileFijo = formularioKpi(datos.tileFijo, 'fijo');
+  } else if (datos.tileFijo) {
+    tileFijo = `
       <div class="kpi-tile" style="border-left:3px solid var(--apex-orange);">
-        <div class="kpi-label">${escapeHtml(clientResults.tileFijo.nombre)}</div>
-        <div class="kpi-val">${escapeHtml(clientResults.tileFijo.valor)}</div>
-        <div class="kpi-trend neutral">${escapeHtml(clientResults.tileFijo.comparativo)}</div>
-      </div>` : `
+        <div class="kpi-label">${escapeHtml(datos.tileFijo.nombre)}</div>
+        <div class="kpi-val">${escapeHtml(datos.tileFijo.valor)}</div>
+        <div class="kpi-trend neutral">${escapeHtml(datos.tileFijo.comparativo)}</div>
+        ${esEquipo ? `<div style="margin-top:8px;"><button class="btn btn-sm btn-secondary" style="font-size:10px;padding:2px 6px;" onclick="editarKpi('fijo')">Editar</button></div>` : ''}
+      </div>`;
+  } else {
+    tileFijo = `
       <div class="kpi-tile" style="border-left:3px solid var(--apex-orange);">
         <div class="kpi-label">Total Piezas Planificadas</div>
         <div class="kpi-val">${piezasMes.length}</div>
         <div class="kpi-trend neutral">${pubCount} publicadas</div>
-      </div>`}
-      ${(clientResults.kpis || []).map((kpi, idx) => `
-        <div class="kpi-tile">
-          <div class="kpi-label">${escapeHtml(kpi.nombre)}</div>
-          <div class="kpi-val">${escapeHtml(kpi.valor)}</div>
-          <div class="kpi-trend ${kpi.positivo ? 'positive' : (kpi.positivo === false ? 'negative' : 'neutral')}">${escapeHtml(kpi.comparativo)}</div>
-          ${state.currentRole === 'team' ? `
-            <div style="margin-top:8px;">
-              <button class="btn btn-sm btn-secondary" style="font-size:10px;padding:2px 6px;" onclick="editKpi(${idx})">Editar</button>
-            </div>
-          ` : ''}
-        </div>
-      `).join('')}
+      </div>`;
+  }
+
+  const tiles = kpis.map((kpi, idx) => {
+    if (esEquipo && editando === idx) return formularioKpi(kpi, idx);
+    return `
+      <div class="kpi-tile">
+        <div class="kpi-label">${escapeHtml(kpi.nombre)}</div>
+        <div class="kpi-val">${escapeHtml(kpi.valor)}</div>
+        <div class="kpi-trend ${claseTendencia(kpi)}">${escapeHtml(kpi.comparativo)}</div>
+        ${esEquipo ? `<div style="margin-top:8px;"><button class="btn btn-sm btn-secondary" style="font-size:10px;padding:2px 6px;" onclick="editarKpi(${idx})">Editar</button></div>` : ''}
+      </div>`;
+  }).join('') + (esEquipo && editando === 'nuevo' ? formularioKpi(null, 'nuevo') : '');
+
+  let resumenHtml = '';
+  if (esEquipo && state.resumenEditando) {
+    resumenHtml = `
+      <textarea id="resumenTexto" class="form-control" rows="5" style="font-size:14px;line-height:1.55;">${escapeHtml(datos.resumen || '')}</textarea>
+      <div style="display:flex;gap:8px;margin-top:10px;">
+        <button class="btn btn-sm btn-primary" onclick="guardarResumen()">Guardar resumen</button>
+        <button class="btn btn-sm btn-secondary" onclick="cancelarResumen()">Cancelar</button>
+      </div>`;
+  } else {
+    resumenHtml = `
+      <p style="color:${datos.resumen ? 'var(--text-main)' : 'var(--text-dim)'};font-size:14.5px;line-height:1.6;">${datos.resumen ? escapeHtml(datos.resumen) : 'Este mes todavía no tiene resumen.'}</p>
+      ${esEquipo ? `<div style="margin-top:14px;"><button class="btn btn-sm btn-secondary" onclick="editarResumen()">${datos.resumen ? 'Editar resumen' : 'Escribir resumen'}</button></div>` : ''}`;
+  }
+
+  container.innerHTML = `
+    <div class="results-header">
+      <div>
+        <h3 style="font-family:var(--font-display);font-size:20px;color:#fff;margin-bottom:4px;">Reporte de Resultados · ${nombreMes(mes)}</h3>
+        <p style="font-size:13px;color:var(--text-muted);">Métricas verificadas de impacto, interacciones y conversiones para la marca.</p>
+      </div>
+      <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;">
+        ${selector}
+        ${esEquipo ? `<button class="btn btn-sm btn-primary" onclick="agregarKpi()">+ Agregar Indicador</button>` : ''}
+      </div>
+    </div>
+
+    ${esEquipo && !reporte ? `
+      <div class="res-aviso">${nombreMes(mes)} todavía no tiene reporte. Lo que agregues aquí se guarda en la nube y el cliente lo verá al entrar.</div>
+    ` : ''}
+
+    <!-- Tarjetas de Métricas -->
+    <div class="kpi-tiles-grid">
+      ${tileFijo}
+      ${tiles}
     </div>
 
     <!-- Resumen Ejecutivo -->
+    ${(datos.resumen || esEquipo) ? `
     <div class="editor-card" style="margin-bottom:24px;">
       <h4 style="font-family:var(--font-display);font-size:16px;color:#fff;margin-bottom:12px;">Resumen Ejecutivo del Mes</h4>
-      <p style="color:var(--text-main);font-size:14.5px;line-height:1.6;">${escapeHtml(clientResults.resumen)}</p>
-      ${state.currentRole === 'team' ? `
-        <div style="margin-top:14px;">
-          <button class="btn btn-sm btn-secondary" onclick="editResultsSummary()">Editar Resumen Ejecutivo</button>
-        </div>
-      ` : ''}
-    </div>
+      ${resumenHtml}
+    </div>` : ''}
 
-    ${renderDetalleResultados(clientResults.detalle)}
+    ${renderDetalleResultados(datos.detalle)}
 
     <!-- Capturas y Evidencias de Resultados -->
+    ${(imagenes.length || esEquipo) ? `
     <div class="editor-card">
-      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;gap:10px;flex-wrap:wrap;">
         <h4 style="font-family:var(--font-display);font-size:16px;color:#fff;">Capturas & Evidencias Verificadas</h4>
-        ${state.currentRole === 'team' ? `
-          <button class="btn btn-sm btn-secondary" onclick="document.getElementById('kpiImageInput').click()">+ Subir Captura</button>
-        ` : ''}
+        ${esEquipo ? `<button class="btn btn-sm btn-secondary" onclick="document.getElementById('kpiImageInput').click()">+ Subir Captura</button>` : ''}
       </div>
       <input type="file" id="kpiImageInput" accept="image/*" style="display:none;" onchange="handleKpiImageUpload(this)">
       <div class="metrics-proofs-grid">
-        ${(clientResults.imagenes && clientResults.imagenes.length) ? clientResults.imagenes.map((imgSrc, imgIdx) => `
-          <div class="proof-card" onclick="openLightbox('${imgSrc}')">
-            <img src="${imgSrc}" alt="Captura métrica" loading="lazy" decoding="async">
+        ${imagenes.length ? imagenes.map((src, i) => `
+          <div class="proof-card" style="position:relative;" onclick="verCaptura(${i})">
+            <img src="${escapeHtml(src)}" alt="Captura de métricas ${i + 1}" loading="lazy" decoding="async">
+            ${esEquipo ? `<button type="button" class="btn btn-sm btn-secondary" title="Quitar captura" aria-label="Quitar captura ${i + 1}" style="position:absolute;top:6px;right:6px;padding:2px 8px;font-size:12px;color:#f87171;" onclick="event.stopPropagation(); borrarCaptura(${i})">✕</button>` : ''}
           </div>
         `).join('') : `
           <div style="grid-column:1/-1;padding:20px;text-align:center;color:var(--text-dim);font-size:13px;">
@@ -987,8 +1133,175 @@ function renderResultados() {
           </div>
         `}
       </div>
-    </div>
+    </div>` : ''}
   `;
+}
+
+function cambiarMesResultados(mes) {
+  if (!state.mesResultados) state.mesResultados = {};
+  state.mesResultados[state.activeClientSlug] = mes;
+  state.kpiEditando = null;
+  state.resumenEditando = false;
+  renderResultados();
+}
+
+function agregarKpi() {
+  state.kpiEditando = 'nuevo';
+  renderResultados();
+  enfocar('kpiNombre');
+}
+
+function editarKpi(idx) {
+  state.kpiEditando = idx;
+  renderResultados();
+  enfocar('kpiNombre');
+}
+
+function cancelarKpi() {
+  state.kpiEditando = null;
+  renderResultados();
+}
+
+function guardarKpi() {
+  const valor = id => ((document.getElementById(id) || {}).value || '').trim();
+  const nombre = valor('kpiNombre');
+  if (!nombre) {
+    alert('Escribe el nombre del indicador.');
+    return;
+  }
+  const slug = state.activeClientSlug;
+  const mes = mesResultados(slug);
+  const r = reporteMes(slug, mes, true);
+  const editando = state.kpiEditando;
+  if (editando === 'fijo') {
+    r.tileFijo = { nombre, valor: valor('kpiValor'), comparativo: valor('kpiComparativo') };
+  } else {
+    const kpi = { nombre, valor: valor('kpiValor'), comparativo: valor('kpiComparativo') };
+    const tendencia = valor('kpiTendencia');
+    if (tendencia === 'sube') kpi.positivo = true;
+    else if (tendencia === 'baja') kpi.positivo = false;
+    if (editando === 'nuevo') r.kpis.push(kpi);
+    else if (typeof editando === 'number' && r.kpis[editando]) r.kpis[editando] = kpi;
+  }
+  state.kpiEditando = null;
+  saveDatabase();
+  renderResultados();
+}
+
+function borrarKpi(idx) {
+  const slug = state.activeClientSlug;
+  const mes = mesResultados(slug);
+  const r = reporteMes(slug, mes, false);
+  if (!r) return;
+  if (idx === 'fijo') {
+    if (!r.tileFijo || !confirm(`¿Eliminar el indicador "${r.tileFijo.nombre}"?`)) return;
+    delete r.tileFijo;
+  } else {
+    const i = Number(idx);
+    if (!r.kpis[i] || !confirm(`¿Eliminar el indicador "${r.kpis[i].nombre}"?`)) return;
+    r.kpis.splice(i, 1);
+  }
+  state.kpiEditando = null;
+  limpiarMesVacio(slug, mes);
+  saveDatabase();
+  renderResultados();
+}
+
+function editarResumen() {
+  state.resumenEditando = true;
+  renderResultados();
+  enfocar('resumenTexto');
+}
+
+function cancelarResumen() {
+  state.resumenEditando = false;
+  renderResultados();
+}
+
+function guardarResumen() {
+  const texto = ((document.getElementById('resumenTexto') || {}).value || '').trim();
+  const slug = state.activeClientSlug;
+  const mes = mesResultados(slug);
+  const r = reporteMes(slug, mes, true);
+  r.resumen = texto;
+  state.resumenEditando = false;
+  limpiarMesVacio(slug, mes);
+  saveDatabase();
+  renderResultados();
+}
+
+function verCaptura(idx) {
+  const r = reporteMes(state.activeClientSlug, mesResultados(state.activeClientSlug), false);
+  if (r && r.imagenes[idx]) openLightbox(r.imagenes[idx]);
+}
+
+function borrarCaptura(idx) {
+  const slug = state.activeClientSlug;
+  const mes = mesResultados(slug);
+  const r = reporteMes(slug, mes, false);
+  if (!r || !r.imagenes[idx]) return;
+  if (!confirm('¿Quitar esta captura del reporte?')) return;
+  r.imagenes.splice(idx, 1);
+  limpiarMesVacio(slug, mes);
+  saveDatabase();
+  renderResultados();
+}
+
+function handleKpiImageUpload(input) {
+  const file = input.files && input.files[0];
+  if (!file) return;
+  const slug = state.activeClientSlug;
+  const mes = mesResultados(slug);
+
+  const reader = new FileReader();
+  reader.onload = function(e) {
+    // Comprimir en canvas
+    const img = new Image();
+    img.onload = function() {
+      const canvas = document.createElement('canvas');
+      const maxW = 900;
+      const scale = Math.min(1, maxW / img.width);
+      canvas.width = Math.round(img.width * scale);
+      canvas.height = Math.round(img.height * scale);
+      const ctx = canvas.getContext('2d');
+      ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+      const compressedDataUrl = canvas.toDataURL('image/jpeg', 0.75);
+      reporteMes(slug, mes, true).imagenes.push(compressedDataUrl);
+      saveDatabase();
+      renderResultados();
+    };
+    img.src = e.target.result;
+  };
+  reader.readAsDataURL(file);
+  input.value = '';
+}
+
+// Guarda lo pendiente y trae lo último de la nube (botón 🔄 Actualizar)
+async function actualizarDesdeNube() {
+  const btn = document.getElementById('btnActualizarNube');
+  if (btn && btn.disabled) return;
+  const texto = btn ? btn.textContent : '';
+  if (btn) {
+    btn.disabled = true;
+    btn.textContent = 'Actualizando…';
+  }
+  try {
+    await nubeGuardarYa();
+    await nubeCargarDatosConReintento();
+    state.kpiEditando = null;
+    state.resumenEditando = false;
+    if (state.currentRole) renderPortalWorkspace();
+    nubeEstado('actualizado');
+  } catch (err) {
+    console.warn('No se pudo actualizar desde la nube:', err);
+    if (String((err && err.code) || '').indexOf('permission-denied') !== -1) nubeSesionVencida();
+    else nubeEstado('error-actualizar');
+  } finally {
+    if (btn) {
+      btn.disabled = false;
+      btn.textContent = texto;
+    }
+  }
 }
 
 // Detalle por red, KPIs y conclusión (solo si el reporte trae "detalle")
@@ -1056,83 +1369,6 @@ function renderDetalleResultados(d) {
         <ul class="res-notas">${d.recomendaciones.map(n => `<li>${escapeHtml(n)}</li>`).join('')}</ul>` : ''}
     </div>
   `;
-}
-
-function editResultsSummary() {
-  const current = (db.resultados[state.activeClientSlug] && db.resultados[state.activeClientSlug]['2026-09'] && db.resultados[state.activeClientSlug]['2026-09'].resumen) || '';
-  const newSummary = prompt('Edita el resumen ejecutivo mensual:', current);
-  if (newSummary !== null) {
-    if (!db.resultados[state.activeClientSlug]) db.resultados[state.activeClientSlug] = {};
-    if (!db.resultados[state.activeClientSlug]['2026-09']) {
-      db.resultados[state.activeClientSlug]['2026-09'] = { resumen: '', kpis: [], imagenes: [] };
-    }
-    db.resultados[state.activeClientSlug]['2026-09'].resumen = newSummary;
-    saveDatabase();
-    renderResultados();
-  }
-}
-
-function addCustomKpi() {
-  const nombre = prompt('Nombre del indicador (ej. Guardados, Visitas al perfil, Clics en anuncio):');
-  if (!nombre) return;
-  const valor = prompt('Valor numérico (ej. 3,450):', '0');
-  const comp = prompt('Comparativo vs mes anterior (ej. +18%):', '+0%');
-
-  if (!db.resultados[state.activeClientSlug]) db.resultados[state.activeClientSlug] = {};
-  if (!db.resultados[state.activeClientSlug]['2026-09']) {
-    db.resultados[state.activeClientSlug]['2026-09'] = { resumen: '', kpis: [], imagenes: [] };
-  }
-  db.resultados[state.activeClientSlug]['2026-09'].kpis.push({
-    nombre,
-    valor: valor || '0',
-    comparativo: comp || '',
-    positivo: true
-  });
-  saveDatabase();
-  renderResultados();
-}
-
-function editKpi(idx) {
-  const kpis = db.resultados[state.activeClientSlug]['2026-09'].kpis;
-  if (!kpis[idx]) return;
-  const valor = prompt(`Nuevo valor para ${kpis[idx].nombre}:`, kpis[idx].valor);
-  if (valor !== null) {
-    kpis[idx].valor = valor;
-    saveDatabase();
-    renderResultados();
-  }
-}
-
-function handleKpiImageUpload(input) {
-  const file = input.files && input.files[0];
-  if (!file) return;
-
-  const reader = new FileReader();
-  reader.onload = function(e) {
-    // Comprimir en canvas
-    const img = new Image();
-    img.onload = function() {
-      const canvas = document.createElement('canvas');
-      const maxW = 900;
-      const scale = Math.min(1, maxW / img.width);
-      canvas.width = Math.round(img.width * scale);
-      canvas.height = Math.round(img.height * scale);
-      const ctx = canvas.getContext('2d');
-      ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
-      const compressedDataUrl = canvas.toDataURL('image/jpeg', 0.75);
-
-      if (!db.resultados[state.activeClientSlug]) db.resultados[state.activeClientSlug] = {};
-      if (!db.resultados[state.activeClientSlug]['2026-09']) {
-        db.resultados[state.activeClientSlug]['2026-09'] = { resumen: '', kpis: [], imagenes: [] };
-      }
-      db.resultados[state.activeClientSlug]['2026-09'].imagenes.push(compressedDataUrl);
-      saveDatabase();
-      renderResultados();
-    };
-    img.src = e.target.result;
-  };
-  reader.readAsDataURL(file);
-  input.value = '';
 }
 
 // Lightbox
@@ -1586,7 +1822,7 @@ function nubeConstruirDocs(d) {
         const r = nubeLimpio(meses[mes] || {});
         r.imagenes = (Array.isArray(r.imagenes) ? r.imagenes : []).map(src => {
           if (typeof src === 'string' && src.indexOf('data:') === 0) {
-            const id = 'img_' + nubeHuella(src);
+            const id = 'img_' + nubeHuella(slug + '|' + mes + '|' + src);
             docs['imagenes/' + id] = { slug, mes, data: src };
             return 'nube-img:' + id;
           }
@@ -1694,7 +1930,8 @@ async function nubeRefrescar(forzar) {
   }
   const activo = document.activeElement;
   const escribiendo = activo && /^(INPUT|TEXTAREA|SELECT)$/.test(activo.tagName);
-  if (!escribiendo && state.currentRole) renderPortalWorkspace();
+  const editandoResultados = state.kpiEditando != null || state.resumenEditando;
+  if (!escribiendo && !editandoResultados && state.currentRole) renderPortalWorkspace();
 }
 
 function nubeSesionVencida() {
@@ -1728,7 +1965,9 @@ function nubeEstado(estado) {
   const estilos = {
     guardando: ['Guardando en la nube…', '#441a46', '#f2e7f3'],
     guardado: ['Guardado en la nube ✓', '#065f46', '#d1fae5'],
-    error: ['No se pudo guardar. Revisa tu conexión.', '#7f1d1d', '#fee2e2']
+    error: ['No se pudo guardar. Revisa tu conexión.', '#7f1d1d', '#fee2e2'],
+    actualizado: ['Información al día ✓', '#065f46', '#d1fae5'],
+    'error-actualizar': ['No se pudo actualizar. Revisa tu conexión.', '#7f1d1d', '#fee2e2']
   }[estado];
   if (!estilos) {
     el.style.opacity = '0';
@@ -1738,7 +1977,7 @@ function nubeEstado(estado) {
   el.style.background = estilos[1];
   el.style.color = estilos[2];
   el.style.opacity = '1';
-  if (estado === 'guardado') el._t = setTimeout(() => { el.style.opacity = '0'; }, 2200);
+  if (estado === 'guardado' || estado === 'actualizado') el._t = setTimeout(() => { el.style.opacity = '0'; }, 2200);
 }
 
 function nubeArranque() {
@@ -1875,6 +2114,8 @@ document.addEventListener('DOMContentLoaded', () => {
   document.querySelectorAll('.portal-tab').forEach(btn => {
     btn.addEventListener('click', () => {
       state.activeTab = btn.dataset.tab;
+      state.kpiEditando = null;
+      state.resumenEditando = false;
       renderPortalWorkspace();
       nubeRefrescar(false);
     });
@@ -1888,6 +2129,8 @@ document.addEventListener('DOMContentLoaded', () => {
         addNewClientPrompt();
       } else {
         state.activeClientSlug = e.target.value;
+        state.kpiEditando = null;
+        state.resumenEditando = false;
         renderPortalWorkspace();
       }
     });
