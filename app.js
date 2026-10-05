@@ -1,407 +1,98 @@
 /* ==========================================================================
    APEX CREATIVO · MOTOR OPERATIVO & GESTOR DE DATOS
    Plataforma de Agencia Multicliente con Autenticación por PIN
-   Soporta GitHub Pages (100% Client-Side con persistencia LocalStorage)
+   Datos compartidos en la nube (Firebase): lo que se edita se ve en cualquier dispositivo
    ========================================================================== */
 
 'use strict';
 
-const STORAGE_KEY = 'apex_creativo_db_v2';
-// PINs oficiales de cada cliente (se aplican siempre al cargar, aunque haya datos guardados)
-const CLIENT_PINS = { tasca: '1010', palato: '0030', elfaro: '0020', canirac: '1001', galerenas: '2000', blucare: '0001', hidrogeo: '0002' };
+const STORAGE_KEY = 'apex_creativo_db_v2'; // copia vieja guardada en cada navegador (ya no se usa; se conserva intacta)
 
-// Miembros de equipo y sus PINs específicos
+// Miembros del equipo. Los PIN viven en la nube (no en este archivo).
 const TEAM_MEMBERS = [
-  { id: 'ale', nombre: 'Alejandra', rol: 'Dirección General & Estrategia', pin: '0007' },
-  { id: 'pablo', nombre: 'Pablo', rol: 'Dirección Operativa & Modelos', pin: '0028' },
-  { id: 'mitzi', nombre: 'Mitzi', rol: 'Levantamiento, Edición y Foto/Video', pin: '3197' },
-  { id: 'extra', nombre: 'Colaborador adicional', rol: 'Producción & Apoyo', pin: '0000' }
+  { id: 'ale', nombre: 'Alejandra', rol: 'Dirección General & Estrategia' },
+  { id: 'pablo', nombre: 'Pablo', rol: 'Dirección Operativa & Modelos' },
+  { id: 'mitzi', nombre: 'Mitzi', rol: 'Levantamiento, Edición y Foto/Video' },
+  { id: 'extra', nombre: 'Colaborador adicional', rol: 'Producción & Apoyo' }
 ];
 
-// ==========================================================================
-// REPORTE OFICIAL · EL FARO · SEPTIEMBRE 2026
-// Fuente única: capturas de Instagram, Facebook y TikTok (carpeta resultados/elfaro-2026-09).
-// Las variaciones marcadas "(calc.)" se calcularon a partir de esas mismas cifras.
-// ==========================================================================
-const REPORTE_ELFARO_2026_09 = {
-  reporteVersion: 1,
-  resumen: 'Primer mes de gestión de Apex (publicación desde el 14 de septiembre). En Instagram, del 5 sep al 4 oct, las visualizaciones pasaron de 5,343 a 21,052 (+294.0% vs agosto) y las interacciones de 115 a 465 (+304.3%). Facebook reporta 10 mil visualizaciones (+282%) en los últimos 28 días. TikTok bajó en visualizaciones (7.9K, −19.2%) aunque subió en me gusta (+32.1%). La cuenta de Instagram todavía pierde más seguidores de los que gana (neto −12), pero la pérdida fue menor que en agosto (−22).',
-  tileFijo: { nombre: 'Publicaciones en Instagram', valor: '41', comparativo: 'Contenido compartido · 5 sep – 4 oct' },
-  kpis: [
-    { nombre: 'Visualizaciones · Instagram', valor: '21,052', comparativo: '+294.0% vs agosto (5,343)', positivo: true },
-    { nombre: 'Cuentas alcanzadas · Instagram', valor: '3,381', comparativo: '+162.5% vs agosto (1,288)', positivo: true },
-    { nombre: 'Interacciones · Instagram', valor: '465', comparativo: '+304.3% vs agosto (115)', positivo: true },
-    { nombre: 'Tasa de interacción · Instagram', valor: '13.75%', comparativo: 'Agosto: 8.93% · +4.82 pts', positivo: true },
-    { nombre: 'Visitas al perfil · Instagram', valor: '326', comparativo: '+42.4% vs agosto (229)', positivo: true },
-    { nombre: 'Toques en enlace · Instagram', valor: '17', comparativo: '+112.5% vs agosto (8)', positivo: true },
-    { nombre: 'Visualizaciones · Facebook', valor: '10 mil', comparativo: '+282% vs 28 días previos', positivo: true },
-    { nombre: 'Interacciones · Facebook', valor: '531', comparativo: '+2 mil% vs 28 días previos', positivo: true },
-    { nombre: 'Visualizaciones · TikTok', valor: '7.9K', comparativo: '−1.9K (−19.2%) vs periodo anterior', positivo: false },
-    { nombre: 'Me gusta · TikTok', valor: '144', comparativo: '+35 (+32.1%) vs periodo anterior', positivo: true }
-  ],
-  imagenes: [
-    'resultados/elfaro-2026-09/ig-01-panel-sep.jpg',
-    'resultados/elfaro-2026-09/ig-02-resumen-sep.jpg',
-    'resultados/elfaro-2026-09/ig-03-formatos-sep.jpg',
-    'resultados/elfaro-2026-09/ig-04-interacciones-perfil-sep.jpg',
-    'resultados/elfaro-2026-09/ig-05-contenido-megusta-sep.jpg',
-    'resultados/elfaro-2026-09/ig-06-contenido-vistas-sep.jpg',
-    'resultados/elfaro-2026-09/ig-07-seguidores-sep.jpg',
-    'resultados/elfaro-2026-09/ig-08-resumen-ago.jpg',
-    'resultados/elfaro-2026-09/ig-09-formatos-ago.jpg',
-    'resultados/elfaro-2026-09/ig-10-interacciones-perfil-ago.jpg',
-    'resultados/elfaro-2026-09/fb-01-visualizaciones.jpg',
-    'resultados/elfaro-2026-09/fb-02-interaccion.jpg',
-    'resultados/elfaro-2026-09/fb-03-publico.jpg',
-    'resultados/elfaro-2026-09/fb-04-que-funciona.jpg',
-    'resultados/elfaro-2026-09/tt-01-resumen-sep.jpg',
-    'resultados/elfaro-2026-09/tt-02-top-vistas.jpg',
-    'resultados/elfaro-2026-09/tt-03-top-megusta.jpg'
-  ],
-  detalle: {
-    avisoPeriodos: 'Cada red mide un periodo distinto y así se presenta. Instagram: 5 sep – 4 oct 2026 contra 1 – 31 ago 2026. Facebook: últimos 28 días (7 sep – 4 oct) contra los 28 días previos, según Meta. TikTok: 1 – 30 sep contra el periodo anterior, según TikTok. La publicación de contenido por Apex inició el 14 de septiembre, así que septiembre solo tuvo 17 días de gestión.',
-    kpiDefiniciones: [
-      { kpi: 'Visualizaciones', formula: 'Veces que se mostró el contenido (dato de cada red)', actual: 'IG 21,052 · FB 10 mil · TT 7.9K', base: 'IG ago 5,343' },
-      { kpi: 'Cuentas alcanzadas', formula: 'Cuentas únicas que vieron contenido ("Espectadores")', actual: 'IG 3,381 · FB 4,4 mil', base: 'IG ago 1,288' },
-      { kpi: 'Interacciones', formula: 'Me gusta + comentarios + compartidos + guardados, etc. (dato de cada red)', actual: 'IG 465 · FB 531', base: 'IG ago 115' },
-      { kpi: 'Tasa de interacción', formula: 'Interacciones ÷ cuentas alcanzadas × 100', actual: 'IG 13.75% · FB ≈12.1%*', base: 'IG ago 8.93%' },
-      { kpi: 'Frecuencia', formula: 'Visualizaciones ÷ cuentas alcanzadas', actual: 'IG 6.2 · FB ≈2.3*', base: 'IG ago 4.1' },
-      { kpi: 'Alcance fuera de la comunidad', formula: 'Visualizaciones × % de no seguidores', actual: 'IG ≈6,252 (29.7%)', base: 'IG ago ≈2,356 (44.1%)' },
-      { kpi: 'Crecimiento de seguidores', formula: 'Seguidores nuevos y saldo neto del periodo', actual: 'IG +39 nuevos · neto −12 · total 3,200', base: 'IG ago neto −22' },
-      { kpi: 'Intención de visita', formula: 'Visitas al perfil + toques en enlace + toques en dirección', actual: 'IG 326 · 17 · 0 | TT perfil 82', base: 'IG ago 229 · 8 · 0' }
-    ],
-    notaKpi: '* Facebook muestra visualizaciones (10 mil) y espectadores (4,4 mil) redondeados, por eso su tasa y frecuencia son aproximadas.',
-    redes: [
-      {
-        red: 'Instagram',
-        clase: 'ig',
-        periodo: '5 sep – 4 oct 2026 vs 1 – 31 ago 2026',
-        filas: [
-          { m: 'Visualizaciones', a: '21,052', b: '5,343', v: '+294.0%', t: 'up' },
-          { m: 'Cuentas alcanzadas (espectadores)', a: '3,381', b: '1,288', v: '+162.5%', t: 'up' },
-          { m: 'Interacciones', a: '465', b: '115', v: '+304.3%', t: 'up' },
-          { m: 'Tasa de interacción (calc.)', a: '13.75%', b: '8.93%', v: '+4.82 pts', t: 'up' },
-          { m: 'Vistas de seguidores / no seguidores', a: '70.3% / 29.7%', b: '55.9% / 44.1%', v: 'Más peso en seguidores', t: 'flat' },
-          { m: 'Vistas en publicaciones', a: '9 mil', b: '545', v: '≈ +1,551%', t: 'up' },
-          { m: 'Vistas en reels', a: '7,2 mil', b: '2,6 mil', v: '≈ +177%', t: 'up' },
-          { m: 'Vistas en historias', a: '4,8 mil', b: '2,2 mil', v: '≈ +118%', t: 'up' },
-          { m: 'Interacciones en publicaciones', a: '228', b: '3', v: '+225', t: 'up' },
-          { m: 'Interacciones en reels', a: '166', b: '69', v: '+140.6%', t: 'up' },
-          { m: 'Interacciones en historias', a: '71', b: '43', v: '+65.1%', t: 'up' },
-          { m: 'Visitas al perfil', a: '326', b: '229', v: '+42.4%', t: 'up' },
-          { m: 'Toques en el enlace', a: '17', b: '8', v: '+112.5%', t: 'up' },
-          { m: 'Toques en la dirección del negocio', a: '0', b: '0', v: 'Sin cambio', t: 'flat' },
-          { m: 'Seguidores netos', a: '−12', b: '−22', v: '10 bajas menos', t: 'up' },
-          { m: 'Nuevos seguidores', a: '39', b: 'Sin dato', v: '—', t: 'flat' },
-          { m: 'Seguidores totales', a: '3,200', b: 'Sin dato', v: '−0.4% desde el 4 sep', t: 'down' },
-          { m: 'Contenido compartido', a: '41', b: 'Sin dato', v: '—', t: 'flat' }
-        ],
-        topTitulo: 'Contenido con más visualizaciones (5 sep – 4 oct)',
-        top: [
-          { t: 'Una michelada siempre e…', d: '1,7 mil vistas · 21 me gusta · 0 comentarios · 4 reposts · 2 compartidos' },
-          { t: '¡Este viernes nos vemos en…', d: '1,6 mil vistas · 35 me gusta (la más gustada) · 4 reposts · 2 compartidos' },
-          { t: 'Porque un buen plan sie…', d: '1,3 mil vistas · 23 me gusta · 2 comentarios · 3 reposts · 6 compartidos' },
-          { t: '¿Se te antojó una michelad…', d: '1,1 mil vistas · 18 me gusta · 4 reposts' },
-          { t: '¿Tú también eres de los qu…', d: '1,0 mil vistas · 22 me gusta · 1 repost · 3 compartidos' },
-          { t: '¡Lo que tanto nos habían…', d: '927 vistas · 20 me gusta · 1 repost · 4 compartidos' },
-          { t: 'Hoy se antoja una michel…', d: '848 vistas · 20 me gusta · 2 reposts · 5 compartidos' },
-          { t: 'Dicen que son las mejore…', d: '806 vistas · 19 me gusta' }
-        ],
-        notas: [
-          'La gráfica diaria se mantiene casi en cero hasta mediados de septiembre y sube a partir del 13–14 de septiembre: varios días superan 925 visualizaciones y los picos llegan a cerca de 1,8 mil.',
-          'Agosto hizo lo contrario: arrancó cerca de 900 visualizaciones diarias y cayó casi a cero en la segunda quincena.',
-          'Los tres contenidos que más seguidores trajeron (1 cada uno) fueron el molcajete, la michelada y "Dicen que son las mejores…". Cuatro de los ocho contenidos más vistos hablan de micheladas.'
-        ]
-      },
-      {
-        red: 'Facebook',
-        clase: 'fb',
-        periodo: 'Últimos 28 días (7 sep – 4 oct) vs 28 días previos · variaciones calculadas por Meta',
-        filas: [
-          { m: 'Visualizaciones', a: '10 mil', b: '—', v: '+282%', t: 'up' },
-          { m: 'Interacción', a: '531', b: '—', v: '+2 mil%', t: 'up' },
-          { m: 'Público', a: '10', b: '—', v: '+25%', t: 'up' },
-          { m: 'Espectadores', a: '4,4 mil', b: '—', v: 'Sin comparativo', t: 'flat' },
-          { m: 'Reproducciones de 3 segundos', a: '1,5 mil', b: '—', v: 'Sin comparativo', t: 'flat' },
-          { m: 'Reacciones', a: '175', b: '—', v: 'Sin comparativo', t: 'flat' },
-          { m: 'Veces que se compartió', a: '29', b: '—', v: 'Sin comparativo', t: 'flat' },
-          { m: 'Comentarios y respuestas', a: '4', b: '—', v: 'Sin comparativo', t: 'flat' },
-          { m: 'Ingresos', a: '$0', b: '—', v: '—', t: 'flat' }
-        ],
-        topTitulo: 'Contenido destacado y señales de Meta',
-        top: [
-          { t: '¡Este viernes nos vemos en nuestra n…', d: '1,722 visualizaciones (foto)' },
-          { t: 'Seguimos en septiembre y, por su…', d: '1,313 visualizaciones (video)' },
-          { t: 'Mejor formato (últimos 7 días)', d: 'Fotos: +6 mil% frente a otros formatos' },
-          { t: 'Mejor duración (últimos 7 días)', d: 'Videos de 10 a 15 segundos: +6 mil% frente a otras duraciones' },
-          { t: 'Audiencia de la página', d: '63% mujeres · 37% hombres · 25–34 años 39.3% · 35–44 años 27.5% · 45–54 años 14.9% · otros 18.3%' }
-        ],
-        notas: [
-          'Meta indica que las visualizaciones subieron al publicar más reels (rinden 113% más que otros formatos), que la interacción subió con más fotos (197% más) y que la audiencia creció con reels (329% más).',
-          'La gráfica de visualizaciones está casi en cero hasta el 14 de septiembre; después crece, con dos picos cercanos a 1,8 mil y 1,7 mil hacia el final del mes.',
-          'El desglose de interacciones visible (reacciones, compartidos y comentarios) suma 208 de las 531; el resto corresponde a tipos que no aparecen en la captura.'
-        ]
-      },
-      {
-        red: 'TikTok',
-        clase: 'tt',
-        periodo: '1 – 30 sep 2026 vs periodo anterior · variaciones calculadas por TikTok',
-        filas: [
-          { m: 'Visualizaciones de publicaciones', a: '7.9K', b: '≈9.8K (calc.)', v: '−19.2%', t: 'down' },
-          { m: 'Visualizaciones de perfil', a: '82', b: '156 (calc.)', v: '−47.4%', t: 'down' },
-          { m: 'Me gusta', a: '144', b: '109 (calc.)', v: '+32.1%', t: 'up' },
-          { m: 'Comentarios', a: '2', b: '4 (calc.)', v: '−50%', t: 'down' },
-          { m: 'Veces compartido', a: '16', b: '36 (calc.)', v: '−55.6%', t: 'down' },
-          { m: 'Recompensas estimadas', a: '$0.00', b: '—', v: '+$0.00', t: 'flat' },
-          { m: 'Tráfico desde "Para ti"', a: '67.2%', b: '—', v: '—', t: 'flat' },
-          { m: 'Tráfico desde búsqueda', a: '26.6%', b: '—', v: '—', t: 'flat' }
-        ],
-        topTitulo: 'Mejores publicaciones (últimos 7 días)',
-        top: [
-          { t: '¿Tú también eres de los que dicen: "un caldito y se me pasa…', d: '566 visualizaciones · 11 me gusta' },
-          { t: '¡Este viernes nos vemos en nuestra nueva sucursal!', d: '281 visualizaciones · 4 me gusta' },
-          { t: '¿Ya probaste nuestro Molcajete Mar y Tierra?', d: '234 visualizaciones · 3 me gusta' },
-          { t: 'Si vienes a la Presa de la Olla, hay una parada que no puede f…', d: '190 visualizaciones · publicado el 12 ago' }
-        ],
-        notas: [
-          'El periodo anterior se obtuvo restando la diferencia que muestra TikTok (por ejemplo, 7.9K + 1.9K ≈ 9.8K).',
-          'La caída del mes se explica por la primera quincena: en la gráfica diaria, antes de mediados de septiembre ningún día llega a la línea de 293 visualizaciones; después hay varios picos por encima de 586.',
-          'Una de cada cuatro visualizaciones (26.6%) llega desde la búsqueda de TikTok.'
-        ]
-      }
-    ],
-    conclusion: [
-      'Septiembre fue un mes de arranque. Apex empezó a publicar el 14 de septiembre, así que los resultados reflejan 17 días de trabajo dentro del mes, y en Instagram y Facebook el corte llega hasta el 4 de octubre. En las tres gráficas diarias se ve el mismo patrón: actividad casi nula antes del 14 y crecimiento después.',
-      'Instagram es donde el cambio se puede medir mejor contra agosto. Las visualizaciones se multiplicaron casi por cuatro (5,343 → 21,052), las cuentas alcanzadas por 2.6 (1,288 → 3,381) y las interacciones por cuatro (115 → 465). La tasa de interacción pasó de 8.93% a 13.75%, lo que dice que el contenido nuevo no solo se vio más, también provocó más respuesta. Las publicaciones fijas pasaron de 545 a 9 mil vistas y de 3 a 228 interacciones.',
-      'Facebook acompaña la tendencia según Meta: 10 mil visualizaciones (+282%) y 531 interacciones. El anuncio de la nueva sucursal fue lo más visto en Facebook (1,722) y lo más gustado en Instagram (35 me gusta).',
-      'Hay tres puntos a atender. Primero, TikTok bajó en visualizaciones (−19.2%), compartidos (−55.6%) y visitas al perfil (−47.4%), aunque los me gusta subieron 32.1%. Segundo, Instagram sigue con saldo negativo de seguidores (−12, con 39 nuevos), aunque la pérdida fue menor que en agosto (−22). Tercero, nadie tocó la dirección del negocio en Instagram ni en agosto ni en septiembre, y la proporción de visitas al perfil frente a cuentas alcanzadas bajó de 17.8% a 9.6%.',
-      'Septiembre queda como línea base para octubre, el primer mes completo de gestión. Los KPI de esta página se van a comparar contra estas mismas cifras.'
-    ],
-    recomendaciones: [
-      'Mantener la línea de micheladas y platillos estrella: cuatro de los ocho contenidos más vistos en Instagram son de micheladas, y el molcajete está entre lo más visto en Instagram y TikTok.',
-      'En Facebook, seguir la señal de Meta: fotos para interacción y reels de 10 a 15 segundos para alcance.',
-      'En TikTok, escribir textos y descripciones con palabras que la gente busca (platillo, zona, "micheladas"), ya que 26.6% del tráfico viene de la búsqueda.',
-      'Agregar en cada publicación un llamado claro a visitar el perfil, el enlace o la ubicación, para mover las visitas al perfil, los toques en enlace y los toques en dirección.'
-    ]
-  }
+// Proyecto de Firebase del portal. Estos datos son públicos por diseño:
+// la seguridad la dan las reglas de Firestore y los PIN guardados en la nube.
+const FIREBASE_CONFIG = {
+  apiKey: 'AIzaSyDevdQI20Fz7eh7AQqcGf9r8ZqFa3W_8Ig',
+  authDomain: 'apex-creativo-portal.firebaseapp.com',
+  projectId: 'apex-creativo-portal',
+  storageBucket: 'apex-creativo-portal.firebasestorage.app',
+  messagingSenderId: '456778205692',
+  appId: '1:456778205692:web:1784044d39f93a593c8a79'
 };
+const FIREBASE_SDK_VERSION = '12.19.0';
 
-// Base de datos inicial con clientes reales de México y Colombia
+// Datos públicos mínimos: solo la lista de acceso. Todo lo demás (parrilla, guiones,
+// resultados y PIN) se carga desde la nube al ingresar con el PIN.
 const DEFAULT_DATABASE = {
   version: '2.0',
-  updatedAt: new Date().toISOString(),
-  
-  // Lista de Colaboradores Dinámica
-  colaboradores: [
-    { id: 'c_ale', nombre: 'Alejandra', rol: 'Dirección Estratégica & Pauta', color: '#ff4d28' },
-    { id: 'c_pablo', nombre: 'Pablo', rol: 'Dirección Operativa & Modelos', color: '#3b82f6' },
-    { id: 'c_mitzi', nombre: 'Mitzi', rol: 'Levantamiento, Edición y Foto/Video', color: '#8b5cf6' },
-    { id: 'c_alexa', nombre: 'Alexa', rol: 'Grabación de video & Actuación', color: '#ec4899' },
-    { id: 'c_infl', nombre: 'Influencers / Externos', rol: 'Generación de contenido en alianza', color: '#f59e0b' }
-  ],
-
-  // Clientes Reales Actuales con sus PINs exactos
+  colaboradores: [],
   clientes: [
     {
-      slug: 'tasca',
-      nombre: 'La Tasca de la Paz',
-      sector: 'Gastronomía Tradicional & Eventos',
-      pais: 'México',
-      pin: '1010',
-      avatar: '🥘',
-      color: '#f59e0b'
+      "slug": "tasca",
+      "nombre": "La Tasca de la Paz",
+      "sector": "Gastronomía Tradicional & Eventos",
+      "pais": "México",
+      "avatar": "🥘",
+      "color": "#f59e0b"
     },
     {
-      slug: 'palato',
-      nombre: 'Restaurante Palato',
-      sector: 'Gastronomía de Autor',
-      pais: 'México',
-      pin: '0030',
-      avatar: '🍽️',
-      color: '#ff4d28'
+      "slug": "palato",
+      "nombre": "Restaurante Palato",
+      "sector": "Gastronomía de Autor",
+      "pais": "México",
+      "avatar": "🍽️",
+      "color": "#ff4d28"
     },
     {
-      slug: 'elfaro',
-      nombre: 'Restaurante & Micheladas El Faro',
-      sector: 'Bares & Vida Nocturna',
-      pais: 'México',
-      pin: '0020',
-      avatar: '🍻',
-      color: '#3b82f6'
+      "slug": "elfaro",
+      "nombre": "Restaurante & Micheladas El Faro",
+      "sector": "Bares & Vida Nocturna",
+      "pais": "México",
+      "avatar": "🍻",
+      "color": "#3b82f6"
     },
     {
-      slug: 'canirac',
-      nombre: 'CANIRAC',
-      sector: 'Cámara Restaurantera Institucional',
-      pais: 'México',
-      pin: '1001',
-      avatar: '🏛️',
-      color: '#10b981'
+      "slug": "canirac",
+      "nombre": "CANIRAC",
+      "sector": "Cámara Restaurantera Institucional",
+      "pais": "México",
+      "avatar": "🏛️",
+      "color": "#10b981"
     },
     {
-      slug: 'galerenas',
-      nombre: 'Club Satélite Galereñas',
-      sector: 'Impacto Social & Comunidad',
-      pais: 'México',
-      pin: '2000',
-      avatar: '🤝',
-      color: '#8b5cf6'
+      "slug": "galerenas",
+      "nombre": "Club Satélite Galereñas",
+      "sector": "Impacto Social & Comunidad",
+      "pais": "México",
+      "avatar": "🤝",
+      "color": "#8b5cf6"
     },
     {
-      slug: 'blucare',
-      nombre: 'Blucare',
-      sector: 'Salud, Belleza & Cuidado Personal',
-      pais: 'Colombia',
-      pin: '0001',
-      avatar: '✨',
-      color: '#ec4899'
+      "slug": "blucare",
+      "nombre": "Blucare",
+      "sector": "Salud, Belleza & Cuidado Personal",
+      "pais": "Colombia",
+      "avatar": "✨",
+      "color": "#ec4899"
     },
     {
-      slug: 'hidrogeo',
-      nombre: 'HidroGeo',
-      sector: 'Modelos Matemáticos & Gestión del Agua',
-      pais: 'México',
-      pin: '0002',
-      avatar: '💧',
-      color: '#06b6d4'
+      "slug": "hidrogeo",
+      "nombre": "HidroGeo",
+      "sector": "Modelos Matemáticos & Gestión del Agua",
+      "pais": "México",
+      "avatar": "💧",
+      "color": "#06b6d4"
     }
   ],
-
-  // Producciones / Contenido por Cliente
-  producciones: [
-    // Club Satélite Galereñas (Datos reales importados del proyecto)
-    {
-      id: 'p_gal_01',
-      clienteSlug: 'galerenas',
-      fecha: '2026-09-23',
-      formato: 'Reel',
-      titulo: 'Episodio 1: ¿Qué estamos haciendo?',
-      estado: 'Pendiente',
-      actuacion: 'Alexa',
-      duracion: '50 seg',
-      link: '',
-      aprobadoCliente: false,
-      comentarioCliente: '',
-      guion: [
-        { ve: '', dice: 'Para muchos de nosotros, tener agua es tan sencillo como abrir una llave.', como: '', texto: '', seg: '6' },
-        { ve: 'Mostrar condiciones de la comunidad y recorrido', dice: 'Pero para esta comunidad, conseguir agua significa tiempo, esfuerzo y recorrer grandes distancias.', como: '', texto: '', seg: '8' },
-        { ve: 'Integrantes del Club visitando la comunidad', dice: 'Cuando conocimos su realidad, entendimos que no se trataba solamente de llevar agua. Se trataba de cambiar su día a día.', como: '', texto: '', seg: '9' },
-        { ve: 'Tomas de terreno y caminos', dice: 'Así nació este proyecto. Tenemos un reto enorme por delante.', como: '', texto: '', seg: '7' },
-        { ve: '', dice: 'Acompáñanos a descubrir cómo vamos a lograrlo.', como: '', texto: 'El camino del agua', seg: '5' }
-      ],
-      requerimientos: 'Fotografías y videos de las visitas a la comunidad',
-      notas: 'Prioridad alta de producción'
-    },
-    {
-      id: 'p_gal_02',
-      clienteSlug: 'galerenas',
-      fecha: '2026-09-28',
-      formato: 'Reel',
-      titulo: 'Episodio 2: ¿Cómo elegimos el proyecto?',
-      estado: 'Grabado',
-      actuacion: 'Alexa',
-      duracion: '30 seg',
-      link: '',
-      aprobadoCliente: true,
-      comentarioCliente: '¡Aprobado! Nos encantó el enfoque humano.',
-      guion: [
-        { ve: 'Recorrido por la zona', dice: 'No elegimos este proyecto al azar.', como: 'Seguro', texto: 'HASTA QUE LLEGUE EL AGUA', seg: '5' },
-        { ve: 'Entrevistas cortas', dice: 'Visitamos la comunidad y escuchamos sus necesidades.', como: 'Cálido', texto: '', seg: '8' },
-        { ve: 'Plano del lugar', dice: 'Llevar agua potable abre nuevas posibilidades para muchas familias.', como: 'Inspirador', texto: '', seg: '10' }
-      ],
-      requerimientos: 'Plano del lugar y tomas de apoyo',
-      notas: ''
-    },
-    // Restaurante Palato
-    {
-      id: 'p_pal_01',
-      clienteSlug: 'palato',
-      fecha: '2026-09-24',
-      formato: 'Reel',
-      titulo: 'El Secreto de Nuestro Risotto de Hongos',
-      estado: 'Grabado',
-      actuacion: 'Chef Palato',
-      duracion: '35 seg',
-      link: '',
-      aprobadoCliente: true,
-      comentarioCliente: 'Aprobado para pauta el viernes.',
-      guion: [
-        { ve: 'Primer plano del fuego y sartén flameando', dice: 'El secreto de un gran risotto no está en la prisa, está en la paciencia.', como: 'Voz en off envolvente', texto: 'ALTA GASTRONOMÍA', seg: '6' },
-        { ve: 'Mantequilla y caldo reduciendo', dice: 'Hongos silvestres de temporada, vino blanco y 22 minutos de mimo constante.', como: 'Sensorial', texto: 'Palato · México', seg: '12' },
-        { ve: 'Platillo servido en mesa con copa de vino', dice: 'Ven a probar la experiencia esta noche.', como: 'Invitación cálida', texto: 'Reserva por WhatsApp', seg: '7' }
-      ],
-      requerimientos: 'Luz cálida de cocina y tomas en cámara lenta',
-      notas: 'Pautar jueves a sábado en México'
-    },
-    // Blucare (Colombia)
-    {
-      id: 'p_blu_01',
-      clienteSlug: 'blucare',
-      fecha: '2026-09-25',
-      formato: 'Carrusel',
-      titulo: '5 Mitos del Protector Solar que Dañan tu Piel',
-      estado: 'Pendiente',
-      actuacion: 'Mitzi (Diseño)',
-      duracion: '5 slides',
-      link: '',
-      aprobadoCliente: false,
-      comentarioCliente: '',
-      guion: [
-        { ve: 'Slide 1: Portada impactante con tipografía bold', dice: 'Mito 1: En días nublados no necesitas bloqueador. FALSO: El 80% de la radiación UV atraviesa las nubes.', como: '', texto: '5 MITOS DEL CUIDADO SOLAR', seg: '' },
-        { ve: 'Slide 2: Gráfico de aplicación de 2 dedos', dice: 'Mito 2: Con una sola aplicación en la mañana es suficiente. FALSO: Debe reaplicarse cada 3 a 4 horas.', como: '', texto: 'REAPLICACIÓN CONSTANTE', seg: '' },
-        { ve: 'Slide 3: Foto producto Blucare con textura fluida', dice: 'Descubre nuestra fórmula con ácido hialurónico y acabado mate.', como: '', texto: 'Envíos a toda Colombia', seg: '' }
-      ],
-      requerimientos: 'Paleta rosa pastel y renders oficiales de producto',
-      notas: 'Copy enfocado en compra en línea para Colombia'
-    },
-    // HidroGeo Consultoría
-    {
-      id: 'p_hid_01',
-      clienteSlug: 'hidrogeo',
-      fecha: '2026-09-27',
-      formato: 'Post',
-      titulo: '¿Cómo modelamos el comportamiento de un acuífero subterráneo?',
-      estado: 'Pendiente',
-      actuacion: 'Alejandra',
-      duracion: '1 post',
-      link: '',
-      aprobadoCliente: false,
-      comentarioCliente: '',
-      guion: [
-        { ve: 'Infografía técnica con mapa piezométrico y datos de simulación', dice: 'La gestión eficiente del agua no se basa en conjeturas: se basa en modelos matemáticos calibrados con geofísica real.', como: 'Corporativo / Científico', texto: 'Modelación Hidrogeológica 3D', seg: '' }
-      ],
-      requerimientos: 'Exportar gráfico de simulador hidrológico',
-      notas: 'Audiencia: Organismos operadores de agua y directores industriales'
-    }
-  ],
-
-  // Resultados Mensuales por Cliente
-  resultados: {
-    'elfaro': { '2026-09': JSON.parse(JSON.stringify(REPORTE_ELFARO_2026_09)) },
-    'palato': {
-      '2026-09': {
-        resumen: 'Mes histórico en reservaciones digitales. Los dos Reels gastronómicos superaron los 48,000 views orgánicos en México.',
-        kpis: [
-          { nombre: 'Alcance Total', valor: '64,200', comparativo: '+28% vs agosto', positivo: true },
-          { nombre: 'Interacciones', valor: '5,840', comparativo: '+42% vs agosto', positivo: true },
-          { nombre: 'Nuevos Seguidores', valor: '+890', comparativo: '+15%', positivo: true },
-          { nombre: 'Clics a Menú / WhatsApp', valor: '1,240', comparativo: '+35%', positivo: true }
-        ],
-        imagenes: []
-      }
-    },
-    'galerenas': {
-      '2026-09': {
-        resumen: 'Campaña de difusión del proyecto del agua con excelente tracción en socias y donantes.',
-        kpis: [
-          { nombre: 'Alcance en México', valor: '18,500', comparativo: '+14%', positivo: true },
-          { nombre: 'Compartidos de Video', valor: '410', comparativo: '+85%', positivo: true },
-          { nombre: 'Donaciones / Contactos Bazar', valor: '38', comparativo: '+20%', positivo: true }
-        ],
-        imagenes: []
-      }
-    }
-  }
+  producciones: [],
+  resultados: {}
 };
 
 // ==========================================================================
@@ -435,105 +126,84 @@ const state = {
 };
 
 // ==========================================================================
-// INICIALIZACIÓN & PERSISTENCIA LOCAL
+// INICIALIZACIÓN & GUARDADO (en la nube)
 // ==========================================================================
-// Huella de los datos publicados en este archivo (lo que está en GitHub).
-// Si los datos de app.js cambian, la huella cambia y todos los navegadores
-// descartan su copia guardada y cargan la versión publicada.
-function getPublishedDataVersion() {
-  const copy = Object.assign({}, DEFAULT_DATABASE);
-  delete copy.updatedAt;
-  delete copy.dataVersion;
-  const str = JSON.stringify(copy);
-  let h = 2166136261;
-  for (let i = 0; i < str.length; i++) {
-    h ^= str.charCodeAt(i);
-    h = Math.imul(h, 16777619);
-  }
-  return (h >>> 0).toString(36) + '-' + str.length.toString(36);
-}
-
 function loadDatabase() {
-  const publishedVersion = getPublishedDataVersion();
-  let previousRaw = null;
-  try {
-    const raw = localStorage.getItem(STORAGE_KEY);
-    if (raw) {
-      const parsed = JSON.parse(raw);
-      // La copia guardada solo se usa si corresponde a la misma versión publicada
-      if (parsed && Array.isArray(parsed.clientes) && parsed.dataVersion === publishedVersion) {
-        parsed.clientes.forEach(c => { if (CLIENT_PINS[c.slug]) c.pin = CLIENT_PINS[c.slug]; });
-        return parsed;
-      }
-      previousRaw = raw;
-    }
-  } catch (err) {
-    console.warn('Error leyendo base de datos local:', err);
-  }
-  const fresh = JSON.parse(JSON.stringify(DEFAULT_DATABASE));
-  fresh.dataVersion = publishedVersion;
-  saveDatabase(fresh);
-  // Copia de seguridad de lo que este navegador tenía antes de tomar la versión publicada
-  if (previousRaw) {
-    try { localStorage.setItem(STORAGE_KEY + '_anterior', previousRaw); } catch (e) { console.warn('No se pudo guardar la copia anterior:', e); }
-  }
-  return fresh;
+  return JSON.parse(JSON.stringify(DEFAULT_DATABASE));
 }
 
-function saveDatabase(customData) {
-  try {
-    const dataToSave = customData || db;
-    dataToSave.updatedAt = new Date().toISOString();
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(dataToSave));
-    return true;
-  } catch (err) {
-    console.error('Error guardando en localStorage:', err);
-    return false;
-  }
+// Cada cambio se guarda en la nube (con una pequeña espera para agrupar lo que se escribe)
+function saveDatabase() {
+  db.updatedAt = new Date().toISOString();
+  nubeProgramarGuardado();
+  return true;
 }
 
 // ==========================================================================
 // MÉTODOS DE AUTENTICACIÓN
 // ==========================================================================
-function verifyClientPin(slug, pin) {
-  const client = db.clientes.find(c => c.slug === slug);
-  if (!client) return false;
-  return client.pin === pin.trim();
+async function loginAsClient(slug, pin) {
+  const pinLimpio = String(pin || '').trim();
+  if (!slug || !pinLimpio) return { success: false, message: 'Selecciona tu marca e ingresa tu PIN.' };
+  try {
+    await nubeAbrirSesion({ rol: 'cliente', slug, pin: pinLimpio });
+    await nubeCargarDatosConReintento();
+  } catch (err) {
+    console.warn('Acceso de cliente rechazado:', err);
+    nube.sesion = null;
+    return { success: false, message: nubeMensajeError(err, 'PIN incorrecto para este cliente.') };
+  }
+  state.currentRole = 'client';
+  state.currentTeamMember = null;
+  state.activeClientSlug = slug;
+  state.activeTab = 'parrilla';
+  openPortalWorkspace();
+  return { success: true };
 }
 
-function verifyTeamPin(memberId, pin) {
+async function loginAsTeam(memberId, pin) {
+  const pinLimpio = String(pin || '').trim();
   const member = TEAM_MEMBERS.find(m => m.id === memberId);
-  if (!member) return false;
-  return member.pin === pin.trim();
-}
-
-function loginAsClient(slug, pin) {
-  if (verifyClientPin(slug, pin)) {
-    state.currentRole = 'client';
-    state.activeClientSlug = slug;
-    state.activeTab = 'parrilla';
-    openPortalWorkspace();
-    return { success: true };
+  if (!member || !pinLimpio) return { success: false, message: 'Selecciona tu nombre e ingresa tu PIN.' };
+  try {
+    await nubeAbrirSesion({ rol: 'equipo', miembro: memberId, pin: pinLimpio });
+    await nubeCargarDatosConReintento();
+  } catch (err) {
+    console.warn('Acceso de equipo rechazado:', err);
+    nube.sesion = null;
+    return { success: false, message: nubeMensajeError(err, 'PIN incorrecto para el colaborador seleccionado.') };
   }
-  return { success: false, message: 'PIN incorrecto para este cliente.' };
-}
-
-function loginAsTeam(memberId, pin) {
-  if (verifyTeamPin(memberId, pin)) {
-    const member = TEAM_MEMBERS.find(m => m.id === memberId);
-    state.currentRole = 'team';
-    state.currentTeamMember = member;
-    state.activeTab = 'parrilla';
-    openPortalWorkspace();
-    return { success: true };
+  state.currentRole = 'team';
+  state.currentTeamMember = member;
+  if (!db.clientes.some(c => c.slug === state.activeClientSlug)) {
+    state.activeClientSlug = db.clientes[0] ? db.clientes[0].slug : '';
   }
-  return { success: false, message: 'PIN incorrecto para el colaborador seleccionado.' };
+  state.activeTab = 'parrilla';
+  openPortalWorkspace();
+  return { success: true };
 }
 
-function logout() {
+async function logout() {
+  try {
+    if (nube.sesion) await nubeGuardarYa();
+  } catch (err) {
+    console.warn('No se pudieron guardar los últimos cambios:', err);
+  }
+  try {
+    const user = nube.auth && nube.auth.currentUser;
+    if (user && nube.fs) await nube.fs.collection('sesiones').doc(user.uid).delete();
+  } catch (err) {
+    console.warn('No se pudo cerrar la sesión en la nube:', err);
+  }
+  nube.sesion = null;
+  nube.ultimo = {};
+  nube.pinesEquipo = {};
   state.currentRole = null;
+  state.currentTeamMember = null;
+  db = loadDatabase();
   state.activeClientSlug = db.clientes[0] ? db.clientes[0].slug : 'palato';
   closePortalWorkspace();
+  nubeCargarConfigPublica();
 }
 
 // ==========================================================================
@@ -554,6 +224,7 @@ function openPortalModal() {
       document.getElementById('portalAuthScreen').hidden = false;
       document.getElementById('portalWorkspaceBody').hidden = true;
       renderAuthSelectOptions();
+      nubeCargarConfigPublica();
     }
   }
 }
@@ -1646,7 +1317,6 @@ function restoreBackupJson(input) {
       const parsed = JSON.parse(e.target.result);
       if (parsed && Array.isArray(parsed.clientes)) {
         db = parsed;
-        db.dataVersion = getPublishedDataVersion();
         saveDatabase();
         alert('Respaldo cargado correctamente.');
         renderPortalWorkspace();
@@ -1659,6 +1329,437 @@ function restoreBackupJson(input) {
   };
   reader.readAsText(file);
   input.value = '';
+}
+
+// ==========================================================================
+// NUBE · FIREBASE
+// Todo lo que se edita en el portal se guarda aquí y se ve en cualquier
+// navegador o dispositivo. Los PIN se verifican en la nube (reglas de Firestore),
+// así que no están escritos en este archivo.
+// ==========================================================================
+const nube = {
+  app: null,
+  auth: null,
+  fs: null,
+  sesion: null,        // { rol: 'equipo', miembro } | { rol: 'cliente', slug }
+  ultimo: {},          // ruta → documento tal como quedó en la nube (para guardar solo lo que cambia)
+  pinesEquipo: {},     // PIN del equipo (solo se cargan en una sesión de equipo)
+  timer: null,
+  guardando: false,
+  pendiente: false,
+  promesa: null,
+  ultimaCarga: 0
+};
+let nubeSdkPromesa = null;
+
+// Carga el SDK de Firebase solo cuando se necesita (la página pública no lo descarga)
+function nubeCargarSDK() {
+  if (typeof firebase !== 'undefined' && firebase.auth && firebase.firestore) return Promise.resolve(true);
+  if (nubeSdkPromesa) return nubeSdkPromesa;
+  const base = `https://www.gstatic.com/firebasejs/${FIREBASE_SDK_VERSION}/`;
+  const cargar = archivo => new Promise((resolve, reject) => {
+    const s = document.createElement('script');
+    s.src = base + archivo;
+    s.async = false;
+    s.onload = () => resolve();
+    s.onerror = () => reject(new Error('No se pudo cargar ' + archivo));
+    document.head.appendChild(s);
+  });
+  nubeSdkPromesa = cargar('firebase-app-compat.js')
+    .then(() => Promise.all([cargar('firebase-auth-compat.js'), cargar('firebase-firestore-compat.js')]))
+    .then(() => true)
+    .catch(err => {
+      console.error('Firebase no disponible:', err);
+      nubeSdkPromesa = null;
+      return false;
+    });
+  return nubeSdkPromesa;
+}
+
+async function nubePreparar() {
+  if (nube.app) return true;
+  const ok = await nubeCargarSDK();
+  if (!ok || typeof firebase === 'undefined') return false;
+  try {
+    try {
+      nube.app = firebase.app();
+    } catch (e) {
+      nube.app = null;
+    }
+    if (!nube.app) nube.app = firebase.initializeApp(FIREBASE_CONFIG);
+    nube.auth = firebase.auth();
+    nube.fs = firebase.firestore();
+    return true;
+  } catch (err) {
+    console.error('No se pudo iniciar Firebase:', err);
+    nube.app = null;
+    return false;
+  }
+}
+
+function nubeEsperarUsuario() {
+  return new Promise(resolve => {
+    const quitar = nube.auth.onAuthStateChanged(user => {
+      if (typeof quitar === 'function') quitar();
+      resolve(user);
+    });
+  });
+}
+
+async function nubeUsuario() {
+  let user = nube.auth.currentUser || await nubeEsperarUsuario();
+  if (!user) user = (await nube.auth.signInAnonymously()).user;
+  return user;
+}
+
+function nubeLimpio(v) {
+  return JSON.parse(JSON.stringify(v === undefined ? null : v));
+}
+
+function nubeEstable(v) {
+  if (Array.isArray(v)) return '[' + v.map(nubeEstable).join(',') + ']';
+  if (v && typeof v === 'object') {
+    return '{' + Object.keys(v).sort().map(k => JSON.stringify(k) + ':' + nubeEstable(v[k])).join(',') + '}';
+  }
+  return JSON.stringify(v === undefined ? null : v);
+}
+
+function nubeHuella(texto) {
+  let h = 2166136261;
+  for (let i = 0; i < texto.length; i++) {
+    h ^= texto.charCodeAt(i);
+    h = Math.imul(h, 16777619);
+  }
+  return (h >>> 0).toString(36) + texto.length.toString(36);
+}
+
+function nubeMensajeError(err, mensajePin) {
+  const code = err && err.code ? String(err.code) : '';
+  if (code.indexOf('permission-denied') !== -1) return mensajePin;
+  if (code === 'sin-nube') return 'No se pudo cargar la conexión con la nube. Revisa tu internet y recarga la página.';
+  return 'No se pudo conectar con la nube. Revisa tu internet e intenta de nuevo.';
+}
+
+// Lista pública de clientes y colaboradores (para la pantalla de acceso)
+function nubeAplicarConfig(cfg) {
+  if (!cfg || !Array.isArray(cfg.clientes) || !cfg.clientes.length) return;
+  db.version = cfg.version || db.version;
+  db.clientes = cfg.clientes.map(c => Object.assign({}, c));
+  db.colaboradores = Array.isArray(cfg.colaboradores) ? cfg.colaboradores : [];
+}
+
+async function nubeCargarConfigPublica() {
+  if (!(await nubePreparar())) return;
+  try {
+    const snap = await nube.fs.collection('portal').doc('config').get();
+    if (snap.exists && !nube.sesion && !state.currentRole) {
+      const select = document.getElementById('authClientSelect');
+      const elegido = select ? select.value : '';
+      nubeAplicarConfig(snap.data());
+      renderAuthSelectOptions();
+      if (select && elegido && db.clientes.some(c => c.slug === elegido)) select.value = elegido;
+    }
+  } catch (err) {
+    console.warn('No se pudo leer la lista de clientes de la nube:', err);
+  }
+}
+
+async function nubeAbrirSesion(datos) {
+  if (!(await nubePreparar())) {
+    const e = new Error('Firebase no disponible');
+    e.code = 'sin-nube';
+    throw e;
+  }
+  const user = await nubeUsuario();
+  const doc = { rol: datos.rol, pin: String(datos.pin || '').trim(), creado: new Date().toISOString() };
+  if (datos.rol === 'cliente') doc.slug = datos.slug;
+  else doc.miembro = datos.miembro;
+  await nube.fs.collection('sesiones').doc(user.uid).set(doc);
+  nube.sesion = datos.rol === 'cliente'
+    ? { rol: 'cliente', slug: datos.slug }
+    : { rol: 'equipo', miembro: datos.miembro };
+}
+
+// Trae de la nube todo lo que la sesión puede ver y lo deja en `db`
+async function nubeCargarDatos() {
+  const s = nube.sesion;
+  if (!s) return;
+  const equipo = s.rol === 'equipo';
+  const col = nombre => nube.fs.collection(nombre);
+  const [cfg, prod, res, img, pines] = await Promise.all([
+    col('portal').doc('config').get(),
+    (equipo ? col('producciones') : col('producciones').where('clienteSlug', '==', s.slug)).get(),
+    (equipo ? col('resultados') : col('resultados').where('slug', '==', s.slug)).get(),
+    (equipo ? col('imagenes') : col('imagenes').where('slug', '==', s.slug)).get(),
+    equipo ? col('privado').doc('pines').get() : Promise.resolve(null)
+  ]);
+
+  const nuevo = loadDatabase();
+  if (cfg.exists) {
+    const c = cfg.data();
+    if (Array.isArray(c.clientes) && c.clientes.length) nuevo.clientes = c.clientes.map(x => Object.assign({}, x));
+    nuevo.colaboradores = Array.isArray(c.colaboradores) ? c.colaboradores : [];
+    nuevo.version = c.version || nuevo.version;
+  }
+
+  const imagenes = {};
+  img.forEach(d => { imagenes[d.id] = (d.data() || {}).data; });
+
+  nuevo.producciones = [];
+  prod.forEach(d => { nuevo.producciones.push(Object.assign({}, d.data(), { id: d.id })); });
+  nuevo.producciones.sort((a, b) =>
+    String(a.fecha || '').localeCompare(String(b.fecha || '')) || String(a.id).localeCompare(String(b.id)));
+
+  nuevo.resultados = {};
+  res.forEach(d => {
+    const r = Object.assign({}, d.data());
+    const slug = r.slug;
+    const mes = r.mes;
+    if (!slug || !mes) return;
+    delete r.slug;
+    delete r.mes;
+    r.imagenes = (Array.isArray(r.imagenes) ? r.imagenes : [])
+      .map(src => (typeof src === 'string' && src.indexOf('nube-img:') === 0) ? (imagenes[src.slice(9)] || null) : src)
+      .filter(Boolean);
+    if (!nuevo.resultados[slug]) nuevo.resultados[slug] = {};
+    nuevo.resultados[slug][mes] = r;
+  });
+
+  nube.pinesEquipo = {};
+  if (pines && pines.exists) {
+    const p = pines.data() || {};
+    nube.pinesEquipo = Object.assign({}, p.equipo || {});
+    const pc = p.clientes || {};
+    nuevo.clientes = nuevo.clientes.map(c => Object.assign({}, c, pc[c.slug] ? { pin: String(pc[c.slug]) } : {}));
+  }
+
+  db = nuevo;
+  // Lo recién cargado es la referencia: después solo se guarda lo que cambie
+  nube.ultimo = {};
+  const docs = nubeConstruirDocs(db);
+  Object.keys(docs).forEach(ruta => { nube.ultimo[ruta] = nubeLimpio(docs[ruta]); });
+  nube.ultimaCarga = Date.now();
+}
+
+// Un rechazo justo después de abrir la sesión puede ser momentáneo: se reintenta una vez
+async function nubeCargarDatosConReintento() {
+  try {
+    await nubeCargarDatos();
+  } catch (err) {
+    if (String((err && err.code) || '').indexOf('permission-denied') === -1) throw err;
+    await new Promise(r => setTimeout(r, 900));
+    await nubeCargarDatos();
+  }
+}
+
+// Convierte `db` en los documentos que la sesión actual puede escribir
+function nubeConstruirDocs(d) {
+  const s = nube.sesion;
+  const docs = {};
+  if (!s) return docs;
+  const equipo = s.rol === 'equipo';
+
+  if (equipo) {
+    if (Array.isArray(d.clientes) && d.clientes.length) {
+      docs['portal/config'] = {
+        version: d.version || '2.0',
+        clientes: d.clientes.map(c => { const copia = Object.assign({}, c); delete copia.pin; return copia; }),
+        colaboradores: d.colaboradores || []
+      };
+    }
+    // Los PIN del equipo nunca se escriben vacíos (evita dejar al equipo sin acceso)
+    if (Object.keys(nube.pinesEquipo || {}).length) {
+      const pinesClientes = {};
+      (d.clientes || []).forEach(c => { if (c.pin) pinesClientes[c.slug] = String(c.pin).trim(); });
+      docs['privado/pines'] = { clientes: pinesClientes, equipo: Object.assign({}, nube.pinesEquipo) };
+    }
+  }
+
+  (d.producciones || []).forEach(p => {
+    if (p && p.id && (equipo || p.clienteSlug === s.slug)) docs['producciones/' + p.id] = p;
+  });
+
+  if (equipo) {
+    Object.keys(d.resultados || {}).forEach(slug => {
+      const meses = d.resultados[slug] || {};
+      Object.keys(meses).forEach(mes => {
+        const r = nubeLimpio(meses[mes] || {});
+        r.imagenes = (Array.isArray(r.imagenes) ? r.imagenes : []).map(src => {
+          if (typeof src === 'string' && src.indexOf('data:') === 0) {
+            const id = 'img_' + nubeHuella(src);
+            docs['imagenes/' + id] = { slug, mes, data: src };
+            return 'nube-img:' + id;
+          }
+          return src;
+        });
+        r.slug = slug;
+        r.mes = mes;
+        docs['resultados/' + slug + '__' + mes] = r;
+      });
+    });
+  }
+  return docs;
+}
+
+function nubeProgramarGuardado() {
+  if (!nube.sesion) return;
+  clearTimeout(nube.timer);
+  nube.timer = setTimeout(() => {
+    nube.timer = null;
+    nubeSincronizar();
+  }, 900);
+}
+
+async function nubeGuardarYa() {
+  if (nube.timer) {
+    clearTimeout(nube.timer);
+    nube.timer = null;
+  }
+  await nubeSincronizar();
+}
+
+async function nubeSincronizar() {
+  if (!nube.sesion || !nube.fs) return;
+  if (nube.guardando) {
+    nube.pendiente = true;
+    return nube.promesa;
+  }
+  nube.guardando = true;
+  nube.pendiente = false;
+  const trabajo = (async () => {
+    const actuales = nubeConstruirDocs(db);
+    const ops = [];
+    Object.keys(actuales).forEach(ruta => {
+      const nuevo = nubeLimpio(actuales[ruta]);
+      const previo = nube.ultimo[ruta];
+      if (!previo) {
+        ops.push({ ruta, tipo: 'crear', doc: nuevo });
+        return;
+      }
+      const claves = new Set(Object.keys(previo).concat(Object.keys(nuevo)));
+      const cambiadas = Array.from(claves).filter(k => nubeEstable(previo[k]) !== nubeEstable(nuevo[k]));
+      if (cambiadas.length) ops.push({ ruta, tipo: 'actualizar', doc: nuevo, campos: cambiadas });
+    });
+    if (nube.sesion.rol === 'equipo') {
+      Object.keys(nube.ultimo).forEach(ruta => {
+        if (!(ruta in actuales) && /^(producciones|resultados|imagenes)\//.test(ruta)) ops.push({ ruta, tipo: 'borrar' });
+      });
+    }
+    if (!ops.length) return;
+
+    nubeEstado('guardando');
+    const resultados = await Promise.allSettled(ops.map(op => {
+      const ref = nube.fs.doc(op.ruta);
+      if (op.tipo === 'borrar') return ref.delete();
+      if (op.tipo === 'crear') return ref.set(op.doc);
+      const datos = {};
+      op.campos.forEach(k => { datos[k] = (k in op.doc) ? op.doc[k] : firebase.firestore.FieldValue.delete(); });
+      return ref.set(datos, { mergeFields: op.campos });
+    }));
+    let fallos = 0;
+    resultados.forEach((r, i) => {
+      const op = ops[i];
+      if (r.status === 'fulfilled') {
+        if (op.tipo === 'borrar') delete nube.ultimo[op.ruta];
+        else nube.ultimo[op.ruta] = op.doc;
+      } else {
+        fallos++;
+        console.error('No se pudo guardar en la nube:', op.ruta, r.reason);
+      }
+    });
+    nubeEstado(fallos ? 'error' : 'guardado');
+  })();
+  nube.promesa = trabajo;
+  try {
+    await trabajo;
+  } finally {
+    nube.guardando = false;
+    if (nube.pendiente) {
+      nube.pendiente = false;
+      await nubeSincronizar();
+    }
+  }
+}
+
+// Al volver a la pestaña o cambiar de sección se traen los cambios de los demás
+async function nubeRefrescar(forzar) {
+  if (!nube.sesion || nube.guardando || nube.timer) return;
+  if (!forzar && Date.now() - nube.ultimaCarga < 15000) return;
+  try {
+    await nubeCargarDatosConReintento();
+  } catch (err) {
+    console.warn('No se pudo actualizar desde la nube:', err);
+    if (err && String(err.code || '').indexOf('permission-denied') !== -1) nubeSesionVencida();
+    return;
+  }
+  const activo = document.activeElement;
+  const escribiendo = activo && /^(INPUT|TEXTAREA|SELECT)$/.test(activo.tagName);
+  if (!escribiendo && state.currentRole) renderPortalWorkspace();
+}
+
+function nubeSesionVencida() {
+  nube.sesion = null;
+  nube.ultimo = {};
+  nube.pinesEquipo = {};
+  state.currentRole = null;
+  state.currentTeamMember = null;
+  db = loadDatabase();
+  closePortalWorkspace();
+  const msg = document.getElementById('authErrorMsg');
+  if (msg) {
+    msg.textContent = 'Tu sesión terminó. Vuelve a ingresar con tu PIN.';
+    msg.hidden = false;
+  }
+  nubeCargarConfigPublica();
+}
+
+function nubeEstado(estado) {
+  let el = document.getElementById('nubeEstado');
+  if (!el) {
+    el = document.createElement('div');
+    el.id = 'nubeEstado';
+    el.setAttribute('role', 'status');
+    el.setAttribute('aria-live', 'polite');
+    el.style.cssText = 'position:fixed;right:16px;bottom:16px;z-index:100000;padding:8px 14px;border-radius:999px;' +
+      'font-size:12.5px;font-weight:600;box-shadow:0 6px 20px rgba(0,0,0,.35);transition:opacity .3s;pointer-events:none;opacity:0;';
+    document.body.appendChild(el);
+  }
+  clearTimeout(el._t);
+  const estilos = {
+    guardando: ['Guardando en la nube…', '#441a46', '#f2e7f3'],
+    guardado: ['Guardado en la nube ✓', '#065f46', '#d1fae5'],
+    error: ['No se pudo guardar. Revisa tu conexión.', '#7f1d1d', '#fee2e2']
+  }[estado];
+  if (!estilos) {
+    el.style.opacity = '0';
+    return;
+  }
+  el.textContent = estilos[0];
+  el.style.background = estilos[1];
+  el.style.color = estilos[2];
+  el.style.opacity = '1';
+  if (estado === 'guardado') el._t = setTimeout(() => { el.style.opacity = '0'; }, 2200);
+}
+
+function nubeArranque() {
+  // En app.html (portal directo) se conecta de inmediato; en index.html, al abrir el portal
+  if (!document.getElementById('portalOverlay')) nubeCargarConfigPublica();
+  document.addEventListener('visibilitychange', () => {
+    if (document.visibilityState === 'hidden') {
+      if (nube.timer) nubeGuardarYa();
+    } else {
+      nubeRefrescar(false);
+    }
+  });
+  window.addEventListener('focus', () => nubeRefrescar(false));
+  window.addEventListener('pagehide', () => { if (nube.timer) nubeGuardarYa(); });
+  window.addEventListener('beforeunload', e => {
+    if (nube.timer || nube.guardando) {
+      nubeGuardarYa();
+      e.preventDefault();
+      e.returnValue = '';
+    }
+  });
 }
 
 // ==========================================================================
@@ -1691,6 +1792,7 @@ function renderAuthSelectOptions() {
 // Inicialización de Eventos DOM al cargar la página
 document.addEventListener('DOMContentLoaded', () => {
   renderAuthSelectOptions();
+  nubeArranque();
 
   // Cambio de pestañas en autenticación
   const tabClientBtn = document.getElementById('authTabClient');
@@ -1728,28 +1830,35 @@ document.addEventListener('DOMContentLoaded', () => {
 
   // Submit de autenticación
   if (authSubmitBtn && authPinInput) {
-    authSubmitBtn.addEventListener('click', () => {
+    authSubmitBtn.addEventListener('click', async () => {
       const pin = authPinInput.value;
       if (!pin) {
         showAuthError('Por favor ingresa un código PIN.');
         return;
       }
-
-      if (state.authMode === 'client') {
-        const select = document.getElementById('authClientSelect');
-        const slug = select ? select.value : db.clientes[0].slug;
-        const res = loginAsClient(slug, pin);
+      if (authSubmitBtn.disabled) return;
+      const textoBoton = authSubmitBtn.textContent;
+      authSubmitBtn.disabled = true;
+      authSubmitBtn.textContent = 'Verificando PIN...';
+      if (authErrorMsg) authErrorMsg.hidden = true;
+      try {
+        let res;
+        if (state.authMode === 'client') {
+          const select = document.getElementById('authClientSelect');
+          const slug = select ? select.value : (db.clientes[0] && db.clientes[0].slug);
+          res = await loginAsClient(slug, pin);
+        } else {
+          const teamSelect = document.getElementById('authTeamSelect');
+          const memberId = teamSelect ? teamSelect.value : TEAM_MEMBERS[0].id;
+          res = await loginAsTeam(memberId, pin);
+        }
         if (!res.success) showAuthError(res.message);
         else authPinInput.value = '';
-      } else {
-        const teamSelect = document.getElementById('authTeamSelect');
-        const memberId = teamSelect ? teamSelect.value : TEAM_MEMBERS[0].id;
-        const res = loginAsTeam(memberId, pin);
-        if (!res.success) showAuthError(res.message);
-        else authPinInput.value = '';
+      } finally {
+        authSubmitBtn.disabled = false;
+        authSubmitBtn.textContent = textoBoton;
       }
     });
-
     authPinInput.addEventListener('keydown', (e) => {
       if (e.key === 'Enter') authSubmitBtn.click();
     });
@@ -1767,6 +1876,7 @@ document.addEventListener('DOMContentLoaded', () => {
     btn.addEventListener('click', () => {
       state.activeTab = btn.dataset.tab;
       renderPortalWorkspace();
+      nubeRefrescar(false);
     });
   });
 
@@ -1830,10 +1940,10 @@ document.addEventListener('DOMContentLoaded', () => {
 
   if (paramCliente && paramPin) {
     openPortalModal();
-    loginAsClient(paramCliente, paramPin);
+    loginAsClient(paramCliente, paramPin).then(res => { if (!res.success) showAuthError(res.message); });
   } else if (paramTeam && paramPin) {
     openPortalModal();
-    loginAsTeam(paramTeam, paramPin);
+    loginAsTeam(paramTeam, paramPin).then(res => { if (!res.success) showAuthError(res.message); });
   } else if (paramPortal) {
     openPortalModal();
   }

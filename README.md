@@ -10,7 +10,7 @@ La plataforma está diseñada con arquitectura pura (HTML5, CSS3 moderno y Vanil
 
 ### Pasos para publicar en 2 minutos:
 1. Crea un repositorio en tu cuenta de GitHub (ej. `apex-creativo` o `apexcreativo.github.io`).
-2. Sube todos los archivos de esta carpeta (`index.html`, `app.html`, `styles.css`, `app.js`).
+2. Sube todos los archivos de esta carpeta (`index.html`, `app.html`, `styles.css`, `app.js` y la carpeta `resultados`).
 3. En GitHub, ve a **Settings** ➔ **Pages** ➔ en **Branch** selecciona `main` (o `master`) y guarda (**Save**).
 4. ¡Listo! Tu sitio estará activo en `https://tuusuario.github.io/apex-creativo/`.
 
@@ -18,13 +18,13 @@ La plataforma está diseñada con arquitectura pura (HTML5, CSS3 moderno y Vanil
 
 ## 🔑 Sistema de Accesos y PINs de Seguridad
 
-La plataforma cuenta con un sistema inteligente de acceso por PIN sin bases de datos complejas:
+El acceso es por PIN y todo lo que se edita en el portal se guarda en la nube (Firebase, proyecto `apex-creativo-portal`), así que los cambios se ven en cualquier navegador o dispositivo:
 
 ### 1. Acceso Clientes (Vista Exclusiva de su Marca)
 * **Cómo ingresa el cliente:**
   1. Entra a la web y da clic en **"Acceso Clientes"** (o va directo a `app.html`).
   2. Selecciona su negocio en la lista.
-  3. Ingresa el código PIN de 4 dígitos asignado a su marca (se configura en `app.js` → `CLIENT_PINS`).
+  3. Ingresa el código PIN de 4 dígitos asignado a su marca (se cambia en el portal: Ajustes de Agencia → Cambiar PIN).
 * **Enlace directo preautenticado:**
   Puedes enviarles un enlace de WhatsApp directo como este:  
   `https://tu-sitio.com/?cliente=<slug>&pin=<PIN>`  
@@ -36,7 +36,7 @@ La plataforma cuenta con un sistema inteligente de acceso por PIN sin bases de d
   * Consultar su **Reporte Mensual de Resultados** con gráficas, comparativas y capturas de pantalla de métricas.
 
 ### 2. Acceso Equipo Apex
-* **Pestaña "Equipo Apex"** ➔ Elegir quién ingresa (Alejandra, Pablo, Mitzi o Colaborador adicional) e ingresar su PIN personal (editable en `app.js` → `TEAM_MEMBERS`).
+* **Pestaña "Equipo Apex"** ➔ Elegir quién ingresa (Alejandra, Pablo, Mitzi o Colaborador adicional) e ingresar su PIN personal (guardado en la nube; no está escrito en el código).
 * **Qué puede hacer el equipo:**
   * **Selector Multicliente:** Cambiar al instante entre Restaurante Palato, La Tazca de la Paz, El Faro, CANIRAC Gto, Blucare Bucaramanga, HidroGeo y Club Galereñas.
   * **Crear Nuevos Clientes:** Añadir cualquier marca nueva con su nombre, sector, país y PIN personalizado en 1 segundo.
@@ -57,7 +57,7 @@ d:\ITM\Página web\
 ├── index.html       # Página Web Pública (Showcase de autoridad + Portal integrado)
 ├── app.html         # Portal de Trabajo en Pantalla Completa (Acceso directo)
 ├── styles.css       # Sistema de Diseño Dark Luxury (Tipografías, Glassmorphism y Componentes)
-├── app.js           # Motor de Datos: Clientes, PINs, Guiones, Tareas y Métricas
+├── app.js           # Motor del portal y conexión con la nube (datos y PIN viven en Firebase)
 └── README.md        # Documentación y Guía de Uso
 ```
 
