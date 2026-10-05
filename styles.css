@@ -1979,3 +1979,49 @@ img, svg {
     display: none;
   }
 }
+
+/* ==== Reporte detallado por red (Resultados) ==== */
+.kpi-trend.negative { color: #fb7185; }
+.res-aviso {
+  background: var(--apex-amber-soft);
+  border: 1px solid rgba(251, 191, 36, 0.35);
+  color: var(--text-muted);
+  border-radius: 12px;
+  padding: 12px 16px;
+  font-size: 13px;
+  line-height: 1.55;
+  margin-bottom: 24px;
+}
+.res-h4 { font-family: var(--font-display); font-size: 16px; color: #fff; margin-bottom: 12px; }
+.res-sub { font-family: var(--font-display); font-size: 13px; letter-spacing: .04em; text-transform: uppercase; color: var(--text-dim); margin: 18px 0 8px; }
+.res-red { margin-bottom: 24px; border-top: 3px solid var(--border-medium); }
+.res-red-ig { border-top-color: #ec4899; }
+.res-red-fb { border-top-color: var(--apex-blue); }
+.res-red-tt { border-top-color: #e5e7eb; }
+.res-red-head { display: flex; flex-wrap: wrap; align-items: baseline; justify-content: space-between; gap: 6px 16px; margin-bottom: 12px; }
+.res-red-head h4 { font-family: var(--font-display); font-size: 18px; color: #fff; margin: 0; }
+.res-periodo { font-size: 12px; color: var(--text-dim); }
+.res-table-wrap { overflow-x: auto; -webkit-overflow-scrolling: touch; }
+.res-table { width: 100%; border-collapse: collapse; font-size: 13px; min-width: 520px; }
+.res-table th { text-align: left; font-weight: 600; color: var(--text-dim); font-size: 11px; text-transform: uppercase; letter-spacing: .05em; padding: 8px 10px; border-bottom: 1px solid var(--border-medium); }
+.res-table td { padding: 8px 10px; border-bottom: 1px solid var(--border-subtle); color: var(--text-main); vertical-align: top; }
+.res-table tr:last-child td { border-bottom: none; }
+.res-num { font-variant-numeric: tabular-nums; white-space: nowrap; }
+.res-strong { font-weight: 600; color: #fff; }
+.res-dim { color: var(--text-dim); }
+.res-trend.res-up { color: var(--apex-emerald); }
+.res-trend.res-down { color: #fb7185; }
+.res-trend.res-flat { color: var(--text-dim); }
+.res-trend span { font-size: 9px; margin-right: 2px; }
+.res-top { margin: 0; padding-left: 20px; display: grid; gap: 6px; }
+.res-top li { font-size: 13px; color: var(--text-main); }
+.res-top li strong { display: block; color: #fff; font-weight: 600; }
+.res-top li span { color: var(--text-dim); font-size: 12.5px; }
+.res-notas { margin: 12px 0 0; padding-left: 18px; display: grid; gap: 6px; }
+.res-notas li { font-size: 13px; line-height: 1.55; color: var(--text-muted); }
+.res-foot { font-size: 12px; color: var(--text-dim); margin-top: 10px; }
+.res-conclusion p { color: var(--text-main); font-size: 14.5px; line-height: 1.65; margin-bottom: 12px; }
+@media (max-width: 640px) {
+  .res-table { font-size: 12px; }
+  .res-red-head h4 { font-size: 16px; }
+}

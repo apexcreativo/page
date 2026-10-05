@@ -18,6 +18,174 @@ const TEAM_MEMBERS = [
   { id: 'extra', nombre: 'Colaborador adicional', rol: 'Producción & Apoyo', pin: '0000' }
 ];
 
+// ==========================================================================
+// REPORTE OFICIAL · EL FARO · SEPTIEMBRE 2026
+// Fuente única: capturas de Instagram, Facebook y TikTok (carpeta resultados/elfaro-2026-09).
+// Las variaciones marcadas "(calc.)" se calcularon a partir de esas mismas cifras.
+// ==========================================================================
+const REPORTE_ELFARO_2026_09 = {
+  reporteVersion: 1,
+  resumen: 'Primer mes de gestión de Apex (publicación desde el 14 de septiembre). En Instagram, del 5 sep al 4 oct, las visualizaciones pasaron de 5,343 a 21,052 (+294.0% vs agosto) y las interacciones de 115 a 465 (+304.3%). Facebook reporta 10 mil visualizaciones (+282%) en los últimos 28 días. TikTok bajó en visualizaciones (7.9K, −19.2%) aunque subió en me gusta (+32.1%). La cuenta de Instagram todavía pierde más seguidores de los que gana (neto −12), pero la pérdida fue menor que en agosto (−22).',
+  tileFijo: { nombre: 'Publicaciones en Instagram', valor: '41', comparativo: 'Contenido compartido · 5 sep – 4 oct' },
+  kpis: [
+    { nombre: 'Visualizaciones · Instagram', valor: '21,052', comparativo: '+294.0% vs agosto (5,343)', positivo: true },
+    { nombre: 'Cuentas alcanzadas · Instagram', valor: '3,381', comparativo: '+162.5% vs agosto (1,288)', positivo: true },
+    { nombre: 'Interacciones · Instagram', valor: '465', comparativo: '+304.3% vs agosto (115)', positivo: true },
+    { nombre: 'Tasa de interacción · Instagram', valor: '13.75%', comparativo: 'Agosto: 8.93% · +4.82 pts', positivo: true },
+    { nombre: 'Visitas al perfil · Instagram', valor: '326', comparativo: '+42.4% vs agosto (229)', positivo: true },
+    { nombre: 'Toques en enlace · Instagram', valor: '17', comparativo: '+112.5% vs agosto (8)', positivo: true },
+    { nombre: 'Visualizaciones · Facebook', valor: '10 mil', comparativo: '+282% vs 28 días previos', positivo: true },
+    { nombre: 'Interacciones · Facebook', valor: '531', comparativo: '+2 mil% vs 28 días previos', positivo: true },
+    { nombre: 'Visualizaciones · TikTok', valor: '7.9K', comparativo: '−1.9K (−19.2%) vs periodo anterior', positivo: false },
+    { nombre: 'Me gusta · TikTok', valor: '144', comparativo: '+35 (+32.1%) vs periodo anterior', positivo: true }
+  ],
+  imagenes: [
+    'resultados/elfaro-2026-09/ig-01-panel-sep.png',
+    'resultados/elfaro-2026-09/ig-02-resumen-sep.png',
+    'resultados/elfaro-2026-09/ig-03-formatos-sep.png',
+    'resultados/elfaro-2026-09/ig-04-interacciones-perfil-sep.png',
+    'resultados/elfaro-2026-09/ig-05-contenido-megusta-sep.png',
+    'resultados/elfaro-2026-09/ig-06-contenido-vistas-sep.png',
+    'resultados/elfaro-2026-09/ig-07-seguidores-sep.png',
+    'resultados/elfaro-2026-09/ig-08-resumen-ago.png',
+    'resultados/elfaro-2026-09/ig-09-formatos-ago.png',
+    'resultados/elfaro-2026-09/ig-10-interacciones-perfil-ago.png',
+    'resultados/elfaro-2026-09/fb-01-visualizaciones.png',
+    'resultados/elfaro-2026-09/fb-02-interaccion.png',
+    'resultados/elfaro-2026-09/fb-03-publico.png',
+    'resultados/elfaro-2026-09/fb-04-que-funciona.png',
+    'resultados/elfaro-2026-09/tt-01-resumen-sep.png',
+    'resultados/elfaro-2026-09/tt-02-top-vistas.png',
+    'resultados/elfaro-2026-09/tt-03-top-megusta.png'
+  ],
+  detalle: {
+    avisoPeriodos: 'Cada red mide un periodo distinto y así se presenta. Instagram: 5 sep – 4 oct 2026 contra 1 – 31 ago 2026. Facebook: últimos 28 días (7 sep – 4 oct) contra los 28 días previos, según Meta. TikTok: 1 – 30 sep contra el periodo anterior, según TikTok. La publicación de contenido por Apex inició el 14 de septiembre, así que septiembre solo tuvo 17 días de gestión.',
+    kpiDefiniciones: [
+      { kpi: 'Visualizaciones', formula: 'Veces que se mostró el contenido (dato de cada red)', actual: 'IG 21,052 · FB 10 mil · TT 7.9K', base: 'IG ago 5,343' },
+      { kpi: 'Cuentas alcanzadas', formula: 'Cuentas únicas que vieron contenido ("Espectadores")', actual: 'IG 3,381 · FB 4,4 mil', base: 'IG ago 1,288' },
+      { kpi: 'Interacciones', formula: 'Me gusta + comentarios + compartidos + guardados, etc. (dato de cada red)', actual: 'IG 465 · FB 531', base: 'IG ago 115' },
+      { kpi: 'Tasa de interacción', formula: 'Interacciones ÷ cuentas alcanzadas × 100', actual: 'IG 13.75% · FB ≈12.1%*', base: 'IG ago 8.93%' },
+      { kpi: 'Frecuencia', formula: 'Visualizaciones ÷ cuentas alcanzadas', actual: 'IG 6.2 · FB ≈2.3*', base: 'IG ago 4.1' },
+      { kpi: 'Alcance fuera de la comunidad', formula: 'Visualizaciones × % de no seguidores', actual: 'IG ≈6,252 (29.7%)', base: 'IG ago ≈2,356 (44.1%)' },
+      { kpi: 'Crecimiento de seguidores', formula: 'Seguidores nuevos y saldo neto del periodo', actual: 'IG +39 nuevos · neto −12 · total 3,200', base: 'IG ago neto −22' },
+      { kpi: 'Intención de visita', formula: 'Visitas al perfil + toques en enlace + toques en dirección', actual: 'IG 326 · 17 · 0 | TT perfil 82', base: 'IG ago 229 · 8 · 0' }
+    ],
+    notaKpi: '* Facebook muestra visualizaciones (10 mil) y espectadores (4,4 mil) redondeados, por eso su tasa y frecuencia son aproximadas.',
+    redes: [
+      {
+        red: 'Instagram',
+        clase: 'ig',
+        periodo: '5 sep – 4 oct 2026 vs 1 – 31 ago 2026',
+        filas: [
+          { m: 'Visualizaciones', a: '21,052', b: '5,343', v: '+294.0%', t: 'up' },
+          { m: 'Cuentas alcanzadas (espectadores)', a: '3,381', b: '1,288', v: '+162.5%', t: 'up' },
+          { m: 'Interacciones', a: '465', b: '115', v: '+304.3%', t: 'up' },
+          { m: 'Tasa de interacción (calc.)', a: '13.75%', b: '8.93%', v: '+4.82 pts', t: 'up' },
+          { m: 'Vistas de seguidores / no seguidores', a: '70.3% / 29.7%', b: '55.9% / 44.1%', v: 'Más peso en seguidores', t: 'flat' },
+          { m: 'Vistas en publicaciones', a: '9 mil', b: '545', v: '≈ +1,551%', t: 'up' },
+          { m: 'Vistas en reels', a: '7,2 mil', b: '2,6 mil', v: '≈ +177%', t: 'up' },
+          { m: 'Vistas en historias', a: '4,8 mil', b: '2,2 mil', v: '≈ +118%', t: 'up' },
+          { m: 'Interacciones en publicaciones', a: '228', b: '3', v: '+225', t: 'up' },
+          { m: 'Interacciones en reels', a: '166', b: '69', v: '+140.6%', t: 'up' },
+          { m: 'Interacciones en historias', a: '71', b: '43', v: '+65.1%', t: 'up' },
+          { m: 'Visitas al perfil', a: '326', b: '229', v: '+42.4%', t: 'up' },
+          { m: 'Toques en el enlace', a: '17', b: '8', v: '+112.5%', t: 'up' },
+          { m: 'Toques en la dirección del negocio', a: '0', b: '0', v: 'Sin cambio', t: 'flat' },
+          { m: 'Seguidores netos', a: '−12', b: '−22', v: '10 bajas menos', t: 'up' },
+          { m: 'Nuevos seguidores', a: '39', b: 'Sin dato', v: '—', t: 'flat' },
+          { m: 'Seguidores totales', a: '3,200', b: 'Sin dato', v: '−0.4% desde el 4 sep', t: 'down' },
+          { m: 'Contenido compartido', a: '41', b: 'Sin dato', v: '—', t: 'flat' }
+        ],
+        topTitulo: 'Contenido con más visualizaciones (5 sep – 4 oct)',
+        top: [
+          { t: 'Una michelada siempre e…', d: '1,7 mil vistas · 21 me gusta · 0 comentarios · 4 reposts · 2 compartidos' },
+          { t: '¡Este viernes nos vemos en…', d: '1,6 mil vistas · 35 me gusta (la más gustada) · 4 reposts · 2 compartidos' },
+          { t: 'Porque un buen plan sie…', d: '1,3 mil vistas · 23 me gusta · 2 comentarios · 3 reposts · 6 compartidos' },
+          { t: '¿Se te antojó una michelad…', d: '1,1 mil vistas · 18 me gusta · 4 reposts' },
+          { t: '¿Tú también eres de los qu…', d: '1,0 mil vistas · 22 me gusta · 1 repost · 3 compartidos' },
+          { t: '¡Lo que tanto nos habían…', d: '927 vistas · 20 me gusta · 1 repost · 4 compartidos' },
+          { t: 'Hoy se antoja una michel…', d: '848 vistas · 20 me gusta · 2 reposts · 5 compartidos' },
+          { t: 'Dicen que son las mejore…', d: '806 vistas · 19 me gusta' }
+        ],
+        notas: [
+          'La gráfica diaria se mantiene casi en cero hasta mediados de septiembre y sube a partir del 13–14 de septiembre: varios días superan 925 visualizaciones y los picos llegan a cerca de 1,8 mil.',
+          'Agosto hizo lo contrario: arrancó cerca de 900 visualizaciones diarias y cayó casi a cero en la segunda quincena.',
+          'Los tres contenidos que más seguidores trajeron (1 cada uno) fueron el molcajete, la michelada y "Dicen que son las mejores…". Cuatro de los ocho contenidos más vistos hablan de micheladas.'
+        ]
+      },
+      {
+        red: 'Facebook',
+        clase: 'fb',
+        periodo: 'Últimos 28 días (7 sep – 4 oct) vs 28 días previos · variaciones calculadas por Meta',
+        filas: [
+          { m: 'Visualizaciones', a: '10 mil', b: '—', v: '+282%', t: 'up' },
+          { m: 'Interacción', a: '531', b: '—', v: '+2 mil%', t: 'up' },
+          { m: 'Público', a: '10', b: '—', v: '+25%', t: 'up' },
+          { m: 'Espectadores', a: '4,4 mil', b: '—', v: 'Sin comparativo', t: 'flat' },
+          { m: 'Reproducciones de 3 segundos', a: '1,5 mil', b: '—', v: 'Sin comparativo', t: 'flat' },
+          { m: 'Reacciones', a: '175', b: '—', v: 'Sin comparativo', t: 'flat' },
+          { m: 'Veces que se compartió', a: '29', b: '—', v: 'Sin comparativo', t: 'flat' },
+          { m: 'Comentarios y respuestas', a: '4', b: '—', v: 'Sin comparativo', t: 'flat' },
+          { m: 'Ingresos', a: '$0', b: '—', v: '—', t: 'flat' }
+        ],
+        topTitulo: 'Contenido destacado y señales de Meta',
+        top: [
+          { t: '¡Este viernes nos vemos en nuestra n…', d: '1,722 visualizaciones (foto)' },
+          { t: 'Seguimos en septiembre y, por su…', d: '1,313 visualizaciones (video)' },
+          { t: 'Mejor formato (últimos 7 días)', d: 'Fotos: +6 mil% frente a otros formatos' },
+          { t: 'Mejor duración (últimos 7 días)', d: 'Videos de 10 a 15 segundos: +6 mil% frente a otras duraciones' },
+          { t: 'Audiencia de la página', d: '63% mujeres · 37% hombres · 25–34 años 39.3% · 35–44 años 27.5% · 45–54 años 14.9% · otros 18.3%' }
+        ],
+        notas: [
+          'Meta indica que las visualizaciones subieron al publicar más reels (rinden 113% más que otros formatos), que la interacción subió con más fotos (197% más) y que la audiencia creció con reels (329% más).',
+          'La gráfica de visualizaciones está casi en cero hasta el 14 de septiembre; después crece, con dos picos cercanos a 1,8 mil y 1,7 mil hacia el final del mes.',
+          'El desglose de interacciones visible (reacciones, compartidos y comentarios) suma 208 de las 531; el resto corresponde a tipos que no aparecen en la captura.'
+        ]
+      },
+      {
+        red: 'TikTok',
+        clase: 'tt',
+        periodo: '1 – 30 sep 2026 vs periodo anterior · variaciones calculadas por TikTok',
+        filas: [
+          { m: 'Visualizaciones de publicaciones', a: '7.9K', b: '≈9.8K (calc.)', v: '−19.2%', t: 'down' },
+          { m: 'Visualizaciones de perfil', a: '82', b: '156 (calc.)', v: '−47.4%', t: 'down' },
+          { m: 'Me gusta', a: '144', b: '109 (calc.)', v: '+32.1%', t: 'up' },
+          { m: 'Comentarios', a: '2', b: '4 (calc.)', v: '−50%', t: 'down' },
+          { m: 'Veces compartido', a: '16', b: '36 (calc.)', v: '−55.6%', t: 'down' },
+          { m: 'Recompensas estimadas', a: '$0.00', b: '—', v: '+$0.00', t: 'flat' },
+          { m: 'Tráfico desde "Para ti"', a: '67.2%', b: '—', v: '—', t: 'flat' },
+          { m: 'Tráfico desde búsqueda', a: '26.6%', b: '—', v: '—', t: 'flat' }
+        ],
+        topTitulo: 'Mejores publicaciones (últimos 7 días)',
+        top: [
+          { t: '¿Tú también eres de los que dicen: "un caldito y se me pasa…', d: '566 visualizaciones · 11 me gusta' },
+          { t: '¡Este viernes nos vemos en nuestra nueva sucursal!', d: '281 visualizaciones · 4 me gusta' },
+          { t: '¿Ya probaste nuestro Molcajete Mar y Tierra?', d: '234 visualizaciones · 3 me gusta' },
+          { t: 'Si vienes a la Presa de la Olla, hay una parada que no puede f…', d: '190 visualizaciones · publicado el 12 ago' }
+        ],
+        notas: [
+          'El periodo anterior se obtuvo restando la diferencia que muestra TikTok (por ejemplo, 7.9K + 1.9K ≈ 9.8K).',
+          'La caída del mes se explica por la primera quincena: en la gráfica diaria, antes de mediados de septiembre ningún día llega a la línea de 293 visualizaciones; después hay varios picos por encima de 586.',
+          'Una de cada cuatro visualizaciones (26.6%) llega desde la búsqueda de TikTok.'
+        ]
+      }
+    ],
+    conclusion: [
+      'Septiembre fue un mes de arranque. Apex empezó a publicar el 14 de septiembre, así que los resultados reflejan 17 días de trabajo dentro del mes, y en Instagram y Facebook el corte llega hasta el 4 de octubre. En las tres gráficas diarias se ve el mismo patrón: actividad casi nula antes del 14 y crecimiento después.',
+      'Instagram es donde el cambio se puede medir mejor contra agosto. Las visualizaciones se multiplicaron casi por cuatro (5,343 → 21,052), las cuentas alcanzadas por 2.6 (1,288 → 3,381) y las interacciones por cuatro (115 → 465). La tasa de interacción pasó de 8.93% a 13.75%, lo que dice que el contenido nuevo no solo se vio más, también provocó más respuesta. Las publicaciones fijas pasaron de 545 a 9 mil vistas y de 3 a 228 interacciones.',
+      'Facebook acompaña la tendencia según Meta: 10 mil visualizaciones (+282%) y 531 interacciones. El anuncio de la nueva sucursal fue lo más visto en Facebook (1,722) y lo más gustado en Instagram (35 me gusta).',
+      'Hay tres puntos a atender. Primero, TikTok bajó en visualizaciones (−19.2%), compartidos (−55.6%) y visitas al perfil (−47.4%), aunque los me gusta subieron 32.1%. Segundo, Instagram sigue con saldo negativo de seguidores (−12, con 39 nuevos), aunque la pérdida fue menor que en agosto (−22). Tercero, nadie tocó la dirección del negocio en Instagram ni en agosto ni en septiembre, y la proporción de visitas al perfil frente a cuentas alcanzadas bajó de 17.8% a 9.6%.',
+      'Septiembre queda como línea base para octubre, el primer mes completo de gestión. Los KPI de esta página se van a comparar contra estas mismas cifras.'
+    ],
+    recomendaciones: [
+      'Mantener la línea de micheladas y platillos estrella: cuatro de los ocho contenidos más vistos en Instagram son de micheladas, y el molcajete está entre lo más visto en Instagram y TikTok.',
+      'En Facebook, seguir la señal de Meta: fotos para interacción y reels de 10 a 15 segundos para alcance.',
+      'En TikTok, escribir textos y descripciones con palabras que la gente busca (platillo, zona, "micheladas"), ya que 26.6% del tráfico viene de la búsqueda.',
+      'Agregar en cada publicación un llamado claro a visitar el perfil, el enlace o la ubicación, para mover las visitas al perfil, los toques en enlace y los toques en dirección.'
+    ]
+  }
+};
+
 // Base de datos inicial con clientes reales de México y Colombia
 const DEFAULT_DATABASE = {
   version: '2.0',
@@ -209,6 +377,7 @@ const DEFAULT_DATABASE = {
 
   // Resultados Mensuales por Cliente
   resultados: {
+    'elfaro': { '2026-09': JSON.parse(JSON.stringify(REPORTE_ELFARO_2026_09)) },
     'palato': {
       '2026-09': {
         resumen: 'Mes histórico en reservaciones digitales. Los dos Reels gastronómicos superaron los 48,000 views orgánicos en México.',
@@ -275,6 +444,14 @@ function loadDatabase() {
       const parsed = JSON.parse(raw);
       if (parsed && Array.isArray(parsed.clientes)) {
         parsed.clientes.forEach(c => { if (CLIENT_PINS[c.slug]) c.pin = CLIENT_PINS[c.slug]; });
+        // Reporte oficial El Faro sep-2026: se instala o actualiza si la copia guardada es anterior
+        if (!parsed.resultados) parsed.resultados = {};
+        if (!parsed.resultados.elfaro) parsed.resultados.elfaro = {};
+        const prevFaro = parsed.resultados.elfaro['2026-09'];
+        if (!prevFaro || (prevFaro.reporteVersion || 0) < REPORTE_ELFARO_2026_09.reporteVersion) {
+          parsed.resultados.elfaro['2026-09'] = JSON.parse(JSON.stringify(REPORTE_ELFARO_2026_09));
+          try { localStorage.setItem(STORAGE_KEY, JSON.stringify(parsed)); } catch (e) {}
+        }
         return parsed;
       }
     }
@@ -1063,16 +1240,22 @@ function renderResultados() {
 
     <!-- Tarjetas de Métricas -->
     <div class="kpi-tiles-grid">
+      ${clientResults.tileFijo ? `
+      <div class="kpi-tile" style="border-left:3px solid var(--apex-orange);">
+        <div class="kpi-label">${escapeHtml(clientResults.tileFijo.nombre)}</div>
+        <div class="kpi-val">${escapeHtml(clientResults.tileFijo.valor)}</div>
+        <div class="kpi-trend neutral">${escapeHtml(clientResults.tileFijo.comparativo)}</div>
+      </div>` : `
       <div class="kpi-tile" style="border-left:3px solid var(--apex-orange);">
         <div class="kpi-label">Total Piezas Planificadas</div>
         <div class="kpi-val">${piezasMes.length}</div>
         <div class="kpi-trend neutral">${pubCount} publicadas</div>
-      </div>
+      </div>`}
       ${(clientResults.kpis || []).map((kpi, idx) => `
         <div class="kpi-tile">
           <div class="kpi-label">${escapeHtml(kpi.nombre)}</div>
           <div class="kpi-val">${escapeHtml(kpi.valor)}</div>
-          <div class="kpi-trend ${kpi.positivo ? 'positive' : 'neutral'}">${escapeHtml(kpi.comparativo)}</div>
+          <div class="kpi-trend ${kpi.positivo ? 'positive' : (kpi.positivo === false ? 'negative' : 'neutral')}">${escapeHtml(kpi.comparativo)}</div>
           ${state.currentRole === 'team' ? `
             <div style="margin-top:8px;">
               <button class="btn btn-sm btn-secondary" style="font-size:10px;padding:2px 6px;" onclick="editKpi(${idx})">Editar</button>
@@ -1092,6 +1275,8 @@ function renderResultados() {
         </div>
       ` : ''}
     </div>
+
+    ${renderDetalleResultados(clientResults.detalle)}
 
     <!-- Capturas y Evidencias de Resultados -->
     <div class="editor-card">
@@ -1113,6 +1298,73 @@ function renderResultados() {
           </div>
         `}
       </div>
+    </div>
+  `;
+}
+
+// Detalle por red, KPIs y conclusión (solo si el reporte trae "detalle")
+function renderDetalleResultados(d) {
+  if (!d) return '';
+  const arrow = t => t === 'up' ? '▲' : (t === 'down' ? '▼' : '•');
+  const kpiRows = (d.kpiDefiniciones || []).map(k => `
+    <tr>
+      <td class="res-strong">${escapeHtml(k.kpi)}</td>
+      <td>${escapeHtml(k.formula)}</td>
+      <td class="res-num">${escapeHtml(k.actual)}</td>
+      <td class="res-num res-dim">${escapeHtml(k.base)}</td>
+    </tr>`).join('');
+
+  const redes = (d.redes || []).map(r => `
+    <div class="editor-card res-red res-red-${escapeHtml(r.clase || '')}">
+      <div class="res-red-head">
+        <h4>${escapeHtml(r.red)}</h4>
+        <span class="res-periodo">${escapeHtml(r.periodo)}</span>
+      </div>
+      <div class="res-table-wrap">
+        <table class="res-table">
+          <thead><tr><th>Métrica</th><th>Septiembre</th><th>Anterior</th><th>Variación</th></tr></thead>
+          <tbody>
+            ${(r.filas || []).map(f => `
+              <tr>
+                <td>${escapeHtml(f.m)}</td>
+                <td class="res-num res-strong">${escapeHtml(f.a)}</td>
+                <td class="res-num res-dim">${escapeHtml(f.b)}</td>
+                <td class="res-num res-trend res-${escapeHtml(f.t)}"><span>${arrow(f.t)}</span> ${escapeHtml(f.v)}</td>
+              </tr>`).join('')}
+          </tbody>
+        </table>
+      </div>
+      ${(r.top && r.top.length) ? `
+        <h5 class="res-sub">${escapeHtml(r.topTitulo || 'Contenido destacado')}</h5>
+        <ol class="res-top">
+          ${r.top.map(x => `<li><strong>${escapeHtml(x.t)}</strong><span>${escapeHtml(x.d)}</span></li>`).join('')}
+        </ol>` : ''}
+      ${(r.notas && r.notas.length) ? `
+        <ul class="res-notas">${r.notas.map(n => `<li>${escapeHtml(n)}</li>`).join('')}</ul>` : ''}
+    </div>`).join('');
+
+  return `
+    <div class="res-aviso">${escapeHtml(d.avisoPeriodos || '')}</div>
+
+    <div class="editor-card" style="margin-bottom:24px;">
+      <h4 class="res-h4">KPI medibles · línea base de septiembre</h4>
+      <div class="res-table-wrap">
+        <table class="res-table">
+          <thead><tr><th>KPI</th><th>Cómo se mide</th><th>Septiembre</th><th>Agosto / base</th></tr></thead>
+          <tbody>${kpiRows}</tbody>
+        </table>
+      </div>
+      ${d.notaKpi ? `<p class="res-foot">${escapeHtml(d.notaKpi)}</p>` : ''}
+    </div>
+
+    ${redes}
+
+    <div class="editor-card res-conclusion" style="margin-bottom:24px;">
+      <h4 class="res-h4">Conclusión del mes</h4>
+      ${(d.conclusion || []).map(p => `<p>${escapeHtml(p)}</p>`).join('')}
+      ${(d.recomendaciones && d.recomendaciones.length) ? `
+        <h5 class="res-sub">Qué sigue en octubre</h5>
+        <ul class="res-notas">${d.recomendaciones.map(n => `<li>${escapeHtml(n)}</li>`).join('')}</ul>` : ''}
     </div>
   `;
 }
