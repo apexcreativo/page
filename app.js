@@ -437,29 +437,47 @@ const state = {
 // ==========================================================================
 // INICIALIZACIÓN & PERSISTENCIA LOCAL
 // ==========================================================================
+// Huella de los datos publicados en este archivo (lo que está en GitHub).
+// Si los datos de app.js cambian, la huella cambia y todos los navegadores
+// descartan su copia guardada y cargan la versión publicada.
+function getPublishedDataVersion() {
+  const copy = Object.assign({}, DEFAULT_DATABASE);
+  delete copy.updatedAt;
+  delete copy.dataVersion;
+  const str = JSON.stringify(copy);
+  let h = 2166136261;
+  for (let i = 0; i < str.length; i++) {
+    h ^= str.charCodeAt(i);
+    h = Math.imul(h, 16777619);
+  }
+  return (h >>> 0).toString(36) + '-' + str.length.toString(36);
+}
+
 function loadDatabase() {
+  const publishedVersion = getPublishedDataVersion();
+  let previousRaw = null;
   try {
     const raw = localStorage.getItem(STORAGE_KEY);
     if (raw) {
       const parsed = JSON.parse(raw);
-      if (parsed && Array.isArray(parsed.clientes)) {
+      // La copia guardada solo se usa si corresponde a la misma versión publicada
+      if (parsed && Array.isArray(parsed.clientes) && parsed.dataVersion === publishedVersion) {
         parsed.clientes.forEach(c => { if (CLIENT_PINS[c.slug]) c.pin = CLIENT_PINS[c.slug]; });
-        // Reporte oficial El Faro sep-2026: se instala o actualiza si la copia guardada es anterior
-        if (!parsed.resultados) parsed.resultados = {};
-        if (!parsed.resultados.elfaro) parsed.resultados.elfaro = {};
-        const prevFaro = parsed.resultados.elfaro['2026-09'];
-        if (!prevFaro || (prevFaro.reporteVersion || 0) < REPORTE_ELFARO_2026_09.reporteVersion) {
-          parsed.resultados.elfaro['2026-09'] = JSON.parse(JSON.stringify(REPORTE_ELFARO_2026_09));
-          try { localStorage.setItem(STORAGE_KEY, JSON.stringify(parsed)); } catch (e) {}
-        }
         return parsed;
       }
+      previousRaw = raw;
     }
   } catch (err) {
     console.warn('Error leyendo base de datos local:', err);
   }
-  saveDatabase(DEFAULT_DATABASE);
-  return JSON.parse(JSON.stringify(DEFAULT_DATABASE));
+  const fresh = JSON.parse(JSON.stringify(DEFAULT_DATABASE));
+  fresh.dataVersion = publishedVersion;
+  saveDatabase(fresh);
+  // Copia de seguridad de lo que este navegador tenía antes de tomar la versión publicada
+  if (previousRaw) {
+    try { localStorage.setItem(STORAGE_KEY + '_anterior', previousRaw); } catch (e) { console.warn('No se pudo guardar la copia anterior:', e); }
+  }
+  return fresh;
 }
 
 function saveDatabase(customData) {
@@ -1628,6 +1646,7 @@ function restoreBackupJson(input) {
       const parsed = JSON.parse(e.target.result);
       if (parsed && Array.isArray(parsed.clientes)) {
         db = parsed;
+        db.dataVersion = getPublishedDataVersion();
         saveDatabase();
         alert('Respaldo cargado correctamente.');
         renderPortalWorkspace();
