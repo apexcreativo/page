@@ -476,6 +476,18 @@ function renderProduccion() {
     else state.activeProdId = null;
   }
 
+  // Encabezado de la lista con el botón para agregar producciones (solo equipo)
+  const headerLista = document.querySelector('#viewTab_produccion .sidebar-header');
+  if (headerLista) {
+    headerLista.style.display = 'flex';
+    headerLista.style.alignItems = 'center';
+    headerLista.style.justifyContent = 'space-between';
+    headerLista.style.gap = '8px';
+    headerLista.innerHTML = `
+      <span class="mono" style="font-size:11px;color:var(--text-dim);text-transform:uppercase;">Producciones del Mes</span>
+      ${state.currentRole === 'team' ? `<button class="btn btn-sm btn-primary" style="font-size:11px;padding:4px 10px;white-space:nowrap;" onclick="createProduction()" title="Agregar una nueva producción para este cliente">+ Agregar</button>` : ''}`;
+  }
+
   // Renderizar Lista Lateral
   const listEl = document.getElementById('prodSidebarList');
   if (listEl) {
