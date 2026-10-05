@@ -40,23 +40,23 @@ const REPORTE_ELFARO_2026_09 = {
     { nombre: 'Me gusta · TikTok', valor: '144', comparativo: '+35 (+32.1%) vs periodo anterior', positivo: true }
   ],
   imagenes: [
-    'resultados/elfaro-2026-09/ig-01-panel-sep.png',
-    'resultados/elfaro-2026-09/ig-02-resumen-sep.png',
-    'resultados/elfaro-2026-09/ig-03-formatos-sep.png',
-    'resultados/elfaro-2026-09/ig-04-interacciones-perfil-sep.png',
-    'resultados/elfaro-2026-09/ig-05-contenido-megusta-sep.png',
-    'resultados/elfaro-2026-09/ig-06-contenido-vistas-sep.png',
-    'resultados/elfaro-2026-09/ig-07-seguidores-sep.png',
-    'resultados/elfaro-2026-09/ig-08-resumen-ago.png',
-    'resultados/elfaro-2026-09/ig-09-formatos-ago.png',
-    'resultados/elfaro-2026-09/ig-10-interacciones-perfil-ago.png',
-    'resultados/elfaro-2026-09/fb-01-visualizaciones.png',
-    'resultados/elfaro-2026-09/fb-02-interaccion.png',
-    'resultados/elfaro-2026-09/fb-03-publico.png',
-    'resultados/elfaro-2026-09/fb-04-que-funciona.png',
-    'resultados/elfaro-2026-09/tt-01-resumen-sep.png',
-    'resultados/elfaro-2026-09/tt-02-top-vistas.png',
-    'resultados/elfaro-2026-09/tt-03-top-megusta.png'
+    'resultados/elfaro-2026-09/ig-01-panel-sep.jpg',
+    'resultados/elfaro-2026-09/ig-02-resumen-sep.jpg',
+    'resultados/elfaro-2026-09/ig-03-formatos-sep.jpg',
+    'resultados/elfaro-2026-09/ig-04-interacciones-perfil-sep.jpg',
+    'resultados/elfaro-2026-09/ig-05-contenido-megusta-sep.jpg',
+    'resultados/elfaro-2026-09/ig-06-contenido-vistas-sep.jpg',
+    'resultados/elfaro-2026-09/ig-07-seguidores-sep.jpg',
+    'resultados/elfaro-2026-09/ig-08-resumen-ago.jpg',
+    'resultados/elfaro-2026-09/ig-09-formatos-ago.jpg',
+    'resultados/elfaro-2026-09/ig-10-interacciones-perfil-ago.jpg',
+    'resultados/elfaro-2026-09/fb-01-visualizaciones.jpg',
+    'resultados/elfaro-2026-09/fb-02-interaccion.jpg',
+    'resultados/elfaro-2026-09/fb-03-publico.jpg',
+    'resultados/elfaro-2026-09/fb-04-que-funciona.jpg',
+    'resultados/elfaro-2026-09/tt-01-resumen-sep.jpg',
+    'resultados/elfaro-2026-09/tt-02-top-vistas.jpg',
+    'resultados/elfaro-2026-09/tt-03-top-megusta.jpg'
   ],
   detalle: {
     avisoPeriodos: 'Cada red mide un periodo distinto y así se presenta. Instagram: 5 sep – 4 oct 2026 contra 1 – 31 ago 2026. Facebook: últimos 28 días (7 sep – 4 oct) contra los 28 días previos, según Meta. TikTok: 1 – 30 sep contra el periodo anterior, según TikTok. La publicación de contenido por Apex inició el 14 de septiembre, así que septiembre solo tuvo 17 días de gestión.',
@@ -1290,7 +1290,7 @@ function renderResultados() {
       <div class="metrics-proofs-grid">
         ${(clientResults.imagenes && clientResults.imagenes.length) ? clientResults.imagenes.map((imgSrc, imgIdx) => `
           <div class="proof-card" onclick="openLightbox('${imgSrc}')">
-            <img src="${imgSrc}" alt="Captura métrica">
+            <img src="${imgSrc}" alt="Captura métrica" loading="lazy" decoding="async">
           </div>
         `).join('') : `
           <div style="grid-column:1/-1;padding:20px;text-align:center;color:var(--text-dim);font-size:13px;">
