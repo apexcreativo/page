@@ -7,7 +7,7 @@
   <link rel="icon" href="favicon.svg" type="image/svg+xml">
   <link rel="icon" href="favicon-32.png" type="image/png" sizes="32x32">
   <link rel="apple-touch-icon" href="apple-touch-icon.png">
-  <link rel="stylesheet" href="styles.css?v=2026-10-06-3">
+  <link rel="stylesheet" href="styles.css?v=2026-10-06-8">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <style>
@@ -68,10 +68,13 @@
         </div>
 
         <div class="auth-input-group" id="authGroupClientSelect">
-          <label class="auth-label">Selecciona tu Marca / Negocio</label>
-          <select id="authClientSelect" class="auth-select">
-            <!-- Dinámico -->
-          </select>
+          <label class="auth-label" for="authClientSearch">Escribe el nombre de tu marca</label>
+          <div class="auth-combo">
+            <input type="text" id="authClientSearch" class="auth-input auth-search" placeholder="Ej. Faro" autocomplete="off" spellcheck="false"
+              role="combobox" aria-autocomplete="list" aria-expanded="false" aria-controls="authClientSugerencias">
+            <input type="hidden" id="authClientSelect" value="">
+            <ul id="authClientSugerencias" class="auth-sugerencias" role="listbox" aria-label="Marcas encontradas" hidden></ul>
+          </div>
         </div>
 
         <div class="auth-input-group" id="authGroupTeamSelect" hidden>
@@ -86,7 +89,7 @@
           <input type="password" id="authPinInput" class="auth-input pin-input" maxlength="8" placeholder="••••">
         </div>
 
-        <div id="authErrorMsg" style="color:#f87171;font-size:12px;margin-bottom:14px;" hidden></div>
+        <div id="authErrorMsg" style="color:#c8264a;font-size:12px;margin-bottom:14px;" hidden></div>
 
         <button class="btn btn-primary" id="authSubmitBtn" style="width:100%;padding:12px;">
           Ingresar al Workspace
@@ -100,7 +103,7 @@
       <!-- Encabezado de Cliente -->
       <div class="workspace-header">
         <div class="client-active-info">
-          <div class="client-avatar" id="currentClientAvatar">🍽️</div>
+          <div class="client-avatar" id="currentClientAvatar"></div>
           <div class="client-meta">
             <h2 id="currentClientName">Cliente</h2>
             <p id="currentClientSector">Gastronomía de Autor · México</p>
@@ -114,15 +117,16 @@
 
       <!-- Pestañas de Navegación -->
       <nav class="portal-tabs">
-        <button class="portal-tab active" data-tab="parrilla">📅 Parrilla de Contenido</button>
+        <button class="portal-tab active" data-tab="resultados">📊 Resumen de Resultados</button>
+        <button class="portal-tab" data-tab="planeacion">📝 Planeación</button>
+        <button class="portal-tab" data-tab="parrilla">📅 Parrilla de Contenido</button>
         <button class="portal-tab" data-tab="produccion">🎬 Plan de Producción & Guiones</button>
         <button class="portal-tab" data-tab="tareas" id="tabBtnTareas">📋 Tablero de Colaboradores</button>
-        <button class="portal-tab" data-tab="resultados">📊 Resumen de Resultados</button>
         <button class="portal-tab" data-tab="ajustes" id="tabBtnAjustes">⚙️ Ajustes de Agencia</button>
       </nav>
 
       <!-- Pestaña 1: Parrilla -->
-      <div class="tab-content" id="viewTab_parrilla">
+      <div class="tab-content" id="viewTab_parrilla" hidden>
         <div class="cal-toolbar">
           <div class="cal-nav">
             <button class="btn btn-sm btn-secondary" id="calPrevMonthBtn">‹</button>
@@ -134,6 +138,8 @@
             0 piezas programadas
           </div>
         </div>
+
+        <div id="calColorTools" class="cal-color-tools"></div>
 
         <div class="cal-container">
           <div class="cal-days-header">
@@ -151,6 +157,11 @@
         </div>
 
         <div id="dayDetailPanel" hidden></div>
+      </div>
+
+      <!-- Pestaña: Planeación del mes -->
+      <div class="tab-content" id="viewTab_planeacion" hidden>
+        <!-- Llenado por app.js -->
       </div>
 
       <!-- Pestaña 2: Producción & Guiones -->
@@ -176,7 +187,7 @@
       </div>
 
       <!-- Pestaña 4: Resultados Mensuales -->
-      <div class="tab-content" id="viewTab_resultados" hidden>
+      <div class="tab-content" id="viewTab_resultados">
         <!-- Dinámico -->
       </div>
 
@@ -194,7 +205,7 @@
   </div>
 
   <!-- SCRIPTS -->
-  <script src="reportes.js?v=2026-10-06-3"></script>
-  <script src="app.js?v=2026-10-06-3"></script>
+  <script src="reportes.js?v=2026-10-06-8"></script>
+  <script src="app.js?v=2026-10-06-8"></script>
 </body>
 </html>

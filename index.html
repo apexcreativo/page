@@ -8,7 +8,7 @@
   <link rel="icon" href="favicon.svg" type="image/svg+xml">
   <link rel="icon" href="favicon-32.png" type="image/png" sizes="32x32">
   <link rel="apple-touch-icon" href="apple-touch-icon.png">
-  <link rel="stylesheet" href="styles.css?v=2026-10-06-3">
+  <link rel="stylesheet" href="styles.css?v=2026-10-06-8">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 </head>
@@ -28,9 +28,6 @@
       </a>
 
       <ul class="nav-links">
-        <li><a href="#sectores" class="nav-link">Sectores</a></li>
-        <li><a href="#metodologia" class="nav-link">Metodología</a></li>
-        <li><a href="#equipo" class="nav-link">Equipo</a></li>
         <li><a href="#cotizaciones" class="nav-link">Cotizaciones</a></li>
         <li><a href="#contacto" class="nav-link">Contacto</a></li>
       </ul>
@@ -67,8 +64,8 @@
       </p>
 
       <div class="hero-cta-group">
-        <a href="#sectores" class="btn btn-primary">
-          Ver Casos de Éxito ↓
+        <a href="#cotizaciones" class="btn btn-primary">
+          Ver Planes ↓
         </a>
         <button class="btn btn-secondary" onclick="openPortalModal()">
           🔒 Ingresar al Portal de Clientes
@@ -78,172 +75,16 @@
       <!-- Métricas / Estadísticas de Autoridad -->
       <div class="hero-stats">
         <div class="stat-item">
-          <div class="stat-number">+6<span>Años</span></div>
+          <div class="stat-number">+5<span>Años</span></div>
           <div class="stat-label">Trayectoria Continua</div>
         </div>
         <div class="stat-item">
-          <div class="stat-number">+1,200<span>+</span></div>
-          <div class="stat-label">Piezas Producidas</div>
+          <div class="stat-number">+20<span>Empresas</span></div>
+          <div class="stat-label">Clientes atendidos</div>
         </div>
         <div class="stat-item">
           <div class="stat-number">2<span>Países</span></div>
           <div class="stat-label">México & Colombia</div>
-        </div>
-        <div class="stat-item">
-          <div class="stat-number">100%<span>Datos</span></div>
-          <div class="stat-label">Resultados Medibles</div>
-        </div>
-      </div>
-    </div>
-  </section>
-
-  <!-- ======================================================================
-       SECTORES & ESPECIALIDADES
-       ====================================================================== -->
-  <section class="section" id="sectores">
-    <div class="container">
-      <div class="section-head">
-        <span class="section-tag">Nuestras Especialidades</span>
-        <h2 class="section-title">Estrategias a la medida de industrias de alto nivel</h2>
-        <p class="section-desc">Diseñamos la voz, la imagen y la reputación digital de líderes y figuras públicas que necesitan ser escuchados con autoridad: discurso estratégico, presencia constante y cada mensaje cuidado en fondo y forma.</p>
-      </div>
-
-      <div class="grid-sectors">
-        <!-- Sector 1: Gastronomía -->
-        <div class="sector-card" style="--sector-color: #ff4d28;">
-          <div class="sector-icon">🍽️</div>
-          <h3 class="sector-name">Hospitality & Gastronomía</h3>
-          <p class="sector-desc">
-            Restaurantes de autor, cámaras empresariales y vida nocturna. Producción de Reels con fotografía gastronómica sensorial, menús interactivos y campañas de pauta para llenar comensales en horas pico.
-          </p>
-          <div class="sector-clients">
-            <span class="client-chip">Restaurantes de Autor</span>
-            <span class="client-chip">Bares & Vida Nocturna</span>
-            <span class="client-chip">Cámaras Empresariales</span>
-          </div>
-        </div>
-
-        <!-- Sector 2: Belleza & Cosmética -->
-        <div class="sector-card" style="--sector-color: #ec4899;">
-          <div class="sector-icon">✨</div>
-          <h3 class="sector-name">Belleza, Cuidado & Estética</h3>
-          <p class="sector-desc">
-            Campañas para el sector cosmético y bienestar en Colombia y México. Creación de carruseles educativos con rigor dermatológico, lanzamientos de producto y unboxing de alto valor percibido.
-          </p>
-          <div class="sector-clients">
-            <span class="client-chip">Marcas de Bienestar</span>
-            <span class="client-chip">E-commerce Colombia</span>
-            <span class="client-chip">Cuidado de la Piel</span>
-          </div>
-        </div>
-
-        <!-- Sector 3: Marcas Personales & Políticos -->
-        <div class="sector-card" style="--sector-color: #3b82f6;">
-          <div class="sector-icon">🎙️</div>
-          <h3 class="sector-name">Liderazgo & Figuras Públicas</h3>
-          <p class="sector-desc">
-            Dirección de imagen, discurso estratégico y reputación digital para personajes políticos, coaches y líderes de opinión. Cuidamos el fondo y la forma con estricta confidencialidad.
-          </p>
-          <div class="sector-clients">
-            <span class="client-chip">Coaches de Vida & Negocios</span>
-            <span class="client-chip">Líderes de Opinión</span>
-            <span class="client-chip">Relaciones Públicas</span>
-          </div>
-        </div>
-
-        <!-- Sector 4: Ciencia, B2B & Agua -->
-        <div class="sector-card" style="--sector-color: #06b6d4;">
-          <div class="sector-icon">💧</div>
-          <h3 class="sector-name">Ciencia, B2B & Gestión Hídrica</h3>
-          <p class="sector-desc">
-            Traducción de conceptos técnicos de alta ingeniería a narrativas corporativas claras. Modelos matemáticos, consultoría hidrogeológica y proyectos de alto impacto institucional.
-          </p>
-          <div class="sector-clients">
-            <span class="client-chip">Consultoría Técnica</span>
-            <span class="client-chip">Modelación Subterránea</span>
-            <span class="client-chip">Organismos de Agua</span>
-          </div>
-        </div>
-      </div>
-    </div>
-  </section>
-
-  <!-- ======================================================================
-       METODOLOGÍA DE 4 PASOS
-       ====================================================================== -->
-  <section class="section" id="metodologia">
-    <div class="container">
-      <div class="section-head">
-        <span class="section-tag">El Método Apex</span>
-        <h2 class="section-title">El fin de las publicaciones improvisadas</h2>
-        <p class="section-desc">Cada peso que inviertes pasa por un proceso estructurado que garantiza calidad cinematográfica y retorno de atención.</p>
-      </div>
-
-      <div class="grid-steps">
-        <div class="step-card">
-          <div class="step-number">PASO 01</div>
-          <h4 class="step-title">1. Diagnóstico & Parrilla</h4>
-          <p class="step-text">Planificamos el mes completo con objetivos de ventas, eventos clave y formatos asignados (Reels, Carruseles, Posts).</p>
-        </div>
-        <div class="step-card">
-          <div class="step-number">PASO 02</div>
-          <h4 class="step-title">2. Guion Escena por Escena</h4>
-          <p class="step-text">Desglosamos qué se ve, qué se dice y los segundos exactos para que el cliente lo apruebe antes de encender la cámara.</p>
-        </div>
-        <div class="step-card">
-          <div class="step-number">PASO 03</div>
-          <h4 class="step-title">3. Levantamiento & Edición</h4>
-          <p class="step-text">Nuestro equipo de producción graba en locación con equipo profesional e iluminación cinematográfica.</p>
-        </div>
-        <div class="step-card">
-          <div class="step-number">PASO 04</div>
-          <h4 class="step-title">4. Medición & Reporte</h4>
-          <p class="step-text">Entregamos resultados cada fin de mes en nuestro portal privado con métricas verificadas y capturas de pantalla reales.</p>
-        </div>
-      </div>
-    </div>
-  </section>
-
-  <!-- ======================================================================
-       EQUIPO & DIRECCIÓN
-       ====================================================================== -->
-  <section class="section" id="equipo" style="border-top: 1px solid var(--border-subtle);">
-    <div class="container">
-      <div class="team-wrap">
-        <div class="director-info">
-          <span class="badge badge-apex" style="margin-bottom:12px;">Dirección General</span>
-          <h3>Alejandra Rodríguez León</h3>
-          <div class="director-title">Fundadora & Directora Estratégica</div>
-          <p class="director-bio">
-            Ingeniera industrial y estudiante de maestría en Gestión Estratégica, con más de 8 años de experiencia en creación de contenido y creación de empresas. Une la precisión de los procesos con la sensibilidad para contar historias, y lidera personalmente la estrategia de cada marca en México y Colombia.
-          </p>
-          <a href="https://wa.me/524731647487?text=Hola%20Alejandra,%20quiero%20platicar%20sobre%20mi%20marca" target="_blank" rel="noopener" class="btn btn-primary">
-            Hablar con Alejandra
-          </a>
-        </div>
-
-        <div class="cred-list">
-          <div class="cred-item">
-            <div class="cred-number">+8<span>años</span></div>
-            <div class="cred-text">
-              <h4>Contenido & creación de empresas</h4>
-              <p>Experiencia construyendo marcas y negocios desde cero.</p>
-            </div>
-          </div>
-          <div class="cred-item">
-            <div class="cred-number">Ing.</div>
-            <div class="cred-text">
-              <h4>Ingeniera Industrial</h4>
-              <p>Procesos, métricas y mejora continua aplicados a la comunicación.</p>
-            </div>
-          </div>
-          <div class="cred-item">
-            <div class="cred-number">MGE</div>
-            <div class="cred-text">
-              <h4>Maestría en Gestión Estratégica</h4>
-              <p>En curso. Visión de negocio detrás de cada decisión creativa.</p>
-            </div>
-          </div>
         </div>
       </div>
     </div>
@@ -345,14 +186,14 @@
       </div>
 
       <div class="addons-wrap">
-        <h4 class="addons-title">Servicios a la carta</h4>
+        <h4 class="addons-title">Otros servicios</h4>
         <div class="addons-grid">
-          <div class="addon-item"><span>Edición de reel (material del cliente, hasta 60 s)</span><strong>$1,500</strong></div>
-          <div class="addon-item"><span>Hora adicional de producción foto / video</span><strong>$900</strong></div>
-          <div class="addon-item"><span>Consultoría estratégica 1:1 (por hora)</span><strong>$1,200</strong></div>
-          <div class="addon-item"><span>Página web profesional</span><strong>desde $9,500</strong></div>
-          <div class="addon-item"><span>Estrategia de marca personal y figura pública</span><strong>a la medida</strong></div>
-          <div class="addon-item"><span>Pauta digital (gestión, sin inversión publicitaria)</span><strong>desde $2,500 / mes</strong></div>
+          <div class="addon-item"><span>Edición de reel (material del cliente, hasta 60 s)</span></div>
+          <div class="addon-item"><span>Hora adicional de producción foto / video</span></div>
+          <div class="addon-item"><span>Consultoría estratégica 1:1</span></div>
+          <div class="addon-item"><span>Página web profesional</span></div>
+          <div class="addon-item"><span>Estrategia de marca personal y figura pública</span></div>
+          <div class="addon-item"><span>Pauta digital (gestión, sin inversión publicitaria)</span></div>
         </div>
         <p class="price-note">Precios en pesos mexicanos, antes de IVA. Para proyectos en Colombia cotizamos en COP. La inversión en anuncios se paga directo a las plataformas.</p>
       </div>
@@ -401,7 +242,6 @@
         <div>© 2020 - 2027 Apex Creativo. Todos los derechos reservados.</div>
         <div style="display:flex; gap:18px;">
           <a href="#inicio" style="color:var(--text-dim);">Inicio</a>
-          <a href="#sectores" style="color:var(--text-dim);">Sectores</a>
           <a href="javascript:void(0)" onclick="openPortalModal()" style="color:var(--apex-orange);">Portal Clientes</a>
         </div>
       </div>
@@ -449,10 +289,13 @@
           </div>
 
           <div class="auth-input-group" id="authGroupClientSelect">
-            <label class="auth-label">Selecciona tu Marca / Negocio</label>
-            <select id="authClientSelect" class="auth-select">
-              <!-- Clientes reales cargados por app.js -->
-            </select>
+            <label class="auth-label" for="authClientSearch">Escribe el nombre de tu marca</label>
+            <div class="auth-combo">
+              <input type="text" id="authClientSearch" class="auth-input auth-search" placeholder="Ej. Faro" autocomplete="off" spellcheck="false"
+                role="combobox" aria-autocomplete="list" aria-expanded="false" aria-controls="authClientSugerencias">
+              <input type="hidden" id="authClientSelect" value="">
+              <ul id="authClientSugerencias" class="auth-sugerencias" role="listbox" aria-label="Marcas encontradas" hidden></ul>
+            </div>
           </div>
 
           <div class="auth-input-group" id="authGroupTeamSelect" hidden>
@@ -467,7 +310,7 @@
             <input type="password" id="authPinInput" class="auth-input pin-input" maxlength="8" placeholder="••••">
           </div>
 
-          <div id="authErrorMsg" style="color:#f87171;font-size:12px;margin-bottom:14px;" hidden></div>
+          <div id="authErrorMsg" style="color:#c8264a;font-size:12px;margin-bottom:14px;" hidden></div>
 
           <button class="btn btn-primary" id="authSubmitBtn" style="width:100%;padding:12px;">
             Ingresar al Workspace
@@ -481,7 +324,7 @@
         <!-- Encabezado de Cliente Activo -->
         <div class="workspace-header">
           <div class="client-active-info">
-            <div class="client-avatar" id="currentClientAvatar">🍽️</div>
+            <div class="client-avatar" id="currentClientAvatar"></div>
             <div class="client-meta">
               <h2 id="currentClientName">Cliente</h2>
               <p id="currentClientSector">Gastronomía de Autor · México</p>
@@ -495,17 +338,18 @@
 
         <!-- Pestañas de Navegación del Portal -->
         <nav class="portal-tabs">
-          <button class="portal-tab active" data-tab="parrilla">📅 Parrilla de Contenido</button>
+          <button class="portal-tab active" data-tab="resultados">📊 Resumen de Resultados</button>
+          <button class="portal-tab" data-tab="planeacion">📝 Planeación</button>
+          <button class="portal-tab" data-tab="parrilla">📅 Parrilla de Contenido</button>
           <button class="portal-tab" data-tab="produccion">🎬 Plan de Producción & Guiones</button>
           <button class="portal-tab" data-tab="tareas" id="tabBtnTareas">📋 Tablero de Colaboradores</button>
-          <button class="portal-tab" data-tab="resultados">📊 Resumen de Resultados</button>
           <button class="portal-tab" data-tab="ajustes" id="tabBtnAjustes">⚙️ Ajustes de Agencia</button>
         </nav>
 
         <!-- Contenedores de las Pestañas -->
         
         <!-- Pestaña 1: Parrilla -->
-        <div class="tab-content" id="viewTab_parrilla">
+        <div class="tab-content" id="viewTab_parrilla" hidden>
           <div class="cal-toolbar">
             <div class="cal-nav">
               <button class="btn btn-sm btn-secondary" id="calPrevMonthBtn">‹</button>
@@ -517,6 +361,8 @@
               0 piezas programadas
             </div>
           </div>
+
+          <div id="calColorTools" class="cal-color-tools"></div>
 
           <div class="cal-container">
             <div class="cal-days-header">
@@ -534,6 +380,11 @@
           </div>
 
           <div id="dayDetailPanel" hidden></div>
+        </div>
+
+        <!-- Pestaña: Planeación del mes -->
+        <div class="tab-content" id="viewTab_planeacion" hidden>
+          <!-- Llenado por app.js -->
         </div>
 
         <!-- Pestaña 2: Producción & Guiones -->
@@ -559,7 +410,7 @@
         </div>
 
         <!-- Pestaña 4: Resultados Mensuales -->
-        <div class="tab-content" id="viewTab_resultados" hidden>
+        <div class="tab-content" id="viewTab_resultados">
           <!-- Llenado por app.js -->
         </div>
 
@@ -579,7 +430,7 @@
   </div>
 
   <!-- SCRIPTS -->
-  <script src="reportes.js?v=2026-10-06-3"></script>
-  <script src="app.js?v=2026-10-06-3"></script>
+  <script src="reportes.js?v=2026-10-06-8"></script>
+  <script src="app.js?v=2026-10-06-8"></script>
 </body>
 </html>

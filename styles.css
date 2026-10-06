@@ -2285,3 +2285,149 @@ img, svg {
 .rp-sub-nombre { font-size: 13.5px; }
 .rp-sub-valor { font-size: 16px; }
 .rp-sub .rp-comp { font-size: 12.5px; margin-top: 2px; }
+
+/* ==========================================================================
+   CALENDARIO EN CLARO + COLORES POR DÍA
+   ========================================================================== */
+.cal-container { background: #ffffff; }
+.cal-days-header { background: var(--bg-surface-elevated); }
+.cal-cell:hover { background: #faf6fa; }
+.cal-cell.empty-cell { background: #f7f2f8; }
+.cal-cell.is-selected { background: rgba(214, 61, 26, 0.05); }
+.content-chip { background: #ffffff; border: 1px solid var(--border-subtle); border-left: 3px solid var(--chip-color, var(--apex-orange)); }
+.content-chip:hover { background: var(--bg-surface-elevated); }
+.cal-cell.has-color, .cal-cell.has-color:hover, .cal-cell.has-color.is-selected { background: var(--dia-color); }
+.cal-cell.has-color .cell-dnum { color: var(--text-strong); font-weight: 700; }
+.cal-grid-body.pintando .cal-cell:not(.empty-cell) { cursor: crosshair; }
+.cal-grid-body.pintando .cal-cell:not(.empty-cell):hover { box-shadow: inset 0 0 0 2px #311432; }
+.cal-grid-body.pintando .content-chip { pointer-events: none; }
+.cal-color-tools { margin-bottom: 12px; display: flex; justify-content: flex-end; }
+.cal-color-tools:empty { display: none; }
+
+/* Barra de colores (calendario y planeación) */
+.paleta-barra {
+  display: flex; align-items: center; flex-wrap: wrap; gap: 10px 14px; width: 100%;
+  padding: 10px 14px; background: #ffffff; border: 1px solid var(--border-medium);
+  border-radius: var(--radius-lg); box-shadow: var(--shadow-sm);
+}
+.paleta-instr { font-size: 13px; color: var(--text-muted); flex: 1 1 260px; }
+.paleta-swatches { display: flex; gap: 8px; flex-wrap: wrap; }
+.swatch {
+  width: 28px; height: 28px; border-radius: 50%; border: 1px solid rgba(49, 20, 50, 0.22);
+  cursor: pointer; transition: transform var(--transition-fast), box-shadow var(--transition-fast); position: relative;
+}
+.swatch:hover { transform: scale(1.1); }
+.swatch.activo { box-shadow: 0 0 0 2px #ffffff, 0 0 0 4px #311432; }
+.swatch-ninguno { background: #ffffff; }
+.swatch-ninguno::after {
+  content: ''; position: absolute; left: 4px; right: 4px; top: 50%; height: 2px;
+  background: #c8264a; transform: rotate(-45deg); border-radius: 2px;
+}
+
+/* ==========================================================================
+   PESTAÑA PLANEACIÓN DEL MES
+   ========================================================================== */
+.plan-toolbar { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 12px; margin-bottom: 14px; }
+.plan-toolbar-izq { flex: 1 1 auto; display: flex; }
+.plan-toolbar-der { display: flex; align-items: center; gap: 8px; }
+.plan-label { font-size: 13px; color: var(--text-muted); }
+.plan-select { width: auto; padding: 6px 10px; font-size: 13px; background: #ffffff; color: var(--text-strong); }
+.plan-tabla-wrap { overflow-x: auto; border: 1px solid var(--border-medium); border-radius: var(--radius-lg); background: #ffffff; box-shadow: var(--shadow-sm); }
+.plan-tabla { width: 100%; min-width: 640px; border-collapse: collapse; table-layout: fixed; font-size: 14px; }
+.plan-col-num { width: 44px; }
+.plan-col-1 { width: 22%; }
+.plan-col-2 { width: 44%; }
+.plan-col-3 { width: 34%; }
+.plan-col-acc { width: 76px; }
+.plan-tabla th, .plan-tabla td { border-right: 1px solid var(--border-subtle); border-bottom: 1px solid var(--border-subtle); vertical-align: top; }
+.plan-tabla th:last-child, .plan-tabla td:last-child { border-right: none; }
+.plan-tabla tbody tr:last-child td { border-bottom: none; }
+.plan-tabla thead th {
+  background: #311432; color: #ffffff; text-align: left; padding: 0;
+  font-family: var(--font-display); font-weight: 700; font-size: 13.5px;
+}
+.plan-tabla:not(.editable) thead th { padding: 11px 12px; }
+.plan-tabla thead th.plan-num { text-align: center; font-family: var(--font-mono); font-size: 12px; font-weight: 500; color: #c5adc7; padding: 11px 0; }
+.plan-col-input {
+  width: 100%; padding: 11px 12px; background: transparent; border: none; color: #ffffff;
+  font-family: var(--font-display); font-weight: 700; font-size: 13.5px;
+}
+.plan-col-input:focus { outline: none; background: rgba(255, 255, 255, 0.1); box-shadow: inset 0 -2px 0 #ff5733; }
+.plan-num { text-align: center; font-family: var(--font-mono); font-size: 12px; color: var(--text-dim); padding-top: 11px; background: #faf6fa; }
+.plan-celda { padding: 0; position: relative; transition: background var(--transition-fast); }
+.plan-celda textarea {
+  display: block; width: 100%; min-height: 42px; resize: none; overflow: hidden;
+  padding: 10px 12px; border: none; background: transparent; color: var(--text-strong);
+  font-family: var(--font-body); font-size: 14px; line-height: 1.5;
+}
+.plan-celda textarea:focus { outline: none; box-shadow: inset 0 0 0 2px #311432; background: rgba(255, 255, 255, 0.55); }
+.plan-tabla.editable .plan-celda:hover { box-shadow: inset 0 0 0 1px var(--border-medium); }
+.plan-tabla.pintando .plan-celda { cursor: crosshair; }
+.plan-tabla.pintando .plan-celda textarea { cursor: crosshair; pointer-events: none; }
+.plan-tabla.pintando .plan-celda:hover { box-shadow: inset 0 0 0 2px #311432; }
+.plan-texto { padding: 10px 12px; min-height: 42px; white-space: pre-wrap; word-break: break-word; color: var(--text-strong); line-height: 1.5; }
+.plan-acc { text-align: center; padding: 6px 4px; white-space: nowrap; background: #faf6fa; }
+.plan-btn {
+  width: 28px; height: 28px; border-radius: 8px; color: var(--text-dim); font-size: 14px; line-height: 1;
+  display: inline-flex; align-items: center; justify-content: center; transition: all var(--transition-fast);
+}
+.plan-btn:hover { background: var(--bg-surface-elevated); color: var(--text-strong); }
+.plan-btn-borrar:hover { background: rgba(200, 38, 74, 0.1); color: #c8264a; }
+.plan-vacia { padding: 24px; text-align: center; color: var(--text-dim); font-size: 13px; }
+.plan-agregar-linea {
+  margin-top: 10px; width: 100%; padding: 10px; border: 1px dashed var(--border-medium); border-radius: var(--radius-md);
+  color: var(--text-muted); font-weight: 600; font-size: 13.5px; background: #ffffff; transition: all var(--transition-fast);
+}
+.plan-agregar-linea:hover { border-color: #311432; color: var(--text-strong); background: #faf6fa; }
+@media (max-width: 560px) {
+  .plan-toolbar-der { width: 100%; }
+  .paleta-instr { flex-basis: 100%; }
+}
+.portal-tabs { padding: 0 16px; gap: 2px; }
+.portal-tab { padding: 12px 12px; }
+
+/* ==========================================================================
+   ACCESO DE CLIENTES: BUSCADOR DE MARCA
+   ========================================================================== */
+.auth-combo { position: relative; }
+.auth-search { text-align: left; }
+.auth-search.elegido { border-color: #311432; box-shadow: inset 0 0 0 1px #311432; font-weight: 600; }
+.auth-sugerencias {
+  position: absolute; left: 0; right: 0; top: calc(100% + 6px); z-index: 20;
+  list-style: none; margin: 0; padding: 6px; background: #ffffff;
+  border: 1px solid var(--border-medium); border-radius: var(--radius-md);
+  box-shadow: 0 14px 34px rgba(49, 20, 50, 0.16); text-align: left;
+}
+.auth-sug {
+  display: flex; align-items: baseline; justify-content: space-between; gap: 12px;
+  padding: 9px 12px; border-radius: var(--radius-sm); cursor: pointer;
+}
+.auth-sug:hover, .auth-sug.activo { background: var(--bg-surface-elevated); }
+.auth-sug-nombre { font-size: 14px; font-weight: 600; color: var(--text-strong); }
+.auth-sug-pais { font-size: 11.5px; color: var(--text-dim); font-family: var(--font-mono); white-space: nowrap; }
+.auth-sug-vacio { padding: 10px 12px; font-size: 13px; color: var(--text-dim); }
+.client-avatar {
+  background: linear-gradient(135deg, #5c205e, #311432); border-color: rgba(49, 20, 50, 0.3);
+  color: #ffffff; font-family: var(--font-display); font-weight: 800; font-size: 15px; letter-spacing: 0.02em;
+}
+
+/* ==========================================================================
+   PORTADA CON 3 CIFRAS Y "OTROS SERVICIOS" SIN PRECIOS
+   ========================================================================== */
+.hero-stats { grid-template-columns: repeat(3, 1fr); max-width: 860px; margin-left: auto; margin-right: auto; }
+@media (max-width: 1024px) {
+  .hero-stats { grid-template-columns: repeat(3, 1fr); }
+  .stat-item:nth-child(-n+2) { border-bottom: none; }
+  .stat-item:nth-child(2) { border-right: 1px solid var(--border-subtle); }
+}
+@media (max-width: 560px) {
+  .hero-stats { grid-template-columns: 1fr; }
+  .stat-item:not(:last-child) { border-right: none; border-bottom: 1px solid var(--border-subtle); }
+  .stat-item:nth-child(2) { border-right: none; }
+}
+.addon-item { justify-content: flex-start; }
+.addon-item span { position: relative; padding-left: 20px; }
+.addon-item span::before {
+  content: ''; position: absolute; left: 2px; top: 0.55em; width: 7px; height: 7px;
+  border-radius: 2px; background: var(--apex-orange); transform: rotate(45deg);
+}

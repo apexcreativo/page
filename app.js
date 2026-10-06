@@ -10,10 +10,11 @@ const STORAGE_KEY = 'apex_creativo_db_v2'; // copia vieja guardada en cada naveg
 
 // Miembros del equipo. Los PIN viven en la nube (no en este archivo).
 const TEAM_MEMBERS = [
-  { id: 'ale', nombre: 'Alejandra', rol: 'Dirección General & Estrategia' },
-  { id: 'pablo', nombre: 'Pablo', rol: 'Dirección Operativa & Modelos' },
-  { id: 'mitzi', nombre: 'Mitzi', rol: 'Levantamiento, Edición y Foto/Video' },
-  { id: 'extra', nombre: 'Colaborador adicional', rol: 'Producción & Apoyo' }
+  // En la pantalla de acceso solo se muestra el código (no el nombre)
+  { id: 'ale', codigo: 'APEX CEO1', nombre: 'Alejandra', rol: 'Dirección General & Estrategia' },
+  { id: 'pablo', codigo: 'APEX CEO2', nombre: 'Pablo', rol: 'Dirección Operativa & Modelos' },
+  { id: 'mitzi', codigo: 'APEX EQ1', nombre: 'Mitzi', rol: 'Levantamiento, Edición y Foto/Video' },
+  { id: 'extra', codigo: 'APEX EQ2', nombre: 'Colaborador adicional', rol: 'Producción & Apoyo' }
 ];
 
 // Proyecto de Firebase del portal. Estos datos son públicos por diseño:
@@ -107,7 +108,7 @@ const state = {
   activeClientSlug: 'palato',
   
   // Navegación dentro del portal
-  activeTab: 'parrilla', // 'parrilla' | 'produccion' | 'tareas' | 'resultados' | 'ajustes'
+  activeTab: 'resultados', // 'resultados' | 'planeacion' | 'parrilla' | 'produccion' | 'tareas' | 'ajustes'
   
   // Calendario
   calYear: new Date().getFullYear(),
@@ -159,7 +160,7 @@ async function loginAsClient(slug, pin) {
   state.currentRole = 'client';
   state.currentTeamMember = null;
   state.activeClientSlug = slug;
-  state.activeTab = 'parrilla';
+  state.activeTab = 'resultados';
   openPortalWorkspace();
   return { success: true };
 }
@@ -181,7 +182,7 @@ async function loginAsTeam(memberId, pin) {
   if (!db.clientes.some(c => c.slug === state.activeClientSlug)) {
     state.activeClientSlug = db.clientes[0] ? db.clientes[0].slug : '';
   }
-  state.activeTab = 'parrilla';
+  state.activeTab = 'resultados';
   openPortalWorkspace();
   return { success: true };
 }
@@ -206,6 +207,7 @@ async function logout() {
   db = loadDatabase();
   state.activeClientSlug = db.clientes[0] ? db.clientes[0].slug : 'palato';
   closePortalWorkspace();
+  authLimpiarBusqueda();
   nubeCargarConfigPublica();
 }
 
@@ -262,7 +264,7 @@ function renderPortalWorkspace() {
   const roleBadge = document.getElementById('portalRoleBadge');
   if (roleBadge) {
     if (state.currentRole === 'team') {
-      roleBadge.textContent = `Modo Equipo: ${state.currentTeamMember ? state.currentTeamMember.nombre : 'Apex'}`;
+      roleBadge.textContent = `Modo Equipo: ${state.currentTeamMember ? (state.currentTeamMember.codigo || state.currentTeamMember.nombre) : 'Apex'}`;
       roleBadge.style.background = 'rgba(192, 132, 252, 0.2)';
       roleBadge.style.color = '#e9d5ff';
     } else {
@@ -280,7 +282,7 @@ function renderPortalWorkspace() {
       const select = document.getElementById('clientSwitcherSelect');
       if (select) {
         select.innerHTML = db.clientes.map(c => 
-          `<option value="${c.slug}" ${c.slug === state.activeClientSlug ? 'selected' : ''}>${c.avatar} ${c.nombre} (${c.pais})</option>`
+          `<option value="${c.slug}" ${c.slug === state.activeClientSlug ? 'selected' : ''}>${escapeHtml(c.nombre)} (${escapeHtml(c.pais)})</option>`
         ).join('') + `<option value="__NEW__">+ Agregar Nuevo Cliente...</option>`;
       }
     }
@@ -290,7 +292,7 @@ function renderPortalWorkspace() {
   const clientAvatarEl = document.getElementById('currentClientAvatar');
   const clientNameEl = document.getElementById('currentClientName');
   const clientSectorEl = document.getElementById('currentClientSector');
-  if (clientAvatarEl) clientAvatarEl.textContent = activeClient.avatar;
+  if (clientAvatarEl) clientAvatarEl.textContent = inicialesCliente(activeClient.nombre);
   if (clientNameEl) clientNameEl.textContent = activeClient.nombre;
   if (clientSectorEl) clientSectorEl.textContent = `${activeClient.sector} · ${activeClient.pais}`;
 
@@ -300,9 +302,9 @@ function renderPortalWorkspace() {
   if (tabTareas) tabTareas.hidden = state.currentRole !== 'team';
   if (tabAjustes) tabAjustes.hidden = state.currentRole !== 'team';
 
-  // Si el cliente estaba en una pestaña de equipo, mandarlo a la parrilla
+  // Si el cliente estaba en una pestaña de equipo, mandarlo a la primera pestaña (resultados)
   if (state.currentRole === 'client' && (state.activeTab === 'tareas' || state.activeTab === 'ajustes')) {
-    state.activeTab = 'parrilla';
+    state.activeTab = 'resultados';
   }
 
   // Activar botón de pestaña actual
@@ -311,13 +313,14 @@ function renderPortalWorkspace() {
   });
 
   // Ocultar todos los paneles y mostrar el activo
-  ['parrilla', 'produccion', 'tareas', 'resultados', 'ajustes'].forEach(tabName => {
+  ['resultados', 'planeacion', 'parrilla', 'produccion', 'tareas', 'ajustes'].forEach(tabName => {
     const el = document.getElementById(`viewTab_${tabName}`);
     if (el) el.hidden = state.activeTab !== tabName;
   });
 
   // Renderizar contenido de la pestaña activa
   if (state.activeTab === 'parrilla') renderParrilla();
+  if (state.activeTab === 'planeacion') renderPlaneacion();
   if (state.activeTab === 'produccion') renderProduccion();
   if (state.activeTab === 'tareas') renderTareas();
   if (state.activeTab === 'resultados') renderResultados();
@@ -342,6 +345,9 @@ function renderParrilla() {
   const hoyIso = new Date().toISOString().slice(0, 10);
 
   // Obtener piezas para el cliente activo en este mes
+  const coloresDias = coloresCalendario(state.activeClientSlug, `${y}-${String(m + 1).padStart(2, '0')}`);
+  const pintandoCal = modoPintar('cal');
+
   const piezasCliente = db.producciones.filter(p => {
     const matchClient = p.clienteSlug === state.activeClientSlug;
     const matchMes = p.fecha && p.fecha.startsWith(`${y}-${String(m + 1).padStart(2, '0')}`);
@@ -360,9 +366,10 @@ function renderParrilla() {
     const piezasDia = piezasCliente.filter(p => p.fecha === fechaIso);
     const isToday = fechaIso === hoyIso;
     const isSelected = fechaIso === state.selectedDayIso;
+    const colorDia = coloresDias[fechaIso] || '';
 
     gridHtml += `
-      <div class="cal-cell ${isToday ? 'is-today' : ''} ${isSelected ? 'is-selected' : ''}" data-day="${fechaIso}" onclick="selectDay('${fechaIso}')">
+      <div class="cal-cell ${isToday ? 'is-today' : ''} ${isSelected ? 'is-selected' : ''} ${colorDia ? 'has-color' : ''}" data-day="${fechaIso}" ${colorDia ? `style="--dia-color:${colorDia}"` : ''} onclick="clickDiaCalendario('${fechaIso}')">
         <div class="cell-top">
           <span class="cell-dnum">${d}</span>
           ${piezasDia.length ? `<span class="mono" style="font-size:10px;color:var(--text-dim);">${piezasDia.length}</span>` : ''}
@@ -391,7 +398,18 @@ function renderParrilla() {
   }
 
   const calBody = document.getElementById('calGridBody');
-  if (calBody) calBody.innerHTML = gridHtml;
+  if (calBody) {
+    calBody.innerHTML = gridHtml;
+    calBody.classList.toggle('pintando', pintandoCal);
+  }
+
+  // Herramienta para colorear días (solo equipo)
+  const calTools = document.getElementById('calColorTools');
+  if (calTools) {
+    calTools.innerHTML = state.currentRole === 'team'
+      ? paletaColoresHtml('cal', 'Elige un color y toca los días. Si tocas un día con el mismo color, se lo quitas.')
+      : '';
+  }
 
   // Resumen del mes
   const countTotal = piezasCliente.length;
@@ -877,7 +895,7 @@ function renderKanbanCards(piezas, estadoCol) {
         <div class="task-assignee">👤 ${p.actuacion || 'Sin asignar'}</div>
         <div class="task-title">${escapeHtml(p.titulo || 'Sin título')}</div>
         <div class="task-meta">
-          <span>${client.avatar} ${client.nombre}</span>
+          <span>${client.nombre}</span>
           <span>${p.fecha ? p.fecha.slice(5) : 's/f'}</span>
         </div>
         <div style="margin-top:10px;display:flex;gap:4px;" onclick="event.stopPropagation();">
@@ -923,8 +941,17 @@ function nombreMes(iso) {
   return `${MESES_NOMBRES[partes[1] - 1]} ${partes[0]}`;
 }
 
+// Un documento del mes también guarda la planeación y los colores del calendario;
+// solo cuenta como "reporte" si trae datos de resultados.
+function tieneReporte(r) {
+  if (!r) return false;
+  return !!(String(r.resumen || '').trim() || (r.kpis || []).length || (r.imagenes || []).length ||
+    r.detalle || r.tileFijo || r.plataformas);
+}
+
 function mesesConReporte(slug) {
-  const meses = new Set(Object.keys((db.resultados && db.resultados[slug]) || {}));
+  const delCliente = (db.resultados && db.resultados[slug]) || {};
+  const meses = new Set(Object.keys(delCliente).filter(m => tieneReporte(delCliente[m])));
   Object.keys(reportesPlataformasDe(slug)).forEach(m => meses.add(m));
   return Array.from(meses).sort().reverse();
 }
@@ -973,7 +1000,7 @@ function reporteMes(slug, mes, crear) {
 function limpiarMesVacio(slug, mes) {
   const r = db.resultados[slug] && db.resultados[slug][mes];
   if (!r) return;
-  const vacio = !String(r.resumen || '').trim() && !(r.kpis || []).length && !(r.imagenes || []).length && !r.detalle && !r.tileFijo;
+  const vacio = !tieneReporte(r) && !r.planeacion && !(r.calendarioColores && Object.keys(r.calendarioColores).length);
   if (vacio) {
     delete db.resultados[slug][mes];
     if (!Object.keys(db.resultados[slug]).length) delete db.resultados[slug];
@@ -1043,7 +1070,6 @@ function renderResultados() {
   const plataformasCargadas = obtenerPlataformas(slug, mes);
   const plataformas = plataformasCargadas || (esEquipo ? plantillaPlataformas() : null);
   const kpis = Array.isArray(datos.kpis) ? datos.kpis : [];
-  const imagenes = Array.isArray(datos.imagenes) ? datos.imagenes : [];
   const piezasMes = db.producciones.filter(p => p.clienteSlug === slug && (p.fecha || '').startsWith(mes));
   const pubCount = piezasMes.filter(p => p.estado === 'Publicado').length;
   const editando = state.kpiEditando;
@@ -1084,20 +1110,6 @@ function renderResultados() {
       </div>`;
   }).join('') + (esEquipo && editando === 'nuevo' ? formularioKpi(null, 'nuevo') : '');
 
-  let resumenHtml = '';
-  if (esEquipo && state.resumenEditando) {
-    resumenHtml = `
-      <textarea id="resumenTexto" class="form-control" rows="5" style="font-size:14px;line-height:1.55;">${escapeHtml(datos.resumen || '')}</textarea>
-      <div style="display:flex;gap:8px;margin-top:10px;">
-        <button class="btn btn-sm btn-primary" onclick="guardarResumen()">Guardar resumen</button>
-        <button class="btn btn-sm btn-secondary" onclick="cancelarResumen()">Cancelar</button>
-      </div>`;
-  } else {
-    resumenHtml = `
-      <p style="color:${datos.resumen ? 'var(--text-main)' : 'var(--text-dim)'};font-size:14.5px;line-height:1.6;">${datos.resumen ? escapeHtml(datos.resumen) : 'Este mes todavía no tiene resumen.'}</p>
-      ${esEquipo ? `<div style="margin-top:14px;"><button class="btn btn-sm btn-secondary" onclick="editarResumen()">${datos.resumen ? 'Editar resumen' : 'Escribir resumen'}</button></div>` : ''}`;
-  }
-
   container.innerHTML = `
     <div class="results-header">
       <div>
@@ -1123,36 +1135,7 @@ function renderResultados() {
       ${tiles}
     </div>`}
 
-    <!-- Resumen Ejecutivo -->
-    ${(datos.resumen || esEquipo) ? `
-    <div class="editor-card" style="margin-bottom:24px;">
-      <h4 style="font-family:var(--font-display);font-size:16px;color:var(--text-strong);margin-bottom:12px;">Resumen Ejecutivo del Mes</h4>
-      ${resumenHtml}
-    </div>` : ''}
-
-    ${plataformas ? renderConclusionResultados(datos.detalle) : renderDetalleResultados(datos.detalle)}
-
-    <!-- Capturas y Evidencias de Resultados -->
-    ${(imagenes.length || esEquipo) ? `
-    <div class="editor-card">
-      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;gap:10px;flex-wrap:wrap;">
-        <h4 style="font-family:var(--font-display);font-size:16px;color:var(--text-strong);">Capturas & Evidencias Verificadas</h4>
-        ${esEquipo ? `<button class="btn btn-sm btn-secondary" onclick="document.getElementById('kpiImageInput').click()">+ Subir Captura</button>` : ''}
-      </div>
-      <input type="file" id="kpiImageInput" accept="image/*" style="display:none;" onchange="handleKpiImageUpload(this)">
-      <div class="metrics-proofs-grid">
-        ${imagenes.length ? imagenes.map((src, i) => `
-          <div class="proof-card" style="position:relative;" onclick="verCaptura(${i})">
-            <img src="${escapeHtml(src)}" alt="Captura de métricas ${i + 1}" loading="lazy" decoding="async">
-            ${esEquipo ? `<button type="button" class="btn btn-sm btn-secondary" title="Quitar captura" aria-label="Quitar captura ${i + 1}" style="position:absolute;top:6px;right:6px;padding:2px 8px;font-size:12px;color:#f87171;" onclick="event.stopPropagation(); borrarCaptura(${i})">✕</button>` : ''}
-          </div>
-        `).join('') : `
-          <div style="grid-column:1/-1;padding:20px;text-align:center;color:var(--text-dim);font-size:13px;">
-            Aún no se han adjuntado capturas de pantalla para este mes.
-          </div>
-        `}
-      </div>
-    </div>` : ''}
+    ${plataformas ? '' : renderDetalleResultados(datos.detalle)}
   `;
 }
 
@@ -1380,13 +1363,6 @@ function renderDetalleResultados(d) {
 
     ${redes}
 
-    <div class="editor-card res-conclusion" style="margin-bottom:24px;">
-      <h4 class="res-h4">Conclusión del mes</h4>
-      ${(d.conclusion || []).map(p => `<p>${escapeHtml(p)}</p>`).join('')}
-      ${(d.recomendaciones && d.recomendaciones.length) ? `
-        <h5 class="res-sub">Qué sigue en octubre</h5>
-        <ul class="res-notas">${d.recomendaciones.map(n => `<li>${escapeHtml(n)}</li>`).join('')}</ul>` : ''}
-    </div>
   `;
 }
 
@@ -1517,30 +1493,6 @@ function rpTarjeta(m, mesAnt, etiqueta, destacada) {
     </article>`;
 }
 
-function rpFilasComparacion(metricas) {
-  const filas = [];
-  const fila = (m, esSub) => {
-    if (m.tipo === 'grupo') {
-      filas.push(`<tr class="rp-tr-grupo"><th scope="row" colspan="5">${escapeHtml(m.nombre)}</th></tr>`);
-      return;
-    }
-    const c = rpComparar(m);
-    filas.push(`
-      <tr class="${esSub ? 'rp-tr-sub' : ''}">
-        <th scope="row">${escapeHtml(m.nombre)}</th>
-        <td class="rp-num rp-strong">${rpValor(m.actual, m.tipo)}</td>
-        <td class="rp-num rp-dim">${rpVacio(m.anterior) ? '—' : rpFormato(m.anterior, m.tipo)}</td>
-        <td class="rp-num">${c.dif ? escapeHtml(c.dif) : '—'}</td>
-        <td class="rp-num">${(rpVacio(m.actual) || (c.dir === 'nd' && !c.pct)) ? '—' : rpChip(c)}</td>
-      </tr>`);
-  };
-  metricas.forEach(m => {
-    fila(m, false);
-    (m.sub || []).forEach(s => fila(s, true));
-  });
-  return filas.join('');
-}
-
 function rpTop(top, red) {
   if (!top) return '';
   const items = (top.items || []).slice(0, 5);
@@ -1603,7 +1555,6 @@ function rpPlataforma(info, p, mes) {
   const mesAnt = MESES_NOMBRES[Number(mesAnteriorIso(mes).split('-')[1]) - 1];
   const mesAct = MESES_NOMBRES[Number(String(mes).split('-')[1]) - 1];
   const metricas = p.metricas || [];
-  const comparar = state.rpComparar !== false;
   return `
     <section class="rp-plataforma rp-${info.clase}" id="rp-${info.id}" aria-labelledby="rp-t-${info.id}">
       <header class="rp-plat-head">
@@ -1619,53 +1570,335 @@ function rpPlataforma(info, p, mes) {
 
       <div class="rp-cards">${metricas.map((m, i) => rpTarjeta(m, mesAnt, p.comparadoCon || mesAnt.toLowerCase(), i === 0)).join('')}</div>
 
-      ${comparar ? `
-      <div class="rp-bloque">
-        <div class="rp-bloque-head">
-          <h5 class="rp-bloque-titulo">Comparación con el mes anterior</h5>
-          <span class="rp-bloque-meta">${mesAct} vs ${mesAnt}</span>
-        </div>
-        <div class="rp-tabla-wrap">
-          <table class="rp-tabla">
-            <thead><tr><th scope="col">Métrica</th><th scope="col">${mesAct}</th><th scope="col">${mesAnt}</th><th scope="col">Diferencia</th><th scope="col">Variación</th></tr></thead>
-            <tbody>${rpFilasComparacion(metricas)}</tbody>
-          </table>
-        </div>
-      </div>` : ''}
-
       ${info.id === 'google' ? rpResenas(p.resenas) : rpTop(p.top, info.nombre)}
     </section>`;
 }
 
 function renderReportePlataformas(plataformas, mes, esPlantilla) {
-  const comparar = state.rpComparar !== false;
   return `
     ${esPlantilla ? `<div class="res-aviso">Este cliente todavía no tiene métricas por plataforma para ${nombreMes(mes)}. La estructura ya está lista: se llena en el archivo reportes.js (copia el bloque de El Faro y cambia cliente, periodo y valores).</div>` : ''}
     <div class="rp-toolbar">
       <nav class="rp-saltos" aria-label="Ir a la plataforma">
         ${PLATAFORMAS_INFO.map(i => `<a href="#rp-${i.id}" class="rp-salto rp-salto-${i.clase}" onclick="event.preventDefault(); var el=document.getElementById('rp-${i.id}'); if(el) el.scrollIntoView({behavior:'smooth', block:'start'});">${i.nombre}</a>`).join('')}
       </nav>
-      <label class="rp-toggle">
-        <input type="checkbox" ${comparar ? 'checked' : ''} onchange="state.rpComparar = this.checked; renderResultados();">
-        <span>Comparar con el mes anterior</span>
-      </label>
     </div>
     <div class="rp-plataformas">
       ${PLATAFORMAS_INFO.map(i => rpPlataforma(i, plataformas[i.id], mes)).join('')}
     </div>`;
 }
 
-// Solo la conclusión del reporte detallado (cuando ya se muestra el reporte por plataforma)
-function renderConclusionResultados(d) {
-  if (!d || !((d.conclusion && d.conclusion.length) || (d.recomendaciones && d.recomendaciones.length))) return '';
+// ==========================================================================
+// 1b. COLORES (calendario y planeación) + PESTAÑA PLANEACIÓN DEL MES
+//     Se guardan en la nube dentro del documento del mes de cada cliente
+//     (resultados/<cliente>__<AAAA-MM>): campos "planeacion" y "calendarioColores".
+// ==========================================================================
+const COLORES_CELDA = [
+  { nombre: 'Sin color', hex: '' },
+  { nombre: 'Rojo', hex: '#fde2e1' },
+  { nombre: 'Naranja', hex: '#ffe2cc' },
+  { nombre: 'Amarillo', hex: '#fff1b8' },
+  { nombre: 'Verde', hex: '#d6f2df' },
+  { nombre: 'Azul', hex: '#d8e8fb' },
+  { nombre: 'Morado', hex: '#eadcf7' },
+  { nombre: 'Rosa', hex: '#fbdaea' },
+  { nombre: 'Gris', hex: '#e9e5ec' }
+];
+const PLAN_COLUMNAS_DEFAULT = ['Fecha', 'Tema / actividad', 'Notas'];
+const PLAN_FILAS_INICIALES = 5;
+
+function colorValido(hex) {
+  return COLORES_CELDA.some(c => c.hex && c.hex === hex) ? hex : '';
+}
+
+function modoPintar(ambito) {
+  return !!(state.pintar && state.pintar.ambito === ambito && state.currentRole === 'team');
+}
+
+function rerenderPintar(ambito) {
+  if (ambito === 'cal') renderParrilla();
+  else renderPlaneacion();
+}
+
+function activarPintar(ambito) {
+  state.pintar = { ambito, color: COLORES_CELDA[3].hex };
+  rerenderPintar(ambito);
+}
+
+function elegirColorPintar(hex) {
+  if (!state.pintar) return;
+  state.pintar.color = colorValido(hex);
+  rerenderPintar(state.pintar.ambito);
+}
+
+function terminarPintar() {
+  const ambito = state.pintar ? state.pintar.ambito : 'plan';
+  state.pintar = null;
+  rerenderPintar(ambito);
+}
+
+// Botón "Colorear" o, si está activo, la barra de colores
+function paletaColoresHtml(ambito, instruccion) {
+  const etiqueta = ambito === 'cal' ? 'Colorear días' : 'Colorear celdas';
+  if (!modoPintar(ambito)) {
+    return `<button type="button" class="btn btn-sm btn-secondary paleta-abrir" onclick="activarPintar('${ambito}')">🎨 ${etiqueta}</button>`;
+  }
+  const actual = state.pintar.color;
   return `
-    <div class="editor-card res-conclusion" style="margin-bottom:24px;">
-      <h4 class="res-h4">Conclusión del mes</h4>
-      ${(d.conclusion || []).map(p => `<p>${escapeHtml(p)}</p>`).join('')}
-      ${(d.recomendaciones && d.recomendaciones.length) ? `
-        <h5 class="res-sub">Qué sigue el próximo mes</h5>
-        <ul class="res-notas">${d.recomendaciones.map(n => `<li>${escapeHtml(n)}</li>`).join('')}</ul>` : ''}
+    <div class="paleta-barra" role="toolbar" aria-label="${etiqueta}">
+      <span class="paleta-instr">${escapeHtml(instruccion)}</span>
+      <div class="paleta-swatches">
+        ${COLORES_CELDA.map(c => `
+          <button type="button" class="swatch${c.hex ? '' : ' swatch-ninguno'}${actual === c.hex ? ' activo' : ''}"
+            ${c.hex ? `style="background:${c.hex}"` : ''} title="${c.nombre}" aria-label="${c.nombre}" aria-pressed="${actual === c.hex}"
+            onclick="elegirColorPintar('${c.hex}')"></button>`).join('')}
+      </div>
+      <button type="button" class="btn btn-sm btn-primary" onclick="terminarPintar()">Listo</button>
     </div>`;
+}
+
+// ---------- Calendario ----------
+function coloresCalendario(slug, mes) {
+  const r = db.resultados && db.resultados[slug] && db.resultados[slug][mes];
+  return (r && r.calendarioColores) || {};
+}
+
+function clickDiaCalendario(fechaIso) {
+  if (modoPintar('cal')) pintarDia(fechaIso);
+  else selectDay(fechaIso);
+}
+
+function pintarDia(fechaIso) {
+  const slug = state.activeClientSlug;
+  const mes = fechaIso.slice(0, 7);
+  const elegido = colorValido(state.pintar ? state.pintar.color : '');
+  const actual = coloresCalendario(slug, mes)[fechaIso] || '';
+  const nuevo = elegido === actual ? '' : elegido; // tocar de nuevo con el mismo color lo quita
+  if (nuevo === actual) return;
+  const r = reporteMes(slug, mes, true);
+  const mapa = Object.assign({}, r.calendarioColores || {});
+  if (nuevo) mapa[fechaIso] = nuevo;
+  else delete mapa[fechaIso];
+  if (Object.keys(mapa).length) r.calendarioColores = mapa;
+  else delete r.calendarioColores;
+  limpiarMesVacio(slug, mes);
+  saveDatabase();
+  renderParrilla();
+}
+
+// ---------- Planeación ----------
+function planMesIso() {
+  return `${state.calYear}-${String(state.calMonth + 1).padStart(2, '0')}`;
+}
+
+function planFilaNueva(id) {
+  return { id: id || ('f' + Date.now().toString(36) + Math.random().toString(36).slice(2, 7)), textos: ['', '', ''], colores: ['', '', ''] };
+}
+
+function planFilasIniciales() {
+  return Array.from({ length: PLAN_FILAS_INICIALES }, (_, i) => planFilaNueva('ini' + (i + 1)));
+}
+
+function planLeer(slug, mes) {
+  const r = db.resultados && db.resultados[slug] && db.resultados[slug][mes];
+  return (r && r.planeacion) || null;
+}
+
+function planNormalizar(plan) {
+  if (!Array.isArray(plan.columnas)) plan.columnas = PLAN_COLUMNAS_DEFAULT.slice();
+  for (let i = 0; i < 3; i++) if (typeof plan.columnas[i] !== 'string') plan.columnas[i] = PLAN_COLUMNAS_DEFAULT[i];
+  plan.columnas = plan.columnas.slice(0, 3);
+  if (!Array.isArray(plan.filas)) plan.filas = [];
+  plan.filas.forEach(f => {
+    if (!Array.isArray(f.textos)) f.textos = ['', '', ''];
+    if (!Array.isArray(f.colores)) f.colores = ['', '', ''];
+    for (let i = 0; i < 3; i++) {
+      if (typeof f.textos[i] !== 'string') f.textos[i] = '';
+      if (typeof f.colores[i] !== 'string') f.colores[i] = '';
+    }
+  });
+  return plan;
+}
+
+// Devuelve la planeación del mes dentro de `db` (la crea si todavía no existe)
+function planAsegurar() {
+  const r = reporteMes(state.activeClientSlug, planMesIso(), true);
+  if (!r.planeacion) r.planeacion = { columnas: PLAN_COLUMNAS_DEFAULT.slice(), filas: planFilasIniciales() };
+  return planNormalizar(r.planeacion);
+}
+
+function planBuscarFila(plan, filaId) {
+  return plan.filas.find(f => f.id === filaId) || null;
+}
+
+function planAutoAltura(el) {
+  if (!el) return;
+  el.style.height = 'auto';
+  el.style.height = (el.scrollHeight + 2) + 'px';
+}
+
+function planEditarCelda(el, filaId, col) {
+  planAutoAltura(el);
+  const plan = planAsegurar();
+  const fila = planBuscarFila(plan, filaId);
+  if (!fila) return;
+  fila.textos[col] = el.value;
+  saveDatabase();
+}
+
+function planEditarColumna(el, col) {
+  const plan = planAsegurar();
+  plan.columnas[col] = el.value;
+  saveDatabase();
+}
+
+function planClickCelda(ev, filaId, col) {
+  if (modoPintar('plan')) {
+    planPintarCelda(filaId, col);
+    return;
+  }
+  const area = ev.currentTarget.querySelector('textarea');
+  if (area && ev.target !== area) area.focus();
+}
+
+function planPintarCelda(filaId, col) {
+  const plan = planAsegurar();
+  const fila = planBuscarFila(plan, filaId);
+  if (!fila) return;
+  const elegido = colorValido(state.pintar ? state.pintar.color : '');
+  fila.colores[col] = fila.colores[col] === elegido ? '' : elegido;
+  saveDatabase();
+  renderPlaneacion();
+}
+
+function planAgregarFilas() {
+  const sel = document.getElementById('planCantidadFilas');
+  const n = Math.max(1, Math.min(20, Number(sel ? sel.value : 1) || 1));
+  const plan = planAsegurar();
+  const nuevas = Array.from({ length: n }, () => planFilaNueva());
+  plan.filas.push(...nuevas);
+  saveDatabase();
+  renderPlaneacion();
+  const primera = document.querySelector(`[data-fila="${nuevas[0].id}"] textarea`);
+  if (primera) primera.focus();
+}
+
+function planInsertarDebajo(filaId) {
+  const plan = planAsegurar();
+  const i = plan.filas.findIndex(f => f.id === filaId);
+  const nueva = planFilaNueva();
+  plan.filas.splice(i === -1 ? plan.filas.length : i + 1, 0, nueva);
+  saveDatabase();
+  renderPlaneacion();
+  const area = document.querySelector(`[data-fila="${nueva.id}"] textarea`);
+  if (area) area.focus();
+}
+
+function planEliminarFila(filaId) {
+  const plan = planAsegurar();
+  const fila = planBuscarFila(plan, filaId);
+  if (!fila) return;
+  const conTexto = fila.textos.some(t => String(t || '').trim());
+  if (conTexto && !confirm('¿Eliminar esta fila y su contenido?')) return;
+  plan.filas = plan.filas.filter(f => f.id !== filaId);
+  saveDatabase();
+  renderPlaneacion();
+}
+
+function planCambiarMes(delta) {
+  if (delta === 0) {
+    const h = new Date();
+    state.calYear = h.getFullYear();
+    state.calMonth = h.getMonth();
+  } else {
+    state.calMonth += delta;
+    if (state.calMonth < 0) { state.calMonth = 11; state.calYear--; }
+    if (state.calMonth > 11) { state.calMonth = 0; state.calYear++; }
+  }
+  renderPlaneacion();
+}
+
+function renderPlaneacion() {
+  const container = document.getElementById('viewTab_planeacion');
+  if (!container) return;
+  const esEquipo = state.currentRole === 'team';
+  const slug = state.activeClientSlug;
+  const mes = planMesIso();
+  const guardada = planLeer(slug, mes);
+  const plan = planNormalizar(guardada
+    ? JSON.parse(JSON.stringify(guardada))
+    : { columnas: PLAN_COLUMNAS_DEFAULT.slice(), filas: esEquipo ? planFilasIniciales() : [] });
+  const pintando = modoPintar('plan');
+  const titulo = `${MESES_NOMBRES[state.calMonth]} ${state.calYear}`;
+
+  const encabezados = plan.columnas.map((c, i) => esEquipo
+    ? `<th scope="col"><input class="plan-col-input" value="${escapeHtml(c)}" aria-label="Nombre de la columna ${i + 1}" oninput="planEditarColumna(this, ${i})" ${pintando ? 'readonly' : ''}></th>`
+    : `<th scope="col">${escapeHtml(c)}</th>`).join('');
+
+  const filas = plan.filas.map((f, n) => `
+    <tr data-fila="${escapeHtml(f.id)}">
+      <td class="plan-num">${n + 1}</td>
+      ${[0, 1, 2].map(col => {
+        const color = colorValido(f.colores[col]);
+        const estilo = color ? ` style="background:${color}"` : '';
+        if (!esEquipo) return `<td class="plan-celda"${estilo}><div class="plan-texto">${escapeHtml(f.textos[col])}</div></td>`;
+        return `<td class="plan-celda"${estilo} onclick="planClickCelda(event, '${escapeHtml(f.id)}', ${col})">
+          <textarea rows="1" aria-label="${escapeHtml(plan.columnas[col])}, fila ${n + 1}" oninput="planEditarCelda(this, '${escapeHtml(f.id)}', ${col})" ${pintando ? 'readonly tabindex="-1"' : ''}>${escapeHtml(f.textos[col])}</textarea>
+        </td>`;
+      }).join('')}
+      ${esEquipo ? `
+      <td class="plan-acc">
+        <button type="button" class="plan-btn" title="Insertar fila debajo" aria-label="Insertar fila debajo de la fila ${n + 1}" onclick="planInsertarDebajo('${escapeHtml(f.id)}')">＋</button>
+        <button type="button" class="plan-btn plan-btn-borrar" title="Eliminar fila" aria-label="Eliminar la fila ${n + 1}" onclick="planEliminarFila('${escapeHtml(f.id)}')">✕</button>
+      </td>` : ''}
+    </tr>`).join('');
+
+  container.innerHTML = `
+    <div class="results-header">
+      <div>
+        <h3 style="font-family:var(--font-display);font-size:20px;color:var(--text-strong);margin-bottom:4px;">Planeación del mes · ${titulo}</h3>
+        <p style="font-size:13px;color:var(--text-muted);">Fechas, temas y pendientes del mes para la marca.</p>
+      </div>
+      <div class="cal-nav">
+        <button class="btn btn-sm btn-secondary" onclick="planCambiarMes(-1)" aria-label="Mes anterior">‹</button>
+        <div class="cal-title-display">${titulo}</div>
+        <button class="btn btn-sm btn-secondary" onclick="planCambiarMes(1)" aria-label="Mes siguiente">›</button>
+        <button class="btn btn-sm btn-secondary" onclick="planCambiarMes(0)">Hoy</button>
+      </div>
+    </div>
+
+    ${esEquipo ? `
+    <div class="plan-toolbar">
+      <div class="plan-toolbar-izq">${paletaColoresHtml('plan', 'Elige un color y toca las celdas. Si tocas una celda con el mismo color, se lo quitas.')}</div>
+      ${pintando ? '' : `
+      <div class="plan-toolbar-der">
+        <label for="planCantidadFilas" class="plan-label">Agregar</label>
+        <select id="planCantidadFilas" class="form-control plan-select">
+          <option value="1">1 fila</option>
+          <option value="3">3 filas</option>
+          <option value="5">5 filas</option>
+          <option value="10">10 filas</option>
+        </select>
+        <button type="button" class="btn btn-sm btn-primary" onclick="planAgregarFilas()">+ Agregar filas</button>
+      </div>`}
+    </div>` : ''}
+
+    ${(!esEquipo && !plan.filas.length) ? `
+      <div class="editor-card" style="text-align:center;padding:40px 20px;">
+        <h3 style="font-family:var(--font-display);font-size:18px;color:var(--text-strong);margin-bottom:8px;">Todavía no hay planeación para ${titulo}</h3>
+        <p style="font-size:13.5px;color:var(--text-muted);">Aquí verás la planeación del mes en cuanto el equipo la publique.</p>
+      </div>` : `
+    <div class="plan-tabla-wrap">
+      <table class="plan-tabla${pintando ? ' pintando' : ''}${esEquipo ? ' editable' : ''}">
+        <colgroup>
+          <col class="plan-col-num"><col class="plan-col-1"><col class="plan-col-2"><col class="plan-col-3">${esEquipo ? '<col class="plan-col-acc">' : ''}
+        </colgroup>
+        <thead><tr><th scope="col" class="plan-num">#</th>${encabezados}${esEquipo ? '<th scope="col" class="plan-acc"><span class="rp-sr">Acciones</span></th>' : ''}</tr></thead>
+        <tbody>${filas || `<tr><td colspan="${esEquipo ? 5 : 4}" class="plan-vacia">Sin filas. Usa "+ Agregar filas".</td></tr>`}</tbody>
+      </table>
+    </div>
+    ${esEquipo && !pintando ? `<button type="button" class="plan-agregar-linea" onclick="document.getElementById('planCantidadFilas').value='1'; planAgregarFilas();">+ Agregar fila</button>` : ''}`}
+  `;
+  container.querySelectorAll('.plan-celda textarea').forEach(planAutoAltura);
 }
 
 // Lightbox
@@ -1711,7 +1944,6 @@ function renderAjustes() {
           ${db.clientes.map(c => `
             <div style="display:flex;align-items:center;justify-content:space-between;background:var(--bg-surface-elevated);padding:10px 14px;border-radius:var(--radius-md);border:1px solid var(--border-subtle);flex-wrap:wrap;gap:8px;">
               <div>
-                <span style="font-size:18px;margin-right:8px;">${c.avatar}</span>
                 <strong style="color:var(--text-strong);font-size:14px;">${c.nombre}</strong>
                 <span class="mono" style="font-size:11px;color:var(--text-dim);margin-left:8px;">PIN: ${c.pin} · ${c.pais}</span>
               </div>
@@ -1737,7 +1969,7 @@ function renderAjustes() {
           ${db.colaboradores.map((col, idx) => `
             <div style="display:flex;align-items:center;justify-content:space-between;background:var(--bg-surface-elevated);padding:10px 14px;border-radius:var(--radius-md);border:1px solid var(--border-subtle);flex-wrap:wrap;gap:8px;">
               <div>
-                <strong style="color:var(--text-strong);font-size:14px;">👤 ${col.nombre}</strong>
+                <strong style="color:var(--text-strong);font-size:14px;">${col.nombre}</strong>
                 <span style="font-size:12px;color:var(--text-dim);margin-left:8px;">(${col.rol})</span>
               </div>
               <div style="display:flex;gap:6px;">
@@ -2311,18 +2543,131 @@ function escapeHtml(str) {
 }
 
 function renderAuthSelectOptions() {
-  const select = document.getElementById('authClientSelect');
-  if (select) {
-    select.innerHTML = db.clientes.map(c => 
-      `<option value="${c.slug}">${c.avatar} ${c.nombre} (${c.pais})</option>`
-    ).join('');
-  }
+  // Clientes: ya no se muestra la lista; se busca al escribir (ver authBuscarClientes)
+  const search = document.getElementById('authClientSearch');
+  const lista = document.getElementById('authClientSugerencias');
+  if (search && lista && !lista.hidden) authRenderSugerencias();
   const teamSelect = document.getElementById('authTeamSelect');
   if (teamSelect) {
     teamSelect.innerHTML = TEAM_MEMBERS.map(m =>
-      `<option value="${m.id}">${m.nombre} (${m.rol})</option>`
+      `<option value="${m.id}">${escapeHtml(m.codigo || m.nombre)}</option>`
     ).join('');
   }
+}
+
+// Iniciales para el recuadro del cliente (en lugar de emoji)
+function inicialesCliente(nombre) {
+  const omitir = new Set(['de', 'del', 'la', 'las', 'el', 'los', 'y', '&']);
+  const palabras = String(nombre || '').split(/\s+/).filter(w => w && !omitir.has(w.toLowerCase()));
+  if (!palabras.length) return '';
+  const letras = palabras.length > 1 ? palabras[0][0] + palabras[1][0] : palabras[0].slice(0, 2);
+  return letras.toUpperCase();
+}
+
+// ---------- Acceso de clientes: buscar la marca al escribir ----------
+const BUSQUEDA_MIN = 3;
+const authBusqueda = { activo: -1, opciones: [] };
+
+function normalizarTexto(t) {
+  return String(t || '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '')
+    .replace(/[^a-z0-9\s]/g, ' ').replace(/\s+/g, ' ').trim();
+}
+
+// Coincide si cada palabra escrita es el inicio de una palabra del nombre (ej. "faro" → "El Faro")
+function authBuscarClientes(texto) {
+  const q = normalizarTexto(texto);
+  const junto = q.replace(/\s/g, '');
+  if (junto.length < BUSQUEDA_MIN) return [];
+  const palabrasQ = q.split(' ');
+  return db.clientes.filter(c => {
+    const nombre = normalizarTexto(c.nombre);
+    const palabras = nombre.split(' ');
+    const porPalabras = palabrasQ.every(w => palabras.some(pal => pal.startsWith(w)));
+    return porPalabras || (junto.length >= 4 && nombre.replace(/\s/g, '').includes(junto));
+  }).slice(0, 5);
+}
+
+function authRenderSugerencias() {
+  const input = document.getElementById('authClientSearch');
+  const lista = document.getElementById('authClientSugerencias');
+  if (!input || !lista) return;
+  const largo = normalizarTexto(input.value).replace(/\s/g, '').length;
+  const opciones = authBuscarClientes(input.value);
+  authBusqueda.opciones = opciones;
+  if (authBusqueda.activo >= opciones.length || authBusqueda.activo < 0) authBusqueda.activo = opciones.length ? 0 : -1;
+  if (largo < BUSQUEDA_MIN) {
+    authCerrarSugerencias();
+    return;
+  }
+  lista.innerHTML = opciones.length
+    ? opciones.map((c, i) => `
+        <li role="option" id="authSug_${i}" class="auth-sug${i === authBusqueda.activo ? ' activo' : ''}" aria-selected="${i === authBusqueda.activo}"
+          onmousedown="event.preventDefault(); authElegirCliente(${i})">
+          <span class="auth-sug-nombre">${escapeHtml(c.nombre)}</span>
+          <span class="auth-sug-pais">${escapeHtml(c.pais || '')}</span>
+        </li>`).join('')
+    : '<li class="auth-sug-vacio" role="option" aria-disabled="true">No encontramos una marca con ese nombre.</li>';
+  lista.hidden = false;
+  input.setAttribute('aria-expanded', 'true');
+  if (authBusqueda.activo >= 0) input.setAttribute('aria-activedescendant', `authSug_${authBusqueda.activo}`);
+  else input.removeAttribute('aria-activedescendant');
+}
+
+function authCerrarSugerencias() {
+  const input = document.getElementById('authClientSearch');
+  const lista = document.getElementById('authClientSugerencias');
+  if (lista) {
+    lista.hidden = true;
+    lista.innerHTML = '';
+  }
+  if (input) {
+    input.setAttribute('aria-expanded', 'false');
+    input.removeAttribute('aria-activedescendant');
+  }
+}
+
+function authElegirCliente(i) {
+  const c = authBusqueda.opciones[i];
+  if (!c) return;
+  const input = document.getElementById('authClientSearch');
+  const oculto = document.getElementById('authClientSelect');
+  if (input) {
+    input.value = c.nombre;
+    input.classList.add('elegido');
+  }
+  if (oculto) oculto.value = c.slug;
+  authCerrarSugerencias();
+  const err = document.getElementById('authErrorMsg');
+  if (err) err.hidden = true;
+  const pin = document.getElementById('authPinInput');
+  if (pin) pin.focus();
+}
+
+// Devuelve el slug elegido; si no eligió pero solo hay una coincidencia, la toma
+function authClienteElegido() {
+  const oculto = document.getElementById('authClientSelect');
+  if (oculto && oculto.value) return oculto.value;
+  const input = document.getElementById('authClientSearch');
+  const opciones = authBuscarClientes(input ? input.value : '');
+  if (opciones.length === 1) {
+    authBusqueda.opciones = opciones;
+    authElegirCliente(0);
+    return opciones[0].slug;
+  }
+  return '';
+}
+
+function authLimpiarBusqueda() {
+  const input = document.getElementById('authClientSearch');
+  const oculto = document.getElementById('authClientSelect');
+  if (input) {
+    input.value = '';
+    input.classList.remove('elegido');
+  }
+  if (oculto) oculto.value = '';
+  authBusqueda.activo = -1;
+  authBusqueda.opciones = [];
+  authCerrarSugerencias();
 }
 
 // Inicialización de Eventos DOM al cargar la página
@@ -2364,9 +2709,49 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   }
 
+  // Buscador de marca (acceso clientes)
+  const authClientSearch = document.getElementById('authClientSearch');
+  if (authClientSearch) {
+    authClientSearch.addEventListener('input', () => {
+      const oculto = document.getElementById('authClientSelect');
+      if (oculto) oculto.value = '';
+      authClientSearch.classList.remove('elegido');
+      authBusqueda.activo = 0;
+      authRenderSugerencias();
+    });
+    authClientSearch.addEventListener('focus', () => {
+      const oculto = document.getElementById('authClientSelect');
+      if (!(oculto && oculto.value)) authRenderSugerencias();
+    });
+    authClientSearch.addEventListener('blur', () => setTimeout(authCerrarSugerencias, 150));
+    authClientSearch.addEventListener('keydown', (e) => {
+      const lista = document.getElementById('authClientSugerencias');
+      const abierta = lista && !lista.hidden && authBusqueda.opciones.length;
+      if (e.key === 'ArrowDown' || e.key === 'ArrowUp') {
+        if (!abierta) { authRenderSugerencias(); return; }
+        e.preventDefault();
+        const n = authBusqueda.opciones.length;
+        authBusqueda.activo = (authBusqueda.activo + (e.key === 'ArrowDown' ? 1 : -1) + n) % n;
+        authRenderSugerencias();
+      } else if (e.key === 'Enter') {
+        e.preventDefault();
+        if (abierta) authElegirCliente(Math.max(0, authBusqueda.activo));
+        else if (authClienteElegido() && authPinInput) authPinInput.focus();
+      } else if (e.key === 'Escape') {
+        authCerrarSugerencias();
+      }
+    });
+  }
+
   // Submit de autenticación
   if (authSubmitBtn && authPinInput) {
     authSubmitBtn.addEventListener('click', async () => {
+      if (state.authMode === 'client' && !authClienteElegido()) {
+        showAuthError('Escribe el nombre de tu marca y elígela de las opciones.');
+        const buscador = document.getElementById('authClientSearch');
+        if (buscador) buscador.focus();
+        return;
+      }
       const pin = authPinInput.value;
       if (!pin) {
         showAuthError('Por favor ingresa un código PIN.');
@@ -2380,8 +2765,7 @@ document.addEventListener('DOMContentLoaded', () => {
       try {
         let res;
         if (state.authMode === 'client') {
-          const select = document.getElementById('authClientSelect');
-          const slug = select ? select.value : (db.clientes[0] && db.clientes[0].slug);
+          const slug = authClienteElegido();
           res = await loginAsClient(slug, pin);
         } else {
           const teamSelect = document.getElementById('authTeamSelect');
@@ -2411,6 +2795,7 @@ document.addEventListener('DOMContentLoaded', () => {
   document.querySelectorAll('.portal-tab').forEach(btn => {
     btn.addEventListener('click', () => {
       state.activeTab = btn.dataset.tab;
+      state.pintar = null;
       state.kpiEditando = null;
       state.resumenEditando = false;
       renderPortalWorkspace();

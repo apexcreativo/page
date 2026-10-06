@@ -23,7 +23,7 @@ El acceso es por PIN y todo lo que se edita en el portal se guarda en la nube (F
 ### 1. Acceso Clientes (Vista Exclusiva de su Marca)
 * **Cómo ingresa el cliente:**
   1. Entra a la web y da clic en **"Acceso Clientes"** (o va directo a `app.html`).
-  2. Selecciona su negocio en la lista.
+  2. Escribe el nombre de su marca (mínimo 3 letras, por ejemplo "Faro") y la elige de las opciones que aparecen. La lista completa de clientes no se muestra.
   3. Ingresa el código PIN de 4 dígitos asignado a su marca (se cambia en el portal: Ajustes de Agencia → Cambiar PIN).
 * **Enlace directo preautenticado:**
   Puedes enviarles un enlace de WhatsApp directo como este:  
@@ -33,30 +33,38 @@ El acceso es por PIN y todo lo que se edita en el portal se guarda en la nube (F
   * Ver su **Parrilla de Contenido** del mes con formatos (Reels, Carruseles, Posts) y fechas de publicación.
   * Revisar el **Guion Escena por Escena** (qué se ve, qué se dice y texto en pantalla).
   * **Aprobar Guiones con 1 clic** o dejar comentarios y ajustes para el equipo.
-  * Consultar su **Reporte Mensual de Resultados** con gráficas, comparativas y capturas de pantalla de métricas.
+  * Consultar su **Reporte Mensual de Resultados** por plataforma: indicadores con su comparación contra el mes anterior y Top 5 de contenidos.
 
 ### 2. Acceso Equipo Apex
-* **Pestaña "Equipo Apex"** ➔ Elegir quién ingresa (Alejandra, Pablo, Mitzi o Colaborador adicional) e ingresar su PIN personal (guardado en la nube; no está escrito en el código).
+* **Pestaña "Equipo Apex"** ➔ Elegir el código de acceso (APEX CEO1, APEX CEO2, APEX EQ1 o APEX EQ2) e ingresar su PIN personal (guardado en la nube; no está escrito en el código).
 * **Qué puede hacer el equipo:**
-  * **Selector Multicliente:** Cambiar al instante entre Restaurante Palato, La Tazca de la Paz, El Faro, CANIRAC Gto, Blucare Bucaramanga, HidroGeo y Club Galereñas.
+  * **Selector Multicliente:** Cambiar al instante entre los clientes de la agencia.
   * **Crear Nuevos Clientes:** Añadir cualquier marca nueva con su nombre, sector, país y PIN personalizado en 1 segundo.
   * **Tablero de Colaboradores & Labores:**
     * Filtrar tareas por responsable: Mitzi (edición/levantamiento), Alexa (grabación/actuación), Influencers aliados, Alejandra (dirección/pauta).
     * Mover piezas entre estados: *Por Grabar*, *Grabado*, *Editado*, *Publicado*.
   * **Gestor Dinámico de Equipo:** Agregar nuevos colaboradores sobre la marcha según varíe el equipo.
-  * **Reportes de Métricas:** Cargar capturas de pantalla, editar indicadores y redactar el resumen ejecutivo mensual.
+  * **Reportes de Métricas:** Las métricas de cada cliente y mes se capturan en `reportes.js` (ver abajo).
   * **Respaldos:** Descargar una copia completa de la base de datos en archivo `.json` con un solo clic.
 
 ---
 
 ## 📊 Reporte de Resultados por plataforma (`reportes.js`)
 
-La pestaña **Resumen de Resultados** muestra 4 bloques (Instagram, Facebook, TikTok y Google) con comparación contra el mes anterior, Top 5 de contenidos con portada y reseñas destacadas de Google.
+La pestaña **Resumen de Resultados** muestra 4 bloques (Instagram, Facebook, TikTok y Google). Cada indicador trae su comparación contra el mes anterior; abajo va el Top 5 de contenidos con portada (o las reseñas destacadas, en Google).
 
 * Los datos se capturan en **`reportes.js`**. El Faro · Septiembre 2026 es el ejemplo completo.
 * Para otro cliente o mes: copia el bloque de El Faro, cámbialo de cliente (slug) y de mes (`'AAAA-MM'`) y llena `actual` y `anterior`. El portal calcula la diferencia, el % y la flecha.
 * `null` se muestra como "Por completar".
 * Portadas del Top 5: `resultados/<cliente>-<AAAA-MM>/portadas/`.
+
+---
+
+## 📝 Planeación del mes y colores del calendario
+
+* **Pestaña Planeación:** tabla de 3 columnas por cliente y por mes. El equipo puede escribir en las celdas, renombrar las columnas, agregar filas (1, 3, 5 o 10 a la vez), insertar o eliminar filas y colorear celdas con "🎨 Colorear celdas". El cliente la ve en modo lectura.
+* **Parrilla de Contenido:** con "🎨 Colorear días" el equipo pinta los días del calendario; tocar un día con el mismo color se lo quita.
+* Todo se guarda en la nube, en el documento del mes de cada cliente (`resultados/<cliente>__<AAAA-MM>`, campos `planeacion` y `calendarioColores`).
 
 ---
 
