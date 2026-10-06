@@ -21,15 +21,19 @@
       null = el portal muestra "Por completar".
       'comparadoCon' es el texto que aparece en la comparación ("vs agosto").
       'sinComparacion: true' muestra solo el valor del mes, sin la línea "vs mes anterior".
-   4. Portadas del Top 5: guarda la imagen en
-      resultados/<cliente>-<AAAA-MM>/portadas/ y escribe la ruta en 'portada'.
+   4. Principal contenido (Top 3): pega en 'link' el link del video
+      (Instagram, Facebook, TikTok o YouTube). La portada se toma del link
+      y al darle clic se abre el video. 'portada' es una imagen opcional
+      que solo se usa si no hay link.
+   Además, el perfil APEX CEO1 puede editar todo el reporte desde el portal
+   (botón "✏️ Editar reporte"); lo que guarda ahí tiene prioridad sobre este archivo.
    ========================================================================== */
 
 'use strict';
 
 // Estructura vacía de un reporte (sirve de base para cualquier cliente)
 function plantillaReporte() {
-  const top = () => [1, 2, 3, 4, 5].map(() => ({ portada: null, titulo: null, valor: null, detalle: null }));
+  const top = () => [1, 2, 3].map(() => ({ link: null, portada: null, titulo: null, valor: null, detalle: null }));
   return {
     instagram: {
       periodo: null,
@@ -141,11 +145,9 @@ const REPORTES_PLATAFORMAS = {
         top: {
           criterio: 'Visualizaciones',
           items: [
-            { portada: 'resultados/elfaro-2026-09/portadas/ig-1.jpg', titulo: 'Una michelada siempre e…', valor: '1.7 mil visualizaciones', detalle: '21 me gusta · 4 reposts · 2 envíos' },
-            { portada: 'resultados/elfaro-2026-09/portadas/ig-2.jpg', titulo: '¡Este viernes nos vemos en…', valor: '1.6 mil visualizaciones', detalle: '35 me gusta · 4 reposts · 2 envíos' },
-            { portada: 'resultados/elfaro-2026-09/portadas/ig-3.jpg', titulo: 'Porque un buen plan sie…', valor: '1.3 mil visualizaciones', detalle: '23 me gusta · 2 comentarios · 6 envíos' },
-            { portada: 'resultados/elfaro-2026-09/portadas/ig-4.jpg', titulo: '¿Se te antojó una michelad…', valor: '1.1 mil visualizaciones', detalle: '18 me gusta · 4 reposts' },
-            { portada: 'resultados/elfaro-2026-09/portadas/ig-5.jpg', titulo: '¿Tú también eres de los qu…', valor: '1.0 mil visualizaciones', detalle: '22 me gusta · 1 repost · 3 envíos' }
+            { link: null, portada: 'resultados/elfaro-2026-09/portadas/ig-1.jpg', titulo: 'Una michelada siempre e…', valor: '1.7 mil visualizaciones', detalle: '21 me gusta · 4 reposts · 2 envíos' },
+            { link: null, portada: 'resultados/elfaro-2026-09/portadas/ig-2.jpg', titulo: '¡Este viernes nos vemos en…', valor: '1.6 mil visualizaciones', detalle: '35 me gusta · 4 reposts · 2 envíos' },
+            { link: null, portada: 'resultados/elfaro-2026-09/portadas/ig-3.jpg', titulo: 'Porque un buen plan sie…', valor: '1.3 mil visualizaciones', detalle: '23 me gusta · 2 comentarios · 6 envíos' }
           ]
         }
       },
@@ -172,11 +174,9 @@ const REPORTES_PLATAFORMAS = {
         top: {
           criterio: 'Visualizaciones',
           items: [
-            { portada: 'resultados/elfaro-2026-09/portadas/fb-1.jpg', titulo: '¡Este viernes nos vemos en nuestra n…', valor: '1,722 visualizaciones', detalle: 'Foto' },
-            { portada: 'resultados/elfaro-2026-09/portadas/fb-2.jpg', titulo: 'Seguimos en septiembre y, por su…', valor: '1,313 visualizaciones', detalle: 'Reel' },
-            { portada: null, titulo: null, valor: null, detalle: null },
-            { portada: null, titulo: null, valor: null, detalle: null },
-            { portada: null, titulo: null, valor: null, detalle: null }
+            { link: null, portada: 'resultados/elfaro-2026-09/portadas/fb-1.jpg', titulo: '¡Este viernes nos vemos en nuestra n…', valor: '1,722 visualizaciones', detalle: 'Foto' },
+            { link: null, portada: 'resultados/elfaro-2026-09/portadas/fb-2.jpg', titulo: 'Seguimos en septiembre y, por su…', valor: '1,313 visualizaciones', detalle: 'Reel' },
+            { link: null, portada: null, titulo: null, valor: null, detalle: null }
           ]
         }
       },
@@ -199,11 +199,9 @@ const REPORTES_PLATAFORMAS = {
           criterio: 'Visualizaciones',
           nota: 'TikTok muestra este ranking con los últimos 7 días (captura del 4 oct).',
           items: [
-            { portada: 'resultados/elfaro-2026-09/portadas/tt-1.jpg', titulo: '¿Tú también eres de los que dicen: "un caldito y se me pasa…', valor: '566 visualizaciones', detalle: '11 me gusta' },
-            { portada: 'resultados/elfaro-2026-09/portadas/tt-2.jpg', titulo: '¡Este viernes nos vemos en nuestra nueva sucursal!', valor: '281 visualizaciones', detalle: '4 me gusta' },
-            { portada: 'resultados/elfaro-2026-09/portadas/tt-3.jpg', titulo: '¿Ya probaste nuestro Molcajete Mar y Tierra?', valor: '234 visualizaciones', detalle: '3 me gusta' },
-            { portada: 'resultados/elfaro-2026-09/portadas/tt-4.jpg', titulo: 'Si vienes a la Presa de la Olla, hay una parada que no puede f…', valor: '190 visualizaciones', detalle: 'Publicado el 12 ago' },
-            { portada: null, titulo: null, valor: null, detalle: null }
+            { link: null, portada: 'resultados/elfaro-2026-09/portadas/tt-1.jpg', titulo: '¿Tú también eres de los que dicen: "un caldito y se me pasa…', valor: '566 visualizaciones', detalle: '11 me gusta' },
+            { link: null, portada: 'resultados/elfaro-2026-09/portadas/tt-2.jpg', titulo: '¡Este viernes nos vemos en nuestra nueva sucursal!', valor: '281 visualizaciones', detalle: '4 me gusta' },
+            { link: null, portada: 'resultados/elfaro-2026-09/portadas/tt-3.jpg', titulo: '¿Ya probaste nuestro Molcajete Mar y Tierra?', valor: '234 visualizaciones', detalle: '3 me gusta' }
           ]
         }
       },

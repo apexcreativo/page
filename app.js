@@ -1069,13 +1069,16 @@ function renderResultados() {
   const datos = reporte || { resumen: '', kpis: [], imagenes: [] };
   const plataformasCargadas = obtenerPlataformas(slug, mes);
   const plataformas = plataformasCargadas || (esEquipo ? plantillaPlataformas() : null);
+  const esCEO = puedeEditarReporte();
+  if (state.rpEditando && !(esCEO && state.rpEditando.slug === slug && state.rpEditando.mes === mes)) state.rpEditando = null;
+  const edicion = state.rpEditando;
   const kpis = Array.isArray(datos.kpis) ? datos.kpis : [];
   const piezasMes = db.producciones.filter(p => p.clienteSlug === slug && (p.fecha || '').startsWith(mes));
   const pubCount = piezasMes.filter(p => p.estado === 'Publicado').length;
   const editando = state.kpiEditando;
 
   const selector = `
-    <select class="form-control" style="width:auto;min-width:200px;font-size:13px;padding:6px 12px;" onchange="cambiarMesResultados(this.value)" aria-label="Mes del reporte">
+    <select class="form-control" style="width:auto;min-width:200px;font-size:13px;padding:6px 12px;" onchange="cambiarMesResultados(this.value)" aria-label="Mes del reporte" ${edicion ? 'disabled' : ''}>
       ${opcionesMeses(slug).map(m => `<option value="${m}" ${m === mes ? 'selected' : ''}>${nombreMes(m)}${esEquipo && conReporte.indexOf(m) === -1 ? ' · sin reporte' : ''}</option>`).join('')}
     </select>`;
 
@@ -1119,10 +1122,12 @@ function renderResultados() {
       <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;">
         ${selector}
         ${esEquipo && !plataformas ? `<button class="btn btn-sm btn-primary" onclick="agregarKpi()">+ Agregar Indicador</button>` : ''}
+        ${esCEO && plataformas && !edicion ? `<button class="btn btn-sm btn-primary" onclick="rpIniciarEdicion()">✏️ Editar reporte</button>` : ''}
+        ${edicion ? `<button class="btn btn-sm btn-secondary" onclick="rpCancelarEdicion()">Cancelar</button><button class="btn btn-sm btn-primary" onclick="rpGuardarEdicion()">Guardar cambios</button>` : ''}
       </div>
     </div>
 
-    ${plataformas ? renderReportePlataformas(plataformas, mes, !plataformasCargadas) : ''}
+    ${plataformas ? (edicion ? renderEditorPlataformas(edicion.datos, mes) : renderReportePlataformas(plataformas, mes, !plataformasCargadas)) : ''}
 
     ${esEquipo && !reporte && !plataformas ? `
       <div class="res-aviso">${nombreMes(mes)} todavía no tiene reporte. Lo que agregues aquí se guarda en la nube y el cliente lo verá al entrar.</div>
@@ -1137,9 +1142,11 @@ function renderResultados() {
 
     ${plataformas ? '' : renderDetalleResultados(datos.detalle)}
   `;
+  rpCargarPortadas(container);
 }
 
 function cambiarMesResultados(mes) {
+  state.rpEditando = null;
   if (!state.mesResultados) state.mesResultados = {};
   state.mesResultados[state.activeClientSlug] = mes;
   state.kpiEditando = null;
@@ -1493,25 +1500,91 @@ function rpTarjeta(m, mesAnt, etiqueta, destacada) {
     </article>`;
 }
 
+// ---------- Principal contenido (Top 3) con link al video ----------
+const RP_TOP_MAX = 3;
+const RP_IFRAME_ANCHO = 340;   // ancho base de las vistas previas incrustadas
+const RP_IFRAME_ALTO = 425;    // 4:5, igual que el recuadro de portada
+const rpPortadasCache = new Map();
+
+// Solo se aceptan links http(s)
+function rpLinkSeguro(link) {
+  try {
+    const u = new URL(String(link || '').trim());
+    return /^https?:$/.test(u.protocol) ? u.href : '';
+  } catch (e) {
+    return '';
+  }
+}
+
+// Detecta la red del link y cómo mostrar su portada
+function rpInfoVideo(link) {
+  const seguro = rpLinkSeguro(link);
+  if (!seguro) return null;
+  const u = new URL(seguro);
+  const host = u.hostname.replace(/^(www|m|mobile|web|vm|vt)\./, '');
+  const ruta = u.pathname;
+  if (/(^|\.)youtube\.com$/.test(host) || host === 'youtu.be') {
+    let id = '';
+    if (host === 'youtu.be') id = ruta.split('/')[1] || '';
+    else if (u.searchParams.get('v')) id = u.searchParams.get('v');
+    else {
+      const m = ruta.match(/\/(shorts|embed|live)\/([A-Za-z0-9_-]{6,})/);
+      if (m) id = m[2];
+    }
+    return { red: 'YouTube', link: seguro, img: id ? `https://i.ytimg.com/vi/${encodeURIComponent(id)}/hqdefault.jpg` : '' };
+  }
+  if (/(^|\.)instagram\.com$/.test(host)) {
+    const m = ruta.match(/\/(p|reel|reels|tv)\/([A-Za-z0-9_-]+)/);
+    if (!m) return { red: 'Instagram', link: seguro };
+    const tipo = m[1] === 'reels' ? 'reel' : m[1];
+    return { red: 'Instagram', link: seguro, embed: `https://www.instagram.com/${tipo}/${m[2]}/embed/` };
+  }
+  if (/(^|\.)tiktok\.com$/.test(host)) {
+    const m = ruta.match(/\/(video|photo)\/(\d+)/);
+    return { red: 'TikTok', link: seguro, oembed: `https://www.tiktok.com/oembed?url=${encodeURIComponent(seguro)}`, embed: m ? `https://www.tiktok.com/embed/v2/${m[2]}` : '' };
+  }
+  if (/(^|\.)facebook\.com$/.test(host) || host === 'fb.watch') {
+    const esVideo = host === 'fb.watch' || /\/(videos|reel|watch)\b|\/share\/(r|v)\//.test(ruta);
+    const plugin = esVideo ? 'video' : 'post';
+    return { red: 'Facebook', link: seguro, embed: `https://www.facebook.com/plugins/${plugin}.php?href=${encodeURIComponent(seguro)}&show_text=false&width=${RP_IFRAME_ANCHO}` };
+  }
+  return { red: '', link: seguro };
+}
+
+// Contenido del recuadro de portada (la portada real se carga después con rpCargarPortadas)
+function rpPortadaInterior(it, i, red, editando) {
+  it = it || {};
+  const link = rpLinkSeguro(it.link);
+  const rank = `<span class="rp-top-rank">${i + 1}</span>`;
+  if (link) {
+    const etiqueta = `Ver el contenido ${i + 1} de ${red}${it.titulo ? ': ' + it.titulo : ''} (se abre en otra pestaña)`;
+    return `${rank}
+      <a class="rp-cover" href="${escapeHtml(link)}" target="_blank" rel="noopener noreferrer" aria-label="${escapeHtml(etiqueta)}">
+        <span class="rp-cover-media" data-link="${escapeHtml(link)}" data-portada="${escapeHtml(it.portada || '')}"><span class="rp-cover-cargando">Cargando portada…</span></span>
+        <span class="rp-top-play" aria-hidden="true">▶</span>
+        <span class="rp-cover-ver" aria-hidden="true">Ver video ↗</span>
+      </a>`;
+  }
+  if (it.portada) {
+    return `${rank}<img src="${escapeHtml(it.portada)}" alt="Portada del contenido ${i + 1} de ${escapeHtml(red)}" loading="lazy" decoding="async" onclick="openLightbox(this.src)">`;
+  }
+  return `${rank}<span class="rp-top-vacio-texto">${editando ? 'Pega el link del video para ver su portada' : 'Portada por completar'}</span>`;
+}
+
 function rpTop(top, red) {
   if (!top) return '';
-  const items = (top.items || []).slice(0, 5);
-  while (items.length < 5) items.push({});
+  const items = (top.items || []).slice(0, RP_TOP_MAX);
+  while (items.length < RP_TOP_MAX) items.push({});
   return `
     <div class="rp-bloque">
       <div class="rp-bloque-head">
-        <h5 class="rp-bloque-titulo">Principal contenido · Top 5</h5>
+        <h5 class="rp-bloque-titulo">Principal contenido · Top ${RP_TOP_MAX}</h5>
         <span class="rp-bloque-meta">Según ${escapeHtml(top.criterio || 'visualizaciones')}</span>
       </div>
       <ol class="rp-top">
         ${items.map((it, i) => `
           <li class="rp-top-item">
-            <div class="rp-top-portada${it.portada ? '' : ' rp-top-portada-vacia'}">
-              <span class="rp-top-rank">${i + 1}</span>
-              ${it.portada
-                ? `<img src="${escapeHtml(it.portada)}" alt="Portada del contenido ${i + 1} de ${escapeHtml(red)}" loading="lazy" decoding="async" onclick="openLightbox(this.src)">`
-                : '<span>Portada por completar</span>'}
-            </div>
+            <div class="rp-top-portada${(rpLinkSeguro(it.link) || it.portada) ? '' : ' rp-top-portada-vacia'}">${rpPortadaInterior(it, i, red, false)}</div>
             <p class="rp-top-titulo">${it.titulo ? escapeHtml(it.titulo) : '<span class="rp-pend">Contenido por completar</span>'}</p>
             <p class="rp-top-valor">${it.valor ? escapeHtml(it.valor) : '<span class="rp-pend">Métrica por completar</span>'}</p>
             ${it.detalle ? `<p class="rp-top-detalle">${escapeHtml(it.detalle)}</p>` : ''}
@@ -1519,6 +1592,73 @@ function rpTop(top, red) {
       </ol>
       ${top.nota ? `<p class="rp-nota">${escapeHtml(top.nota)}</p>` : ''}
     </div>`;
+}
+
+function rpEscalarIframe(caja) {
+  const frame = caja.querySelector('iframe');
+  if (!frame) return;
+  const escala = caja.clientWidth / RP_IFRAME_ANCHO;
+  if (escala > 0) frame.style.transform = `scale(${escala})`;
+}
+
+const rpObservadorTamano = typeof ResizeObserver === 'function'
+  ? new ResizeObserver(entradas => entradas.forEach(e => rpEscalarIframe(e.target)))
+  : null;
+
+function rpPonerImagen(caja, src) {
+  caja.innerHTML = `<img src="${escapeHtml(src)}" alt="" loading="lazy" decoding="async" referrerpolicy="no-referrer">`;
+  const img = caja.querySelector('img');
+  img.addEventListener('error', () => rpPonerGenerica(caja), { once: true });
+}
+
+function rpPonerIframe(caja, src) {
+  caja.innerHTML = `<iframe class="rp-cover-frame" src="${escapeHtml(src)}" loading="lazy" scrolling="no" tabindex="-1" aria-hidden="true" title="Vista previa del video" referrerpolicy="strict-origin-when-cross-origin" style="width:${RP_IFRAME_ANCHO}px;height:${RP_IFRAME_ALTO}px"></iframe>`;
+  rpEscalarIframe(caja);
+  if (rpObservadorTamano) rpObservadorTamano.observe(caja);
+}
+
+function rpPonerGenerica(caja) {
+  const info = rpInfoVideo(caja.dataset.link) || {};
+  caja.innerHTML = `<span class="rp-cover-generica"><span class="rp-cover-red">${escapeHtml(info.red || 'Video')}</span><span>Toca para ver el video</span></span>`;
+}
+
+async function rpPortadaTikTok(info) {
+  if (rpPortadasCache.has(info.link)) return rpPortadasCache.get(info.link);
+  let img = '';
+  try {
+    const ctrl = typeof AbortController === 'function' ? new AbortController() : null;
+    const t = ctrl ? setTimeout(() => ctrl.abort(), 7000) : null;
+    const res = await fetch(info.oembed, ctrl ? { signal: ctrl.signal } : {});
+    if (t) clearTimeout(t);
+    if (res.ok) {
+      const json = await res.json();
+      img = (json && json.thumbnail_url) || '';
+    }
+  } catch (e) {
+    img = '';
+  }
+  rpPortadasCache.set(info.link, img);
+  return img;
+}
+
+// Busca y muestra la portada de cada link dentro de `raiz`
+function rpCargarPortadas(raiz) {
+  if (!raiz) return;
+  raiz.querySelectorAll('.rp-cover-media[data-link]').forEach(async caja => {
+    if (caja.dataset.cargada === '1') return;
+    caja.dataset.cargada = '1';
+    const info = rpInfoVideo(caja.dataset.link);
+    if (!info) return rpPonerGenerica(caja);
+    if (caja.dataset.portada) return rpPonerImagen(caja, caja.dataset.portada);
+    if (info.img) return rpPonerImagen(caja, info.img);
+    if (info.oembed) {
+      const img = await rpPortadaTikTok(info);
+      if (!caja.isConnected) return;
+      if (img) return rpPonerImagen(caja, img);
+    }
+    if (info.embed) return rpPonerIframe(caja, info.embed);
+    rpPonerGenerica(caja);
+  });
 }
 
 function rpEstrellas(n) {
@@ -1576,7 +1716,7 @@ function rpPlataforma(info, p, mes) {
 
 function renderReportePlataformas(plataformas, mes, esPlantilla) {
   return `
-    ${esPlantilla ? `<div class="res-aviso">Este cliente todavía no tiene métricas por plataforma para ${nombreMes(mes)}. La estructura ya está lista: se llena en el archivo reportes.js (copia el bloque de El Faro y cambia cliente, periodo y valores).</div>` : ''}
+    ${esPlantilla ? `<div class="res-aviso">Este cliente todavía no tiene métricas por plataforma para ${nombreMes(mes)}. ${puedeEditarReporte() ? 'Usa «✏️ Editar reporte» para capturarlas.' : 'El perfil APEX CEO1 puede capturarlas con «Editar reporte».'}</div>` : ''}
     <div class="rp-toolbar">
       <nav class="rp-saltos" aria-label="Ir a la plataforma">
         ${PLATAFORMAS_INFO.map(i => `<a href="#rp-${i.id}" class="rp-salto rp-salto-${i.clase}" onclick="event.preventDefault(); var el=document.getElementById('rp-${i.id}'); if(el) el.scrollIntoView({behavior:'smooth', block:'start'});">${i.nombre}</a>`).join('')}
@@ -1899,6 +2039,256 @@ function renderPlaneacion() {
     ${esEquipo && !pintando ? `<button type="button" class="plan-agregar-linea" onclick="document.getElementById('planCantidadFilas').value='1'; planAgregarFilas();">+ Agregar fila</button>` : ''}`}
   `;
   container.querySelectorAll('.plan-celda textarea').forEach(planAutoAltura);
+}
+
+// ==========================================================================
+// 4c. EDICIÓN DEL REPORTE DESDE EL PORTAL (solo perfil APEX CEO1 · Alejandra)
+//     Lo guardado aquí va a la nube (reporte.plataformas) y tiene prioridad
+//     sobre lo capturado en reportes.js.
+// ==========================================================================
+function puedeEditarReporte() {
+  return state.currentRole === 'team' && !!state.currentTeamMember && state.currentTeamMember.id === 'ale';
+}
+
+// Asegura que el reporte tenga las 4 redes, 3 lugares de Top y las 2 reseñas
+function rpCompletarEstructura(datos) {
+  const base = plantillaPlataformas() || {};
+  PLATAFORMAS_INFO.forEach(info => {
+    if (!datos[info.id]) datos[info.id] = base[info.id] ? JSON.parse(JSON.stringify(base[info.id])) : { metricas: [] };
+    const p = datos[info.id];
+    if (!Array.isArray(p.metricas)) p.metricas = [];
+    if (info.id === 'google') {
+      if (!p.resenas) p.resenas = {};
+      ['positiva', 'negativa'].forEach(k => { if (!p.resenas[k]) p.resenas[k] = { autor: null, calificacion: null, fecha: null, texto: null }; });
+    } else {
+      if (!p.top) p.top = { criterio: 'Visualizaciones', items: [] };
+      if (!Array.isArray(p.top.items)) p.top.items = [];
+      p.top.items = p.top.items.slice(0, RP_TOP_MAX);
+      while (p.top.items.length < RP_TOP_MAX) p.top.items.push({ link: null, portada: null, titulo: null, valor: null, detalle: null });
+    }
+  });
+  return datos;
+}
+
+function rpIniciarEdicion() {
+  if (!puedeEditarReporte()) return;
+  const slug = state.activeClientSlug;
+  const mes = mesResultados(slug);
+  const base = obtenerPlataformas(slug, mes) || plantillaPlataformas() || {};
+  state.rpEditando = { slug, mes, datos: rpCompletarEstructura(JSON.parse(JSON.stringify(base))) };
+  renderResultados();
+}
+
+function rpCancelarEdicion() {
+  if (state.rpEditando && !confirm('¿Salir sin guardar los cambios del reporte?')) return;
+  state.rpEditando = null;
+  renderResultados();
+}
+
+function rpGuardarEdicion() {
+  const ed = state.rpEditando;
+  if (!ed || !puedeEditarReporte()) return;
+  const r = reporteMes(ed.slug, ed.mes, true);
+  r.plataformas = nubeLimpio(ed.datos);
+  state.rpEditando = null;
+  saveDatabase();
+  renderResultados();
+}
+
+// "21,052" → 21052 · "70.3%" → 70.3 · "10 mil" se queda como texto · vacío → null
+function rpLeerValor(texto) {
+  const t = String(texto == null ? '' : texto).trim().replace(/−/g, '-');
+  if (!t) return null;
+  const sinPct = t.replace(/%$/, '').trim();
+  if (/^[-+]?\d{1,3}(,\d{3})+(\.\d+)?$/.test(sinPct) || /^[-+]?\d+(\.\d+)?$/.test(sinPct)) return Number(sinPct.replace(/,/g, ''));
+  return t;
+}
+
+function rpValorInput(v) {
+  if (v === null || v === undefined) return '';
+  if (typeof v === 'number') return v.toLocaleString('es-MX', { maximumFractionDigits: 2 });
+  return String(v);
+}
+
+function rpRuta(obj, ruta) {
+  const partes = String(ruta).split('.');
+  let o = obj;
+  for (let i = 0; i < partes.length - 1; i++) {
+    const k = /^\d+$/.test(partes[i]) ? Number(partes[i]) : partes[i];
+    if (o[k] === null || o[k] === undefined) o[k] = /^\d+$/.test(partes[i + 1]) ? [] : {};
+    o = o[k];
+  }
+  const ultima = partes[partes.length - 1];
+  return [o, /^\d+$/.test(ultima) ? Number(ultima) : ultima];
+}
+
+// Guarda en la copia de trabajo lo que se escribe (sin volver a dibujar la página)
+function rpEditar(el) {
+  const ed = state.rpEditando;
+  if (!ed || !el.dataset.ruta) return;
+  const [obj, clave] = rpRuta(ed.datos, el.dataset.ruta);
+  let v = el.value;
+  if (el.dataset.tipo === 'num') v = rpLeerValor(v);
+  else if (el.dataset.tipo === 'estrellas') v = v === '' ? null : Number(v);
+  else v = String(v).trim() === '' ? null : v;
+  obj[clave] = v;
+  if (clave === 'link') {
+    obj.portada = null; // la imagen anterior ya no corresponde al nuevo link
+    rpProgramarVistaPrevia(el);
+  }
+}
+
+const rpTimersVista = {};
+function rpProgramarVistaPrevia(el) {
+  const ruta = el.dataset.ruta;
+  clearTimeout(rpTimersVista[ruta]);
+  rpTimersVista[ruta] = setTimeout(() => {
+    const ed = state.rpEditando;
+    if (!ed) return;
+    const m = ruta.match(/^(\w+)\.top\.items\.(\d+)\.link$/);
+    if (!m) return;
+    const caja = document.getElementById(`rpPrev_${m[1]}_${m[2]}`);
+    const info = PLATAFORMAS_INFO.find(x => x.id === m[1]) || { nombre: '' };
+    const item = ((ed.datos[m[1]] || {}).top || {}).items[Number(m[2])] || {};
+    if (!caja) return;
+    caja.classList.toggle('rp-top-portada-vacia', !rpLinkSeguro(item.link));
+    caja.innerHTML = rpPortadaInterior(item, Number(m[2]), info.nombre, true);
+    rpCargarPortadas(caja);
+  }, 450);
+}
+
+function rpCampo(base, ruta, valor, opts) {
+  opts = opts || {};
+  return `<input class="rp-in${opts.cls ? ' ' + opts.cls : ''}" data-ruta="${base}.${ruta}"${opts.tipo ? ` data-tipo="${opts.tipo}"` : ''}
+    type="${opts.type || 'text'}" value="${escapeHtml(rpValorInput(valor))}" placeholder="${escapeHtml(opts.ph || '')}"
+    ${opts.label ? `aria-label="${escapeHtml(opts.label)}"` : ''} oninput="rpEditar(this)">`;
+}
+
+function rpTexto(base, ruta, valor, ph) {
+  return `<textarea class="rp-in rp-in-area" data-ruta="${base}.${ruta}" placeholder="${escapeHtml(ph || '')}" oninput="rpEditar(this)">${escapeHtml(valor || '')}</textarea>`;
+}
+
+function rpEditorTarjeta(base, m, i, mesAct, mesAnt) {
+  const grupo = m.tipo === 'grupo';
+  const manual = !rpVacio(m.variacion) || !rpVacio(m.diferencia);
+  const subs = (m.sub || []).map((s, j) => `
+    <div class="rp-edit-sub">
+      ${rpCampo(base, `metricas.${i}.sub.${j}.nombre`, s.nombre, { cls: 'rp-in-sub', label: 'Nombre del dato' })}
+      <div class="rp-edit-grid">
+        <label>${mesAct}${rpCampo(base, `metricas.${i}.sub.${j}.actual`, s.actual, { tipo: 'num' })}</label>
+        <label>${mesAnt}${rpCampo(base, `metricas.${i}.sub.${j}.anterior`, s.anterior, { tipo: 'num' })}</label>
+      </div>
+    </div>`).join('');
+  return `
+    <article class="rp-card rp-card-edit${i === 0 ? ' rp-card-destacada' : ''}">
+      ${rpCampo(base, `metricas.${i}.nombre`, m.nombre, { cls: 'rp-in-nombre', label: 'Nombre del indicador' })}
+      ${grupo ? '' : `
+      <div class="rp-edit-grid">
+        <label>${mesAct}${rpCampo(base, `metricas.${i}.actual`, m.actual, { tipo: 'num', ph: 'Ej. 21,052' })}</label>
+        <label>${mesAnt}${rpCampo(base, `metricas.${i}.anterior`, m.anterior, { tipo: 'num', ph: 'Ej. 5,343' })}</label>
+      </div>
+      <details class="rp-edit-mas"${manual ? ' open' : ''}>
+        <summary>Variación manual (si la red solo da el %)</summary>
+        <div class="rp-edit-grid">
+          <label>Variación${rpCampo(base, `metricas.${i}.variacion`, m.variacion, { ph: 'Ej. +282%' })}</label>
+          <label>Diferencia${rpCampo(base, `metricas.${i}.diferencia`, m.diferencia, { ph: 'Ej. −1.9 mil' })}</label>
+        </div>
+      </details>`}
+      ${subs}
+      <label class="rp-edit-nota">Nota (opcional)${rpTexto(base, `metricas.${i}.nota`, m.nota, 'Texto pequeño debajo del indicador')}</label>
+    </article>`;
+}
+
+function rpEditorTop(base, top, red) {
+  const items = (top.items || []).slice(0, RP_TOP_MAX);
+  return `
+    <div class="rp-bloque">
+      <div class="rp-bloque-head">
+        <h5 class="rp-bloque-titulo">Principal contenido · Top ${RP_TOP_MAX}</h5>
+        <label class="rp-edit-inline">Según ${rpCampo(base, 'top.criterio', top.criterio, { ph: 'Visualizaciones' })}</label>
+      </div>
+      <ol class="rp-top rp-top-edit">
+        ${items.map((it, i) => `
+          <li class="rp-top-item">
+            <div class="rp-top-portada${rpLinkSeguro(it.link) || it.portada ? '' : ' rp-top-portada-vacia'}" id="rpPrev_${base}_${i}">${rpPortadaInterior(it, i, red, true)}</div>
+            <label>Link del video${rpCampo(base, `top.items.${i}.link`, it.link, { type: 'url', ph: 'https://www.instagram.com/reel/…' })}</label>
+            <label>Título${rpCampo(base, `top.items.${i}.titulo`, it.titulo, { ph: 'Ej. Una michelada siempre es buena idea' })}</label>
+            <label>Métrica${rpCampo(base, `top.items.${i}.valor`, it.valor, { ph: 'Ej. 1.7 mil visualizaciones' })}</label>
+            <label>Detalle (opcional)${rpCampo(base, `top.items.${i}.detalle`, it.detalle, { ph: 'Ej. 21 me gusta · 4 reposts' })}</label>
+          </li>`).join('')}
+      </ol>
+      <label class="rp-edit-nota">Nota (opcional)${rpTexto(base, 'top.nota', top.nota, 'Ej. TikTok muestra este ranking con 7 días')}</label>
+    </div>`;
+}
+
+function rpEditorResenas(base, resenas) {
+  const tarjeta = (k, tipo, titulo) => {
+    const r = resenas[k] || {};
+    return `
+      <article class="rp-resena rp-resena-${tipo} rp-resena-edit">
+        <h6>${titulo}</h6>
+        <div class="rp-edit-grid rp-edit-grid-3">
+          <label>Autor${rpCampo(base, `resenas.${k}.autor`, r.autor)}</label>
+          <label>Calificación
+            <select class="rp-in" data-ruta="${base}.resenas.${k}.calificacion" data-tipo="estrellas" onchange="rpEditar(this)">
+              <option value="">—</option>
+              ${[5, 4, 3, 2, 1].map(n => `<option value="${n}" ${Number(r.calificacion) === n ? 'selected' : ''}>${'★'.repeat(n)} (${n})</option>`).join('')}
+            </select>
+          </label>
+          <label>Fecha${rpCampo(base, `resenas.${k}.fecha`, r.fecha, { ph: 'Ej. 12 sep 2026' })}</label>
+        </div>
+        <label class="rp-edit-nota">Reseña${rpTexto(base, `resenas.${k}.texto`, r.texto, 'Texto de la reseña')}</label>
+      </article>`;
+  };
+  return `
+    <div class="rp-bloque">
+      <div class="rp-bloque-head"><h5 class="rp-bloque-titulo">Reseñas destacadas del mes</h5></div>
+      <div class="rp-resenas">
+        ${tarjeta('positiva', 'pos', 'Reseña positiva destacada')}
+        ${tarjeta('negativa', 'neg', 'Reseña negativa destacada')}
+      </div>
+    </div>`;
+}
+
+function rpEditorPlataforma(info, p, mes) {
+  const base = info.id;
+  const mesAnt = MESES_NOMBRES[Number(mesAnteriorIso(mes).split('-')[1]) - 1];
+  const mesAct = MESES_NOMBRES[Number(String(mes).split('-')[1]) - 1];
+  return `
+    <section class="rp-plataforma rp-${info.clase} editando" id="rp-${info.id}" aria-labelledby="rp-t-${info.id}">
+      <header class="rp-plat-head">
+        <span class="rp-plat-icono" aria-hidden="true">${info.sigla}</span>
+        <div><h4 id="rp-t-${info.id}">${info.nombre}</h4></div>
+      </header>
+      <div class="rp-edit-periodos">
+        <label>Periodo de ${mesAct}${rpCampo(base, 'periodo', p.periodo, { ph: 'Ej. 1 – 30 sep 2026' })}</label>
+        <label>Se compara con${rpCampo(base, 'periodoAnterior', p.periodoAnterior, { ph: 'Ej. 1 – 31 ago 2026' })}</label>
+        <label>Texto en las tarjetas ("vs …")${rpCampo(base, 'comparadoCon', p.comparadoCon, { ph: mesAnt.toLowerCase() })}</label>
+      </div>
+      <div class="rp-cards">${(p.metricas || []).map((m, i) => rpEditorTarjeta(base, m, i, mesAct, mesAnt)).join('')}</div>
+      ${info.id === 'google' ? rpEditorResenas(base, p.resenas || {}) : rpEditorTop(base, p.top || { items: [] }, info.nombre)}
+    </section>`;
+}
+
+function renderEditorPlataformas(datos, mes) {
+  const cliente = db.clientes.find(c => c.slug === state.activeClientSlug) || {};
+  return `
+    <div class="res-aviso">Estás editando el reporte de ${nombreMes(mes)} de ${escapeHtml(cliente.nombre || '')}. Los números se escriben sin texto (ej. 21052 o 70.3); si la red solo da un valor redondeado, escríbelo como texto (ej. 10 mil). Al guardar, el cliente verá los cambios.</div>
+    <div class="rp-toolbar">
+      <nav class="rp-saltos" aria-label="Ir a la plataforma">
+        ${PLATAFORMAS_INFO.map(i => `<a href="#rp-${i.id}" class="rp-salto rp-salto-${i.clase}" onclick="event.preventDefault(); var el=document.getElementById('rp-${i.id}'); if(el) el.scrollIntoView({behavior:'smooth', block:'start'});">${i.nombre}</a>`).join('')}
+      </nav>
+    </div>
+    <div class="rp-plataformas">
+      ${PLATAFORMAS_INFO.map(i => rpEditorPlataforma(i, datos[i.id] || {}, mes)).join('')}
+    </div>
+    <div class="rp-edit-barra" role="region" aria-label="Guardar reporte">
+      <span>Editando · ${nombreMes(mes)}</span>
+      <div>
+        <button type="button" class="btn btn-sm btn-secondary" onclick="rpCancelarEdicion()">Cancelar</button>
+        <button type="button" class="btn btn-sm btn-primary" onclick="rpGuardarEdicion()">Guardar cambios</button>
+      </div>
+    </div>`;
 }
 
 // Lightbox
@@ -2459,7 +2849,7 @@ async function nubeRefrescar(forzar) {
   }
   const activo = document.activeElement;
   const escribiendo = activo && /^(INPUT|TEXTAREA|SELECT)$/.test(activo.tagName);
-  const editandoResultados = state.kpiEditando != null || state.resumenEditando;
+  const editandoResultados = state.kpiEditando != null || state.resumenEditando || !!state.rpEditando;
   if (!escribiendo && !editandoResultados && state.currentRole) renderPortalWorkspace();
 }
 
@@ -2810,6 +3200,11 @@ document.addEventListener('DOMContentLoaded', () => {
       if (e.target.value === '__NEW__') {
         addNewClientPrompt();
       } else {
+        if (state.rpEditando && !confirm('Tienes cambios sin guardar en el reporte. ¿Cambiar de cliente sin guardarlos?')) {
+          e.target.value = state.activeClientSlug;
+          return;
+        }
+        state.rpEditando = null;
         state.activeClientSlug = e.target.value;
         state.kpiEditando = null;
         state.resumenEditando = false;

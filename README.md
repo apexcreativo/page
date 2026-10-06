@@ -56,7 +56,8 @@ La pestaña **Resumen de Resultados** muestra 4 bloques (Instagram, Facebook, Ti
 * Los datos se capturan en **`reportes.js`**. El Faro · Septiembre 2026 es el ejemplo completo.
 * Para otro cliente o mes: copia el bloque de El Faro, cámbialo de cliente (slug) y de mes (`'AAAA-MM'`) y llena `actual` y `anterior`. El portal calcula la diferencia, el % y la flecha.
 * `null` se muestra como "Por completar".
-* Portadas del Top 5: `resultados/<cliente>-<AAAA-MM>/portadas/`.
+* **Principal contenido (Top 3):** se pega el link del video (Instagram, Facebook, TikTok o YouTube); la tarjeta muestra la portada del video y al darle clic se abre el video en otra pestaña. Las imágenes de `resultados/<cliente>-<AAAA-MM>/portadas/` solo se usan cuando no hay link.
+* **Edición desde el portal:** el perfil **APEX CEO1** ve el botón "✏️ Editar reporte" en Resumen de Resultados y puede cambiar todos los campos (periodos, indicadores, valores del mes anterior, notas, Top 3 y reseñas de Google). Lo que guarda se va a la nube y tiene prioridad sobre `reportes.js`.
 
 ---
 
