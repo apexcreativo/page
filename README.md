@@ -69,6 +69,14 @@ La pestaña **Resumen de Resultados** muestra 4 bloques (Instagram, Facebook, Ti
 
 ---
 
+## 💳 Pestaña Pagos
+
+* Última pestaña del portal. Tabla por cliente que empieza con 4 columnas (Fecha, Concepto, Monto, Estatus) y 5 filas.
+* El equipo puede escribir en las celdas, renombrar columnas, agregar columnas ("+ Agregar columna", hasta 10) o quitarlas (✕ en el encabezado), y agregar, insertar o eliminar filas. El cliente la ve en modo lectura.
+* Se guarda en la nube en `resultados/<cliente>__pagos` (campo `pagos`).
+
+---
+
 ## 📁 Estructura del Proyecto
 
 ```

@@ -108,7 +108,7 @@ const state = {
   activeClientSlug: 'palato',
   
   // Navegación dentro del portal
-  activeTab: 'resultados', // 'resultados' | 'planeacion' | 'parrilla' | 'produccion' | 'tareas' | 'ajustes'
+  activeTab: 'resultados', // 'resultados' | 'planeacion' | 'parrilla' | 'produccion' | 'tareas' | 'ajustes' | 'pagos'
   
   // Calendario
   calYear: new Date().getFullYear(),
@@ -313,7 +313,7 @@ function renderPortalWorkspace() {
   });
 
   // Ocultar todos los paneles y mostrar el activo
-  ['resultados', 'planeacion', 'parrilla', 'produccion', 'tareas', 'ajustes'].forEach(tabName => {
+  ['resultados', 'planeacion', 'parrilla', 'produccion', 'tareas', 'ajustes', 'pagos'].forEach(tabName => {
     const el = document.getElementById(`viewTab_${tabName}`);
     if (el) el.hidden = state.activeTab !== tabName;
   });
@@ -321,6 +321,7 @@ function renderPortalWorkspace() {
   // Renderizar contenido de la pestaña activa
   if (state.activeTab === 'parrilla') renderParrilla();
   if (state.activeTab === 'planeacion') renderPlaneacion();
+  if (state.activeTab === 'pagos') renderPagos();
   if (state.activeTab === 'produccion') renderProduccion();
   if (state.activeTab === 'tareas') renderTareas();
   if (state.activeTab === 'resultados') renderResultados();
@@ -2289,6 +2290,217 @@ function renderEditorPlataformas(datos, mes) {
         <button type="button" class="btn btn-sm btn-primary" onclick="rpGuardarEdicion()">Guardar cambios</button>
       </div>
     </div>`;
+}
+
+// ==========================================================================
+// 1c. PESTAÑA PAGOS: tabla por cliente (4 columnas y 5 filas al inicio)
+//     Se guarda en la nube en resultados/<cliente>__pagos (campo "pagos").
+//     El equipo la edita; el cliente la ve en solo lectura.
+// ==========================================================================
+const PAGOS_CLAVE = 'pagos';
+const PAGOS_COLUMNAS_DEFAULT = ['Fecha', 'Concepto', 'Monto', 'Estatus'];
+const PAGOS_FILAS_INICIALES = 5;
+const PAGOS_MAX_COLUMNAS = 10;
+
+function pagosFilaNueva(n, id) {
+  return { id: id || ('p' + Date.now().toString(36) + Math.random().toString(36).slice(2, 7)), textos: Array.from({ length: n }, () => '') };
+}
+
+function pagosIniciales() {
+  return {
+    columnas: PAGOS_COLUMNAS_DEFAULT.slice(),
+    filas: Array.from({ length: PAGOS_FILAS_INICIALES }, (_, i) => pagosFilaNueva(PAGOS_COLUMNAS_DEFAULT.length, 'pini' + (i + 1)))
+  };
+}
+
+function pagosNormalizar(t) {
+  if (!Array.isArray(t.columnas) || !t.columnas.length) t.columnas = PAGOS_COLUMNAS_DEFAULT.slice();
+  t.columnas = t.columnas.map(c => (typeof c === 'string' ? c : ''));
+  const n = t.columnas.length;
+  if (!Array.isArray(t.filas)) t.filas = [];
+  t.filas.forEach(f => {
+    const previos = Array.isArray(f.textos) ? f.textos : [];
+    f.textos = Array.from({ length: n }, (_, i) => (typeof previos[i] === 'string' ? previos[i] : ''));
+  });
+  return t;
+}
+
+function pagosLeer(slug) {
+  const r = db.resultados && db.resultados[slug] && db.resultados[slug][PAGOS_CLAVE];
+  return (r && r.pagos) || null;
+}
+
+// Devuelve la tabla de pagos del cliente dentro de `db` (la crea si no existe)
+function pagosAsegurar() {
+  const slug = state.activeClientSlug;
+  if (!db.resultados) db.resultados = {};
+  if (!db.resultados[slug]) db.resultados[slug] = {};
+  if (!db.resultados[slug][PAGOS_CLAVE]) db.resultados[slug][PAGOS_CLAVE] = {};
+  const r = db.resultados[slug][PAGOS_CLAVE];
+  if (!r.pagos) r.pagos = pagosIniciales();
+  return pagosNormalizar(r.pagos);
+}
+
+function pagosBuscarFila(t, filaId) {
+  return t.filas.find(f => f.id === filaId) || null;
+}
+
+function pagosEditarCelda(el, filaId, col) {
+  planAutoAltura(el);
+  const t = pagosAsegurar();
+  const fila = pagosBuscarFila(t, filaId);
+  if (!fila || col >= t.columnas.length) return;
+  fila.textos[col] = el.value;
+  saveDatabase();
+}
+
+function pagosEditarColumna(el, col) {
+  const t = pagosAsegurar();
+  if (col >= t.columnas.length) return;
+  t.columnas[col] = el.value;
+  saveDatabase();
+}
+
+function pagosClickCelda(ev) {
+  const area = ev.currentTarget.querySelector('textarea');
+  if (area && ev.target !== area) area.focus();
+}
+
+function pagosAgregarFilas() {
+  const sel = document.getElementById('pagosCantidadFilas');
+  const n = Math.max(1, Math.min(20, Number(sel ? sel.value : 1) || 1));
+  const t = pagosAsegurar();
+  const nuevas = Array.from({ length: n }, () => pagosFilaNueva(t.columnas.length));
+  t.filas.push(...nuevas);
+  saveDatabase();
+  renderPagos();
+  const primera = document.querySelector(`#viewTab_pagos [data-fila="${nuevas[0].id}"] textarea`);
+  if (primera) primera.focus();
+}
+
+function pagosInsertarDebajo(filaId) {
+  const t = pagosAsegurar();
+  const i = t.filas.findIndex(f => f.id === filaId);
+  const nueva = pagosFilaNueva(t.columnas.length);
+  t.filas.splice(i === -1 ? t.filas.length : i + 1, 0, nueva);
+  saveDatabase();
+  renderPagos();
+  const area = document.querySelector(`#viewTab_pagos [data-fila="${nueva.id}"] textarea`);
+  if (area) area.focus();
+}
+
+function pagosEliminarFila(filaId) {
+  const t = pagosAsegurar();
+  const fila = pagosBuscarFila(t, filaId);
+  if (!fila) return;
+  if (fila.textos.some(x => String(x || '').trim()) && !confirm('¿Eliminar esta fila y su contenido?')) return;
+  t.filas = t.filas.filter(f => f.id !== filaId);
+  saveDatabase();
+  renderPagos();
+}
+
+function pagosAgregarColumna() {
+  const t = pagosAsegurar();
+  if (t.columnas.length >= PAGOS_MAX_COLUMNAS) {
+    alert(`La tabla admite hasta ${PAGOS_MAX_COLUMNAS} columnas.`);
+    return;
+  }
+  t.columnas.push('Nueva columna');
+  t.filas.forEach(f => f.textos.push(''));
+  saveDatabase();
+  renderPagos();
+  const inputs = document.querySelectorAll('#viewTab_pagos .plan-col-input');
+  const ultimo = inputs[inputs.length - 1];
+  if (ultimo) { ultimo.focus(); ultimo.select(); }
+}
+
+function pagosEliminarColumna(col) {
+  const t = pagosAsegurar();
+  if (t.columnas.length <= 1) {
+    alert('La tabla necesita al menos una columna.');
+    return;
+  }
+  const nombre = t.columnas[col] || `Columna ${col + 1}`;
+  const conTexto = t.filas.some(f => String(f.textos[col] || '').trim());
+  if (!confirm(conTexto ? `¿Eliminar la columna "${nombre}" y todo su contenido?` : `¿Eliminar la columna "${nombre}"?`)) return;
+  t.columnas.splice(col, 1);
+  t.filas.forEach(f => f.textos.splice(col, 1));
+  saveDatabase();
+  renderPagos();
+}
+
+function renderPagos() {
+  const container = document.getElementById('viewTab_pagos');
+  if (!container) return;
+  const esEquipo = state.currentRole === 'team';
+  const guardada = pagosLeer(state.activeClientSlug);
+  const t = pagosNormalizar(guardada ? JSON.parse(JSON.stringify(guardada)) : (esEquipo ? pagosIniciales() : { columnas: PAGOS_COLUMNAS_DEFAULT.slice(), filas: [] }));
+  const n = t.columnas.length;
+
+  const encabezados = t.columnas.map((c, i) => esEquipo
+    ? `<th scope="col">
+        <div class="pagos-th">
+          <input class="plan-col-input" value="${escapeHtml(c)}" aria-label="Nombre de la columna ${i + 1}" oninput="pagosEditarColumna(this, ${i})">
+          <button type="button" class="pagos-col-borrar" title="Eliminar columna" aria-label="Eliminar la columna ${escapeHtml(c || String(i + 1))}" onclick="pagosEliminarColumna(${i})">✕</button>
+        </div>
+      </th>`
+    : `<th scope="col">${escapeHtml(c)}</th>`).join('');
+
+  const filas = t.filas.map((f, k) => `
+    <tr data-fila="${escapeHtml(f.id)}">
+      <td class="plan-num">${k + 1}</td>
+      ${f.textos.map((txt, col) => esEquipo
+        ? `<td class="plan-celda" onclick="pagosClickCelda(event)"><textarea rows="1" aria-label="${escapeHtml(t.columnas[col] || 'Columna ' + (col + 1))}, fila ${k + 1}" oninput="pagosEditarCelda(this, '${escapeHtml(f.id)}', ${col})">${escapeHtml(txt)}</textarea></td>`
+        : `<td class="plan-celda"><div class="plan-texto">${escapeHtml(txt)}</div></td>`).join('')}
+      ${esEquipo ? `
+      <td class="plan-acc">
+        <button type="button" class="plan-btn" title="Insertar fila debajo" aria-label="Insertar fila debajo de la fila ${k + 1}" onclick="pagosInsertarDebajo('${escapeHtml(f.id)}')">＋</button>
+        <button type="button" class="plan-btn plan-btn-borrar" title="Eliminar fila" aria-label="Eliminar la fila ${k + 1}" onclick="pagosEliminarFila('${escapeHtml(f.id)}')">✕</button>
+      </td>` : ''}
+    </tr>`).join('');
+
+  container.innerHTML = `
+    <div class="results-header">
+      <div>
+        <h3 style="font-family:var(--font-display);font-size:20px;color:var(--text-strong);margin-bottom:4px;">Pagos</h3>
+        <p style="font-size:13px;color:var(--text-muted);">Registro de pagos de la marca.</p>
+      </div>
+    </div>
+
+    ${esEquipo ? `
+    <div class="plan-toolbar">
+      <div class="plan-toolbar-izq">
+        <button type="button" class="btn btn-sm btn-secondary" onclick="pagosAgregarColumna()" ${n >= PAGOS_MAX_COLUMNAS ? 'disabled' : ''}>+ Agregar columna</button>
+      </div>
+      <div class="plan-toolbar-der">
+        <label for="pagosCantidadFilas" class="plan-label">Agregar</label>
+        <select id="pagosCantidadFilas" class="form-control plan-select">
+          <option value="1">1 fila</option>
+          <option value="3">3 filas</option>
+          <option value="5">5 filas</option>
+          <option value="10">10 filas</option>
+        </select>
+        <button type="button" class="btn btn-sm btn-primary" onclick="pagosAgregarFilas()">+ Agregar filas</button>
+      </div>
+    </div>` : ''}
+
+    ${(!esEquipo && !t.filas.length) ? `
+      <div class="editor-card" style="text-align:center;padding:40px 20px;">
+        <h3 style="font-family:var(--font-display);font-size:18px;color:var(--text-strong);margin-bottom:8px;">Todavía no hay pagos registrados</h3>
+        <p style="font-size:13.5px;color:var(--text-muted);">Aquí verás tus pagos en cuanto el equipo los registre.</p>
+      </div>` : `
+    <div class="plan-tabla-wrap">
+      <table class="plan-tabla pagos-tabla${esEquipo ? ' editable' : ''}" style="min-width:${Math.max(560, 150 * n + (esEquipo ? 120 : 44))}px">
+        <colgroup>
+          <col class="plan-col-num">${t.columnas.map(() => '<col>').join('')}${esEquipo ? '<col class="plan-col-acc">' : ''}
+        </colgroup>
+        <thead><tr><th scope="col" class="plan-num">#</th>${encabezados}${esEquipo ? '<th scope="col" class="plan-acc"><span class="rp-sr">Acciones</span></th>' : ''}</tr></thead>
+        <tbody>${filas || `<tr><td colspan="${n + (esEquipo ? 2 : 1)}" class="plan-vacia">Sin filas. Usa "+ Agregar filas".</td></tr>`}</tbody>
+      </table>
+    </div>
+    ${esEquipo ? `<button type="button" class="plan-agregar-linea" onclick="document.getElementById('pagosCantidadFilas').value='1'; pagosAgregarFilas();">+ Agregar fila</button>` : ''}`}
+  `;
+  container.querySelectorAll('.plan-celda textarea').forEach(planAutoAltura);
 }
 
 // Lightbox

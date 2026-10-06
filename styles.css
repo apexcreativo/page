@@ -2505,3 +2505,19 @@ img, svg {
   .rp-edit-periodos { grid-template-columns: 1fr; }
   .rp-edit-grid-3 { grid-template-columns: 1fr; }
 }
+
+/* ==========================================================================
+   PESTAÑA PAGOS (tabla con columnas y filas editables)
+   ========================================================================== */
+.pagos-th { display: flex; align-items: center; }
+.pagos-th .plan-col-input { flex: 1; min-width: 0; }
+.pagos-col-borrar {
+  flex-shrink: 0; width: 24px; height: 24px; margin-right: 8px; border-radius: 6px;
+  color: #c5adc7; font-size: 12px; line-height: 1; display: inline-flex; align-items: center; justify-content: center;
+  opacity: 0.55; transition: all var(--transition-fast);
+}
+.pagos-th:hover .pagos-col-borrar, .pagos-col-borrar:focus-visible { opacity: 1; }
+.pagos-col-borrar:hover { background: rgba(255, 255, 255, 0.14); color: #ffffff; }
+.pagos-col-borrar:focus-visible { outline: 2px solid #ff5733; outline-offset: 1px; }
+.portal-tabs { padding: 0 12px; gap: 0; }
+.portal-tab { padding: 12px 10px; font-size: 13px; }
