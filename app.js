@@ -428,7 +428,7 @@ function renderDayDetailPanel() {
   panel.innerHTML = `
     <div style="background:var(--bg-surface-elevated);border:1px solid var(--border-medium);border-radius:var(--radius-lg);padding:18px 22px;margin-top:16px;">
       <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;flex-wrap:wrap;gap:10px;">
-        <h4 style="font-family:var(--font-display);font-size:16px;color:#fff;">📅 Contenido del ${formattedDate}</h4>
+        <h4 style="font-family:var(--font-display);font-size:16px;color:var(--text-strong);">📅 Contenido del ${formattedDate}</h4>
         ${state.currentRole === 'team' ? `
           <button class="btn btn-sm btn-primary" onclick="createProduction('${state.selectedDayIso}')">+ Agregar Pieza a este Día</button>
         ` : ''}
@@ -441,7 +441,7 @@ function renderDayDetailPanel() {
             <div style="display:flex;align-items:center;justify-content:space-between;background:var(--bg-surface);padding:12px 16px;border-radius:var(--radius-md);border:1px solid var(--border-subtle);flex-wrap:wrap;gap:10px;">
               <div>
                 <span class="badge" style="background:var(--bg-surface-elevated);color:var(--apex-orange);margin-bottom:4px;">${p.formato} · ${p.estado}</span>
-                <h5 style="color:#fff;font-size:15px;font-weight:600;">${escapeHtml(p.titulo || 'Sin título')}</h5>
+                <h5 style="color:var(--text-strong);font-size:15px;font-weight:600;">${escapeHtml(p.titulo || 'Sin título')}</h5>
                 <p style="font-size:12px;color:var(--text-dim);font-family:var(--font-mono);">Asignado a: ${p.actuacion || 'Sin asignar'} · ${p.duracion || 's/d'}</p>
               </div>
               <div style="display:flex;gap:8px;">
@@ -515,7 +515,7 @@ function renderProduccion() {
   if (!currentProd) {
     editorEl.innerHTML = `
       <div style="text-align:center;padding:60px 20px;">
-        <h3 style="color:#fff;margin-bottom:12px;">Selecciona o crea una producción</h3>
+        <h3 style="color:var(--text-strong);margin-bottom:12px;">Selecciona o crea una producción</h3>
         <p style="color:var(--text-muted);font-size:14px;margin-bottom:20px;">Elige una pieza del menú izquierdo para desglosar su guion y plan de grabación.</p>
         ${state.currentRole === 'team' ? `<button class="btn btn-primary" onclick="createProduction()">+ Nueva Producción</button>` : ''}
       </div>
@@ -536,7 +536,7 @@ function renderProduccion() {
     <!-- Barra de Aprobación de Cliente -->
     <div class="client-approval-bar">
       <div>
-        <h4 style="font-family:var(--font-display);font-size:15px;color:#fff;margin-bottom:2px;">
+        <h4 style="font-family:var(--font-display);font-size:15px;color:var(--text-strong);margin-bottom:2px;">
           ${currentProd.aprobadoCliente ? '✅ Guion Aprobado por el Cliente' : '⏳ Pendiente de Aprobación del Cliente'}
         </h4>
         <p style="font-size:12.5px;color:var(--text-muted);">
@@ -799,7 +799,7 @@ function renderTareas() {
   container.innerHTML = `
     <div class="tasks-toolbar">
       <div>
-        <h3 style="font-family:var(--font-display);font-size:20px;color:#fff;margin-bottom:4px;">Tablero de Labores & Colaboradores</h3>
+        <h3 style="font-family:var(--font-display);font-size:20px;color:var(--text-strong);margin-bottom:4px;">Tablero de Labores & Colaboradores</h3>
         <p style="font-size:13px;color:var(--text-muted);">Asigna y da seguimiento a grabaciones de Alexa, edición de Mitzi y supervisión de Alejandra.</p>
       </div>
       <div class="collab-filters">
@@ -924,7 +924,9 @@ function nombreMes(iso) {
 }
 
 function mesesConReporte(slug) {
-  return Object.keys((db.resultados && db.resultados[slug]) || {}).sort().reverse();
+  const meses = new Set(Object.keys((db.resultados && db.resultados[slug]) || {}));
+  Object.keys(reportesPlataformasDe(slug)).forEach(m => meses.add(m));
+  return Array.from(meses).sort().reverse();
 }
 
 // Mes que se está viendo para el cliente activo (por defecto, el último con reporte)
@@ -1029,7 +1031,7 @@ function renderResultados() {
   if (!esEquipo && !conReporte.length) {
     container.innerHTML = `
       <div class="editor-card" style="text-align:center;padding:40px 20px;">
-        <h3 style="font-family:var(--font-display);font-size:18px;color:#fff;margin-bottom:8px;">Todavía no hay reportes publicados</h3>
+        <h3 style="font-family:var(--font-display);font-size:18px;color:var(--text-strong);margin-bottom:8px;">Todavía no hay reportes publicados</h3>
         <p style="font-size:13.5px;color:var(--text-muted);">Aquí verás tus resultados de cada mes en cuanto el equipo los publique.</p>
       </div>`;
     return;
@@ -1038,6 +1040,8 @@ function renderResultados() {
   const mes = mesResultados(slug);
   const reporte = reporteMes(slug, mes, false);
   const datos = reporte || { resumen: '', kpis: [], imagenes: [] };
+  const plataformasCargadas = obtenerPlataformas(slug, mes);
+  const plataformas = plataformasCargadas || (esEquipo ? plantillaPlataformas() : null);
   const kpis = Array.isArray(datos.kpis) ? datos.kpis : [];
   const imagenes = Array.isArray(datos.imagenes) ? datos.imagenes : [];
   const piezasMes = db.producciones.filter(p => p.clienteSlug === slug && (p.fecha || '').startsWith(mes));
@@ -1097,39 +1101,42 @@ function renderResultados() {
   container.innerHTML = `
     <div class="results-header">
       <div>
-        <h3 style="font-family:var(--font-display);font-size:20px;color:#fff;margin-bottom:4px;">Reporte de Resultados · ${nombreMes(mes)}</h3>
+        <h3 style="font-family:var(--font-display);font-size:20px;color:var(--text-strong);margin-bottom:4px;">Reporte de Resultados · ${nombreMes(mes)}</h3>
         <p style="font-size:13px;color:var(--text-muted);">Métricas verificadas de impacto, interacciones y conversiones para la marca.</p>
       </div>
       <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;">
         ${selector}
-        ${esEquipo ? `<button class="btn btn-sm btn-primary" onclick="agregarKpi()">+ Agregar Indicador</button>` : ''}
+        ${esEquipo && !plataformas ? `<button class="btn btn-sm btn-primary" onclick="agregarKpi()">+ Agregar Indicador</button>` : ''}
       </div>
     </div>
 
-    ${esEquipo && !reporte ? `
+    ${plataformas ? renderReportePlataformas(plataformas, mes, !plataformasCargadas) : ''}
+
+    ${esEquipo && !reporte && !plataformas ? `
       <div class="res-aviso">${nombreMes(mes)} todavía no tiene reporte. Lo que agregues aquí se guarda en la nube y el cliente lo verá al entrar.</div>
     ` : ''}
 
-    <!-- Tarjetas de Métricas -->
+    <!-- Tarjetas de Métricas (formato anterior; se ocultan cuando hay reporte por plataforma) -->
+    ${plataformas ? '' : `
     <div class="kpi-tiles-grid">
       ${tileFijo}
       ${tiles}
-    </div>
+    </div>`}
 
     <!-- Resumen Ejecutivo -->
     ${(datos.resumen || esEquipo) ? `
     <div class="editor-card" style="margin-bottom:24px;">
-      <h4 style="font-family:var(--font-display);font-size:16px;color:#fff;margin-bottom:12px;">Resumen Ejecutivo del Mes</h4>
+      <h4 style="font-family:var(--font-display);font-size:16px;color:var(--text-strong);margin-bottom:12px;">Resumen Ejecutivo del Mes</h4>
       ${resumenHtml}
     </div>` : ''}
 
-    ${renderDetalleResultados(datos.detalle)}
+    ${plataformas ? renderConclusionResultados(datos.detalle) : renderDetalleResultados(datos.detalle)}
 
     <!-- Capturas y Evidencias de Resultados -->
     ${(imagenes.length || esEquipo) ? `
     <div class="editor-card">
       <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;gap:10px;flex-wrap:wrap;">
-        <h4 style="font-family:var(--font-display);font-size:16px;color:#fff;">Capturas & Evidencias Verificadas</h4>
+        <h4 style="font-family:var(--font-display);font-size:16px;color:var(--text-strong);">Capturas & Evidencias Verificadas</h4>
         ${esEquipo ? `<button class="btn btn-sm btn-secondary" onclick="document.getElementById('kpiImageInput').click()">+ Subir Captura</button>` : ''}
       </div>
       <input type="file" id="kpiImageInput" accept="image/*" style="display:none;" onchange="handleKpiImageUpload(this)">
@@ -1383,6 +1390,284 @@ function renderDetalleResultados(d) {
   `;
 }
 
+// ==========================================================================
+// 4b. REPORTE POR PLATAFORMA (Instagram, Facebook, TikTok, Google)
+//     Los datos se capturan en reportes.js (o en la nube como reporte.plataformas)
+// ==========================================================================
+const PLATAFORMAS_INFO = [
+  { id: 'instagram', nombre: 'Instagram', sigla: 'IG', clase: 'ig' },
+  { id: 'facebook', nombre: 'Facebook', sigla: 'f', clase: 'fb' },
+  { id: 'tiktok', nombre: 'TikTok', sigla: 'TT', clase: 'tt' },
+  { id: 'google', nombre: 'Google', sigla: 'G', clase: 'gg' }
+];
+
+function reportesPlataformasDe(slug) {
+  try {
+    if (typeof REPORTES_PLATAFORMAS !== 'undefined' && REPORTES_PLATAFORMAS[slug]) return REPORTES_PLATAFORMAS[slug];
+  } catch (e) { /* sin archivo de reportes */ }
+  return {};
+}
+
+function plantillaPlataformas() {
+  try { if (typeof plantillaReporte === 'function') return plantillaReporte(); } catch (e) { /* sin plantilla */ }
+  return null;
+}
+
+// Primero lo guardado en la nube (reporte.plataformas); si no, lo capturado en reportes.js
+function obtenerPlataformas(slug, mes) {
+  const r = db.resultados && db.resultados[slug] && db.resultados[slug][mes];
+  if (r && r.plataformas) return r.plataformas;
+  return reportesPlataformasDe(slug)[mes] || null;
+}
+
+function mesAnteriorIso(mes) {
+  const p = String(mes).split('-').map(Number);
+  const d = new Date(p[0], p[1] - 2, 1);
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
+}
+
+function rpVacio(v) { return v === null || v === undefined || v === ''; }
+
+function rpFormato(v, tipo) {
+  if (rpVacio(v)) return '';
+  if (typeof v !== 'number') return escapeHtml(String(v));
+  if (tipo === 'porcentaje') return `${v.toLocaleString('es-MX', { maximumFractionDigits: 2 })}%`;
+  if (tipo === 'calificacion') return `${v.toLocaleString('es-MX', { minimumFractionDigits: 1, maximumFractionDigits: 1 })} ★`;
+  return v.toLocaleString('es-MX');
+}
+
+// Diferencia, % y dirección (sube / baja / igual / sin dato)
+function rpComparar(m) {
+  const tipo = m.tipo;
+  let dif = null, pct = null, dir = 'nd';
+  if (typeof m.actual === 'number' && typeof m.anterior === 'number') {
+    const d = Math.round((m.actual - m.anterior) * 100) / 100;
+    dir = d > 0 ? 'up' : (d < 0 ? 'down' : 'flat');
+    const signo = d > 0 ? '+' : (d < 0 ? '−' : '');
+    if (tipo === 'porcentaje') {
+      dif = `${signo}${Math.abs(d).toLocaleString('es-MX', { maximumFractionDigits: 2 })} pts`;
+    } else {
+      dif = `${signo}${Math.abs(d).toLocaleString('es-MX', { maximumFractionDigits: 2 })}`;
+      if (m.anterior > 0 && m.actual >= 0) { // % solo con base positiva
+        const p = (d / Math.abs(m.anterior)) * 100;
+        pct = `${p > 0 ? '+' : (p < 0 ? '−' : '')}${Math.abs(p).toLocaleString('es-MX', { minimumFractionDigits: 1, maximumFractionDigits: 1 })}%`;
+      }
+    }
+  }
+  if (!rpVacio(m.diferencia)) dif = String(m.diferencia);
+  if (!rpVacio(m.variacion)) pct = String(m.variacion);
+  if (dir === 'nd' && pct) dir = /^[−-]/.test(pct) ? 'down' : (/^\+/.test(pct) ? 'up' : 'flat');
+  return { dif, pct, dir };
+}
+
+function rpChip(c) {
+  if (c.dir === 'nd' && !c.pct) return '<span class="rp-chip rp-chip-nd">Sin comparación</span>';
+  const flecha = c.dir === 'up' ? '▲' : (c.dir === 'down' ? '▼' : '=');
+  const texto = c.pct || c.dif || 'Sin cambio';
+  const leyenda = c.dir === 'up' ? 'Aumento' : (c.dir === 'down' ? 'Disminución' : 'Sin cambio');
+  return `<span class="rp-chip rp-chip-${c.dir}" title="${leyenda}"><span aria-hidden="true">${flecha}</span> ${escapeHtml(texto)}<span class="rp-sr"> (${leyenda})</span></span>`;
+}
+
+function rpValor(v, tipo) {
+  return rpVacio(v) ? '<span class="rp-pend">Por completar</span>' : rpFormato(v, tipo);
+}
+
+// Línea de comparación: "+294.0% vs agosto (5,343)"
+function rpLineaComparacion(m, etiqueta, mesAnt) {
+  if (rpVacio(m.actual)) return '';
+  const c = rpComparar(m);
+  const cls = `rp-comp rp-comp-${c.dir === 'nd' ? 'nd' : c.dir}`;
+  const ant = rpVacio(m.anterior) ? '' : rpFormato(m.anterior, m.tipo);
+  let texto;
+  if (m.tipo === 'porcentaje') {
+    if (!ant) return `<p class="rp-comp rp-comp-nd">${escapeHtml(mesAnt)}: —</p>`;
+    texto = `${escapeHtml(mesAnt)}: ${ant}${c.dif ? ` · ${escapeHtml(c.dif)}` : ''}`;
+  } else if (c.pct && c.dif && typeof m.actual !== 'number') {
+    texto = `${escapeHtml(c.dif)} (${escapeHtml(c.pct)}) vs ${escapeHtml(etiqueta)}`;
+  } else if (c.pct) {
+    texto = `${escapeHtml(c.pct)} vs ${escapeHtml(etiqueta)}${ant ? ` (${ant})` : ''}`;
+  } else if (c.dif) {
+    texto = `${escapeHtml(c.dif)} vs ${escapeHtml(etiqueta)}${ant ? ` (${ant})` : ''}`;
+  } else {
+    return `<p class="rp-comp rp-comp-nd">${escapeHtml(mesAnt)}: ${ant || '—'}</p>`;
+  }
+  const flecha = c.dir === 'up' ? '▲' : (c.dir === 'down' ? '▼' : '');
+  const leyenda = c.dir === 'up' ? 'aumento' : (c.dir === 'down' ? 'disminución' : 'sin cambio');
+  return `<p class="${cls}">${flecha ? `<span aria-hidden="true">${flecha}</span> ` : ''}${texto}<span class="rp-sr"> (${leyenda})</span></p>`;
+}
+
+function rpTarjeta(m, mesAnt, etiqueta, destacada) {
+  const esGrupo = m.tipo === 'grupo';
+  const sub = (m.sub || []).map(s => `
+      <li class="rp-sub">
+        <div class="rp-sub-fila">
+          <span class="rp-sub-nombre">${escapeHtml(s.nombre)}</span>
+          <span class="rp-sub-valor">${rpValor(s.actual, s.tipo)}</span>
+        </div>
+        ${s.sinComparacion ? '' : rpLineaComparacion(s, etiqueta, mesAnt)}
+      </li>`).join('');
+  return `
+    <article class="rp-card${esGrupo ? ' rp-card-grupo' : ''}${destacada ? ' rp-card-destacada' : ''}">
+      <h5 class="rp-card-label">${escapeHtml(m.nombre)}</h5>
+      ${esGrupo ? '' : `
+        <div class="rp-card-valor">${rpValor(m.actual, m.tipo)}</div>
+        ${rpLineaComparacion(m, etiqueta, mesAnt)}`}
+      ${sub ? `<ul class="rp-subs">${sub}</ul>` : ''}
+      ${m.nota ? `<p class="rp-nota">${escapeHtml(m.nota)}</p>` : ''}
+    </article>`;
+}
+
+function rpFilasComparacion(metricas) {
+  const filas = [];
+  const fila = (m, esSub) => {
+    if (m.tipo === 'grupo') {
+      filas.push(`<tr class="rp-tr-grupo"><th scope="row" colspan="5">${escapeHtml(m.nombre)}</th></tr>`);
+      return;
+    }
+    const c = rpComparar(m);
+    filas.push(`
+      <tr class="${esSub ? 'rp-tr-sub' : ''}">
+        <th scope="row">${escapeHtml(m.nombre)}</th>
+        <td class="rp-num rp-strong">${rpValor(m.actual, m.tipo)}</td>
+        <td class="rp-num rp-dim">${rpVacio(m.anterior) ? '—' : rpFormato(m.anterior, m.tipo)}</td>
+        <td class="rp-num">${c.dif ? escapeHtml(c.dif) : '—'}</td>
+        <td class="rp-num">${(rpVacio(m.actual) || (c.dir === 'nd' && !c.pct)) ? '—' : rpChip(c)}</td>
+      </tr>`);
+  };
+  metricas.forEach(m => {
+    fila(m, false);
+    (m.sub || []).forEach(s => fila(s, true));
+  });
+  return filas.join('');
+}
+
+function rpTop(top, red) {
+  if (!top) return '';
+  const items = (top.items || []).slice(0, 5);
+  while (items.length < 5) items.push({});
+  return `
+    <div class="rp-bloque">
+      <div class="rp-bloque-head">
+        <h5 class="rp-bloque-titulo">Principal contenido · Top 5</h5>
+        <span class="rp-bloque-meta">Según ${escapeHtml(top.criterio || 'visualizaciones')}</span>
+      </div>
+      <ol class="rp-top">
+        ${items.map((it, i) => `
+          <li class="rp-top-item">
+            <div class="rp-top-portada${it.portada ? '' : ' rp-top-portada-vacia'}">
+              <span class="rp-top-rank">${i + 1}</span>
+              ${it.portada
+                ? `<img src="${escapeHtml(it.portada)}" alt="Portada del contenido ${i + 1} de ${escapeHtml(red)}" loading="lazy" decoding="async" onclick="openLightbox(this.src)">`
+                : '<span>Portada por completar</span>'}
+            </div>
+            <p class="rp-top-titulo">${it.titulo ? escapeHtml(it.titulo) : '<span class="rp-pend">Contenido por completar</span>'}</p>
+            <p class="rp-top-valor">${it.valor ? escapeHtml(it.valor) : '<span class="rp-pend">Métrica por completar</span>'}</p>
+            ${it.detalle ? `<p class="rp-top-detalle">${escapeHtml(it.detalle)}</p>` : ''}
+          </li>`).join('')}
+      </ol>
+      ${top.nota ? `<p class="rp-nota">${escapeHtml(top.nota)}</p>` : ''}
+    </div>`;
+}
+
+function rpEstrellas(n) {
+  if (typeof n !== 'number') return '';
+  const llenas = Math.max(0, Math.min(5, Math.round(n)));
+  return `<span class="rp-estrellas" aria-label="${n} de 5 estrellas">${'★'.repeat(llenas)}<span>${'★'.repeat(5 - llenas)}</span></span>`;
+}
+
+function rpResenas(resenas) {
+  if (!resenas) return '';
+  const tarjeta = (r, tipo, titulo) => {
+    r = r || {};
+    const vacia = rpVacio(r.texto);
+    return `
+      <article class="rp-resena rp-resena-${tipo}">
+        <h6>${titulo}</h6>
+        ${vacia ? '<p class="rp-pend">Reseña por completar</p>' : `
+          <div class="rp-resena-meta">${rpEstrellas(r.calificacion)} ${r.autor ? `<strong>${escapeHtml(r.autor)}</strong>` : ''} ${r.fecha ? `<span>${escapeHtml(r.fecha)}</span>` : ''}</div>
+          <blockquote>${escapeHtml(r.texto)}</blockquote>`}
+      </article>`;
+  };
+  return `
+    <div class="rp-bloque">
+      <div class="rp-bloque-head"><h5 class="rp-bloque-titulo">Reseñas destacadas del mes</h5></div>
+      <div class="rp-resenas">
+        ${tarjeta(resenas.positiva, 'pos', 'Reseña positiva destacada')}
+        ${tarjeta(resenas.negativa, 'neg', 'Reseña negativa destacada')}
+      </div>
+    </div>`;
+}
+
+function rpPlataforma(info, p, mes) {
+  p = p || {};
+  const mesAnt = MESES_NOMBRES[Number(mesAnteriorIso(mes).split('-')[1]) - 1];
+  const mesAct = MESES_NOMBRES[Number(String(mes).split('-')[1]) - 1];
+  const metricas = p.metricas || [];
+  const comparar = state.rpComparar !== false;
+  return `
+    <section class="rp-plataforma rp-${info.clase}" id="rp-${info.id}" aria-labelledby="rp-t-${info.id}">
+      <header class="rp-plat-head">
+        <span class="rp-plat-icono" aria-hidden="true">${info.sigla}</span>
+        <div>
+          <h4 id="rp-t-${info.id}">${info.nombre}</h4>
+          <p class="rp-plat-periodo">
+            <span><b>${mesAct}:</b> ${p.periodo ? escapeHtml(p.periodo) : 'periodo por completar'}</span>
+            <span><b>Comparado con:</b> ${p.periodoAnterior ? escapeHtml(p.periodoAnterior) : 'mes anterior'}</span>
+          </p>
+        </div>
+      </header>
+
+      <div class="rp-cards">${metricas.map((m, i) => rpTarjeta(m, mesAnt, p.comparadoCon || mesAnt.toLowerCase(), i === 0)).join('')}</div>
+
+      ${comparar ? `
+      <div class="rp-bloque">
+        <div class="rp-bloque-head">
+          <h5 class="rp-bloque-titulo">Comparación con el mes anterior</h5>
+          <span class="rp-bloque-meta">${mesAct} vs ${mesAnt}</span>
+        </div>
+        <div class="rp-tabla-wrap">
+          <table class="rp-tabla">
+            <thead><tr><th scope="col">Métrica</th><th scope="col">${mesAct}</th><th scope="col">${mesAnt}</th><th scope="col">Diferencia</th><th scope="col">Variación</th></tr></thead>
+            <tbody>${rpFilasComparacion(metricas)}</tbody>
+          </table>
+        </div>
+      </div>` : ''}
+
+      ${info.id === 'google' ? rpResenas(p.resenas) : rpTop(p.top, info.nombre)}
+    </section>`;
+}
+
+function renderReportePlataformas(plataformas, mes, esPlantilla) {
+  const comparar = state.rpComparar !== false;
+  return `
+    ${esPlantilla ? `<div class="res-aviso">Este cliente todavía no tiene métricas por plataforma para ${nombreMes(mes)}. La estructura ya está lista: se llena en el archivo reportes.js (copia el bloque de El Faro y cambia cliente, periodo y valores).</div>` : ''}
+    <div class="rp-toolbar">
+      <nav class="rp-saltos" aria-label="Ir a la plataforma">
+        ${PLATAFORMAS_INFO.map(i => `<a href="#rp-${i.id}" class="rp-salto rp-salto-${i.clase}" onclick="event.preventDefault(); var el=document.getElementById('rp-${i.id}'); if(el) el.scrollIntoView({behavior:'smooth', block:'start'});">${i.nombre}</a>`).join('')}
+      </nav>
+      <label class="rp-toggle">
+        <input type="checkbox" ${comparar ? 'checked' : ''} onchange="state.rpComparar = this.checked; renderResultados();">
+        <span>Comparar con el mes anterior</span>
+      </label>
+    </div>
+    <div class="rp-plataformas">
+      ${PLATAFORMAS_INFO.map(i => rpPlataforma(i, plataformas[i.id], mes)).join('')}
+    </div>`;
+}
+
+// Solo la conclusión del reporte detallado (cuando ya se muestra el reporte por plataforma)
+function renderConclusionResultados(d) {
+  if (!d || !((d.conclusion && d.conclusion.length) || (d.recomendaciones && d.recomendaciones.length))) return '';
+  return `
+    <div class="editor-card res-conclusion" style="margin-bottom:24px;">
+      <h4 class="res-h4">Conclusión del mes</h4>
+      ${(d.conclusion || []).map(p => `<p>${escapeHtml(p)}</p>`).join('')}
+      ${(d.recomendaciones && d.recomendaciones.length) ? `
+        <h5 class="res-sub">Qué sigue el próximo mes</h5>
+        <ul class="res-notas">${d.recomendaciones.map(n => `<li>${escapeHtml(n)}</li>`).join('')}</ul>` : ''}
+    </div>`;
+}
+
 // Lightbox
 function openLightbox(src) {
   const modal = document.getElementById('globalLightboxModal');
@@ -1413,13 +1698,13 @@ function renderAjustes() {
 
   container.innerHTML = `
     <div style="max-width:880px;">
-      <h3 style="font-family:var(--font-display);font-size:20px;color:#fff;margin-bottom:6px;">Panel de Ajustes de la Agencia</h3>
+      <h3 style="font-family:var(--font-display);font-size:20px;color:var(--text-strong);margin-bottom:6px;">Panel de Ajustes de la Agencia</h3>
       <p style="font-size:13px;color:var(--text-muted);margin-bottom:24px;">Administra tus clientes, contraseñas PIN, colaboradores del equipo y respaldos.</p>
 
       <!-- Gestor de Clientes -->
       <div class="editor-card">
         <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;">
-          <h4 style="font-family:var(--font-display);font-size:16px;color:#fff;">Clientes Activos (${db.clientes.length})</h4>
+          <h4 style="font-family:var(--font-display);font-size:16px;color:var(--text-strong);">Clientes Activos (${db.clientes.length})</h4>
           <button class="btn btn-sm btn-primary" onclick="addNewClientPrompt()">+ Agregar Cliente</button>
         </div>
         <div style="display:flex;flex-direction:column;gap:8px;">
@@ -1427,7 +1712,7 @@ function renderAjustes() {
             <div style="display:flex;align-items:center;justify-content:space-between;background:var(--bg-surface-elevated);padding:10px 14px;border-radius:var(--radius-md);border:1px solid var(--border-subtle);flex-wrap:wrap;gap:8px;">
               <div>
                 <span style="font-size:18px;margin-right:8px;">${c.avatar}</span>
-                <strong style="color:#fff;font-size:14px;">${c.nombre}</strong>
+                <strong style="color:var(--text-strong);font-size:14px;">${c.nombre}</strong>
                 <span class="mono" style="font-size:11px;color:var(--text-dim);margin-left:8px;">PIN: ${c.pin} · ${c.pais}</span>
               </div>
               <div style="display:flex;gap:6px;">
@@ -1442,7 +1727,7 @@ function renderAjustes() {
       <!-- Gestor Dinámico de Colaboradores -->
       <div class="editor-card">
         <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;">
-          <h4 style="font-family:var(--font-display);font-size:16px;color:#fff;">Equipo & Colaboradores (${db.colaboradores.length})</h4>
+          <h4 style="font-family:var(--font-display);font-size:16px;color:var(--text-strong);">Equipo & Colaboradores (${db.colaboradores.length})</h4>
           <button class="btn btn-sm btn-primary" onclick="addNewCollabPrompt()">+ Agregar Colaborador</button>
         </div>
         <p style="font-size:12.5px;color:var(--text-muted);margin-bottom:14px;">
@@ -1452,7 +1737,7 @@ function renderAjustes() {
           ${db.colaboradores.map((col, idx) => `
             <div style="display:flex;align-items:center;justify-content:space-between;background:var(--bg-surface-elevated);padding:10px 14px;border-radius:var(--radius-md);border:1px solid var(--border-subtle);flex-wrap:wrap;gap:8px;">
               <div>
-                <strong style="color:#fff;font-size:14px;">👤 ${col.nombre}</strong>
+                <strong style="color:var(--text-strong);font-size:14px;">👤 ${col.nombre}</strong>
                 <span style="font-size:12px;color:var(--text-dim);margin-left:8px;">(${col.rol})</span>
               </div>
               <div style="display:flex;gap:6px;">
@@ -1465,7 +1750,7 @@ function renderAjustes() {
 
       <!-- Respaldos y Seguridad -->
       <div class="editor-card">
-        <h4 style="font-family:var(--font-display);font-size:16px;color:#fff;margin-bottom:8px;">Respaldo y Seguridad de Datos</h4>
+        <h4 style="font-family:var(--font-display);font-size:16px;color:var(--text-strong);margin-bottom:8px;">Respaldo y Seguridad de Datos</h4>
         <p style="font-size:12.5px;color:var(--text-muted);margin-bottom:16px;">
           Descarga una copia completa de tus guiones, calendarios y resultados en un archivo JSON para tener siempre tu información segura.
         </p>

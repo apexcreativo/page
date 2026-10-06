@@ -49,6 +49,17 @@ El acceso es por PIN y todo lo que se edita en el portal se guarda en la nube (F
 
 ---
 
+## 📊 Reporte de Resultados por plataforma (`reportes.js`)
+
+La pestaña **Resumen de Resultados** muestra 4 bloques (Instagram, Facebook, TikTok y Google) con comparación contra el mes anterior, Top 5 de contenidos con portada y reseñas destacadas de Google.
+
+* Los datos se capturan en **`reportes.js`**. El Faro · Septiembre 2026 es el ejemplo completo.
+* Para otro cliente o mes: copia el bloque de El Faro, cámbialo de cliente (slug) y de mes (`'AAAA-MM'`) y llena `actual` y `anterior`. El portal calcula la diferencia, el % y la flecha.
+* `null` se muestra como "Por completar".
+* Portadas del Top 5: `resultados/<cliente>-<AAAA-MM>/portadas/`.
+
+---
+
 ## 📁 Estructura del Proyecto
 
 ```
@@ -57,6 +68,7 @@ d:\ITM\Página web\
 ├── index.html       # Página Web Pública (Showcase de autoridad + Portal integrado)
 ├── app.html         # Portal de Trabajo en Pantalla Completa (Acceso directo)
 ├── styles.css       # Sistema de Diseño Dark Luxury (Tipografías, Glassmorphism y Componentes)
+├── reportes.js      # Métricas por plataforma de cada cliente y mes
 ├── app.js           # Motor del portal y conexión con la nube (datos y PIN viven en Firebase)
 └── README.md        # Documentación y Guía de Uso
 ```
