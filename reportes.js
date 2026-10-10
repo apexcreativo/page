@@ -4,7 +4,9 @@
    Aquí se capturan, a mano, las métricas de cada cliente por mes.
    El portal (pestaña "Resumen de Resultados") las muestra en 4 bloques:
    Instagram, Facebook, TikTok y Google, con la comparación contra el mes
-   anterior, el Top 5 de contenidos y las reseñas destacadas.
+   anterior (TikTok solo muestra los datos del mes, sin comparar), el Top 3
+   de contenidos de Instagram y las reseñas destacadas de Google.
+   Facebook y TikTok solo llevan sus indicadores (sin Top).
 
    CÓMO AGREGAR EL REPORTE DE OTRO CLIENTE O DE OTRO MES
    1. Copia el bloque completo de El Faro ('2026-09': { ... }).
@@ -21,10 +23,11 @@
       null = el portal muestra "Por completar".
       'comparadoCon' es el texto que aparece en la comparación ("vs agosto").
       'sinComparacion: true' muestra solo el valor del mes, sin la línea "vs mes anterior".
-   4. Principal contenido (Top 3): pega en 'link' el link del video
-      (Instagram, Facebook, TikTok o YouTube). La portada se toma del link
-      y al darle clic se abre el video. 'portada' es una imagen opcional
-      que solo se usa si no hay link.
+      TikTok no se compara con el mes anterior: ahí solo va 'actual'.
+   4. Principal contenido (Top 3, solo en Instagram): pega en 'link' el link
+      de la publicación o reel. La portada se toma del link y al darle clic
+      se abre el video. 'portada' es una imagen opcional que solo se usa si
+      no hay link.
    Además, el perfil APEX CEO1 puede editar todo el reporte desde el portal
    (botón "✏️ Editar reporte"); lo que guarda ahí tiene prioridad sobre este archivo.
    ========================================================================== */
@@ -43,19 +46,14 @@ function plantillaReporte() {
           { nombre: '% de seguidores', tipo: 'porcentaje', actual: null, anterior: null, sinComparacion: true },
           { nombre: '% de no seguidores', tipo: 'porcentaje', actual: null, anterior: null, sinComparacion: true }
         ] },
-        { nombre: 'Cuentas alcanzadas', actual: null, anterior: null },
-        { nombre: 'Interacciones', actual: null, anterior: null, sub: [
-          { nombre: 'Seguidores', actual: null, anterior: null },
-          { nombre: 'No seguidores', actual: null, anterior: null }
+        { nombre: 'Cuentas alcanzadas', actual: null, anterior: null, sub: [
+          { nombre: 'Visitas al perfil', actual: null, anterior: null },
+          { nombre: 'Toques en el enlace externo', actual: null, anterior: null }
         ] },
-        { nombre: 'Tasa de interacción', tipo: 'porcentaje', actual: null, anterior: null },
+        { nombre: 'Interacciones', actual: null, anterior: null },
         { nombre: 'Publicaciones en total', actual: null, anterior: null, sub: [
           { nombre: 'Publicaciones en el perfil', actual: null, anterior: null },
           { nombre: 'Historias', actual: null, anterior: null }
-        ] },
-        { nombre: 'Actividad en el perfil', tipo: 'grupo', sub: [
-          { nombre: 'Visitas al perfil', actual: null, anterior: null },
-          { nombre: 'Toques en el enlace externo', actual: null, anterior: null }
         ] },
         { nombre: 'Total de seguidores', actual: null, anterior: null }
       ],
@@ -72,22 +70,19 @@ function plantillaReporte() {
           { nombre: 'Publicaciones en el perfil', actual: null, anterior: null },
           { nombre: 'Historias', actual: null, anterior: null }
         ] }
-      ],
-      top: { criterio: 'Visualizaciones', items: top() }
+      ]
     },
     tiktok: {
       periodo: null,
-      periodoAnterior: null,
       metricas: [
-        { nombre: 'Visualizaciones', actual: null, anterior: null },
-        { nombre: 'Me gusta', actual: null, anterior: null },
-        { nombre: 'Nuevos seguidores', actual: null, anterior: null },
+        { nombre: 'Visualizaciones', actual: null },
+        { nombre: 'Me gusta', actual: null },
+        { nombre: 'Nuevos seguidores', actual: null },
         { nombre: 'Interacciones', tipo: 'grupo', sub: [
-          { nombre: 'Comentarios', actual: null, anterior: null },
-          { nombre: 'Compartidos', actual: null, anterior: null }
+          { nombre: 'Comentarios', actual: null },
+          { nombre: 'Compartidos', actual: null }
         ] }
-      ],
-      top: { criterio: 'Visualizaciones', items: top() }
+      ]
     },
     google: {
       periodo: null,
@@ -122,20 +117,14 @@ const REPORTES_PLATAFORMAS = {
             { nombre: '% de seguidores', tipo: 'porcentaje', actual: 70.3, anterior: 55.9, sinComparacion: true },
             { nombre: '% de no seguidores', tipo: 'porcentaje', actual: 29.7, anterior: 44.1, sinComparacion: true }
           ] },
-          { nombre: 'Cuentas alcanzadas', actual: 3381, anterior: 1288 },
-          { nombre: 'Interacciones', actual: 465, anterior: 115, sub: [
-            { nombre: 'Seguidores', actual: null, anterior: null },
-            { nombre: 'No seguidores', actual: null, anterior: null }
+          { nombre: 'Cuentas alcanzadas', actual: 3381, anterior: 1288, sub: [
+            { nombre: 'Visitas al perfil', actual: 326, anterior: 229 },
+            { nombre: 'Toques en el enlace externo', actual: 17, anterior: 8 }
           ] },
-          { nombre: 'Tasa de interacción', tipo: 'porcentaje', actual: 13.75, anterior: 8.93,
-            nota: 'Interacciones ÷ cuentas alcanzadas.' },
+          { nombre: 'Interacciones', actual: 465, anterior: 115 },
           { nombre: 'Publicaciones en total', actual: 41, anterior: null, sub: [
             { nombre: 'Publicaciones en el perfil', actual: null, anterior: null },
             { nombre: 'Historias', actual: null, anterior: null }
-          ] },
-          { nombre: 'Actividad en el perfil', tipo: 'grupo', sub: [
-            { nombre: 'Visitas al perfil', actual: 326, anterior: 229 },
-            { nombre: 'Toques en el enlace externo', actual: 17, anterior: 8 }
           ] },
           { nombre: 'Total de seguidores', actual: 3200, anterior: 3212, sub: [
             { nombre: 'Nuevos seguidores', actual: 39, anterior: null },
@@ -170,40 +159,22 @@ const REPORTES_PLATAFORMAS = {
             { nombre: 'Publicaciones en el perfil', actual: null, anterior: null },
             { nombre: 'Historias', actual: null, anterior: null }
           ] }
-        ],
-        top: {
-          criterio: 'Visualizaciones',
-          items: [
-            { link: null, portada: 'resultados/elfaro-2026-09/portadas/fb-1.jpg', titulo: '¡Este viernes nos vemos en nuestra n…', valor: '1,722 visualizaciones', detalle: 'Foto' },
-            { link: null, portada: 'resultados/elfaro-2026-09/portadas/fb-2.jpg', titulo: 'Seguimos en septiembre y, por su…', valor: '1,313 visualizaciones', detalle: 'Reel' },
-            { link: null, portada: null, titulo: null, valor: null, detalle: null }
-          ]
-        }
+        ]
       },
 
       tiktok: {
+        // TikTok no se compara con el mes anterior: solo los datos de septiembre
         periodo: '1 – 30 sep 2026',
-        periodoAnterior: 'Agosto 2026 (periodo anterior que compara TikTok)',
-        comparadoCon: 'periodo anterior',
         metricas: [
-          { nombre: 'Visualizaciones', actual: '7.9 mil', anterior: '9.8 mil', diferencia: '−1.9 mil', variacion: '−19.2%' },
-          { nombre: 'Me gusta', actual: 144, anterior: 109 },
-          { nombre: 'Nuevos seguidores', actual: null, anterior: null },
+          { nombre: 'Visualizaciones', actual: '7.9 mil' },
+          { nombre: 'Me gusta', actual: 144 },
+          { nombre: 'Nuevos seguidores', actual: null },
           { nombre: 'Interacciones', tipo: 'grupo', sub: [
-            { nombre: 'Comentarios', actual: 2, anterior: 4 },
-            { nombre: 'Compartidos', actual: 16, anterior: 36 }
+            { nombre: 'Comentarios', actual: 2 },
+            { nombre: 'Compartidos', actual: 16 }
           ] },
-          { nombre: 'Visualizaciones del perfil', actual: 82, anterior: 156 }
-        ],
-        top: {
-          criterio: 'Visualizaciones',
-          nota: 'TikTok muestra este ranking con los últimos 7 días (captura del 4 oct).',
-          items: [
-            { link: null, portada: 'resultados/elfaro-2026-09/portadas/tt-1.jpg', titulo: '¿Tú también eres de los que dicen: "un caldito y se me pasa…', valor: '566 visualizaciones', detalle: '11 me gusta' },
-            { link: null, portada: 'resultados/elfaro-2026-09/portadas/tt-2.jpg', titulo: '¡Este viernes nos vemos en nuestra nueva sucursal!', valor: '281 visualizaciones', detalle: '4 me gusta' },
-            { link: null, portada: 'resultados/elfaro-2026-09/portadas/tt-3.jpg', titulo: '¿Ya probaste nuestro Molcajete Mar y Tierra?', valor: '234 visualizaciones', detalle: '3 me gusta' }
-          ]
-        }
+          { nombre: 'Visualizaciones del perfil', actual: 82 }
+        ]
       },
 
       google: {

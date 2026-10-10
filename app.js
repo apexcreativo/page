@@ -1124,6 +1124,7 @@ function renderResultados() {
         ${selector}
         ${esEquipo && !plataformas ? `<button class="btn btn-sm btn-primary" onclick="agregarKpi()">+ Agregar Indicador</button>` : ''}
         ${esCEO && plataformas && !edicion ? `<button class="btn btn-sm btn-primary" onclick="rpIniciarEdicion()">✏️ Editar reporte</button>` : ''}
+        ${esCEO && !edicion && tieneReporte(reporte) ? `<button class="btn btn-sm btn-secondary rp-btn-eliminar" onclick="rpEliminarReporteMes()">🗑️ Eliminar reporte</button>` : ''}
         ${edicion ? `<button class="btn btn-sm btn-secondary" onclick="rpCancelarEdicion()">Cancelar</button><button class="btn btn-sm btn-primary" onclick="rpGuardarEdicion()">Guardar cambios</button>` : ''}
       </div>
     </div>
@@ -1346,7 +1347,7 @@ function renderDetalleResultados(d) {
           </tbody>
         </table>
       </div>
-      ${(r.top && r.top.length) ? `
+      ${(r.top && r.top.length && !rpRedSinTopAnterior(r)) ? `
         <h5 class="res-sub">${escapeHtml(r.topTitulo || 'Contenido destacado')}</h5>
         <ol class="res-top">
           ${r.top.map(x => `<li><strong>${escapeHtml(x.t)}</strong><span>${escapeHtml(x.d)}</span></li>`).join('')}
@@ -1385,6 +1386,61 @@ const PLATAFORMAS_INFO = [
   { id: 'google', nombre: 'Google', sigla: 'G', clase: 'gg' }
 ];
 
+// "Principal contenido · Top 3" solo se muestra en Instagram.
+// Facebook y TikTok ya no lo llevan; Google muestra sus reseñas destacadas.
+const RP_REDES_CON_TOP = ['instagram'];
+function rpRedConTop(id) { return RP_REDES_CON_TOP.indexOf(id) !== -1; }
+
+// Formato anterior (campo "detalle"): identifica Facebook o TikTok para no mostrar su contenido destacado
+function rpRedSinTopAnterior(r) {
+  const t = `${(r && r.clase) || ''} ${(r && r.red) || ''}`.toLowerCase();
+  return /\b(fb|tt)\b|facebook|tiktok/.test(t);
+}
+
+// TikTok no se compara con el mes anterior: solo muestra los datos del mes
+const RP_REDES_SIN_COMPARACION = ['tiktok'];
+function rpRedSinComparacion(id) { return RP_REDES_SIN_COMPARACION.indexOf(id) !== -1; }
+
+function rpNombreClave(t) {
+  return String(t || '').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/\s+/g, ' ').trim();
+}
+
+// Estructura vigente del reporte (9 oct 2026). También se aplica a reportes ya guardados en la nube:
+// - Instagram: "Actividad en el perfil" queda dentro de "Cuentas alcanzadas"; "Interacciones" sin
+//   seguidores / no seguidores; sin "Tasa de interacción".
+// - TikTok: sin datos del mes anterior.
+// Se usa siempre sobre una copia, nunca sobre `db`.
+function rpAjustarEstructura(pl) {
+  if (!pl) return pl;
+  const ig = pl.instagram;
+  if (ig && Array.isArray(ig.metricas)) {
+    const buscar = nombre => ig.metricas.findIndex(m => rpNombreClave(m && m.nombre) === nombre);
+    const iAct = buscar('actividad en el perfil');
+    const iAlc = buscar('cuentas alcanzadas');
+    if (iAct !== -1 && iAlc !== -1) {
+      const alc = ig.metricas[iAlc];
+      const ya = new Set((alc.sub || []).map(s => rpNombreClave(s && s.nombre)));
+      alc.sub = (alc.sub || []).concat((ig.metricas[iAct].sub || []).filter(s => s && !ya.has(rpNombreClave(s.nombre))));
+      ig.metricas.splice(iAct, 1);
+    }
+    const inter = ig.metricas[buscar('interacciones')];
+    if (inter && Array.isArray(inter.sub)) {
+      inter.sub = inter.sub.filter(s => ['seguidores', 'no seguidores'].indexOf(rpNombreClave(s && s.nombre)) === -1);
+      if (!inter.sub.length) delete inter.sub;
+    }
+    ig.metricas = ig.metricas.filter(m => rpNombreClave(m && m.nombre) !== 'tasa de interaccion');
+  }
+  PLATAFORMAS_INFO.forEach(info => {
+    const p = pl[info.id];
+    if (!p || !rpRedSinComparacion(info.id)) return;
+    delete p.periodoAnterior;
+    delete p.comparadoCon;
+    const quitar = m => { if (m) ['anterior', 'diferencia', 'variacion'].forEach(k => { delete m[k]; }); };
+    (p.metricas || []).forEach(m => { quitar(m); ((m && m.sub) || []).forEach(quitar); });
+  });
+  return pl;
+}
+
 function reportesPlataformasDe(slug) {
   try {
     if (typeof REPORTES_PLATAFORMAS !== 'undefined' && REPORTES_PLATAFORMAS[slug]) return REPORTES_PLATAFORMAS[slug];
@@ -1397,11 +1453,12 @@ function plantillaPlataformas() {
   return null;
 }
 
-// Primero lo guardado en la nube (reporte.plataformas); si no, lo capturado en reportes.js
+// Primero lo guardado en la nube (reporte.plataformas); si no, lo capturado en reportes.js.
+// Devuelve una copia con la estructura vigente (rpAjustarEstructura).
 function obtenerPlataformas(slug, mes) {
   const r = db.resultados && db.resultados[slug] && db.resultados[slug][mes];
-  if (r && r.plataformas) return r.plataformas;
-  return reportesPlataformasDe(slug)[mes] || null;
+  const base = (r && r.plataformas) || reportesPlataformasDe(slug)[mes] || null;
+  return base ? rpAjustarEstructura(JSON.parse(JSON.stringify(base))) : null;
 }
 
 function mesAnteriorIso(mes) {
@@ -1480,7 +1537,8 @@ function rpLineaComparacion(m, etiqueta, mesAnt) {
   return `<p class="${cls}">${flecha ? `<span aria-hidden="true">${flecha}</span> ` : ''}${texto}<span class="rp-sr"> (${leyenda})</span></p>`;
 }
 
-function rpTarjeta(m, mesAnt, etiqueta, destacada) {
+// sinComp = la red no se compara con el mes anterior (TikTok)
+function rpTarjeta(m, mesAnt, etiqueta, destacada, sinComp) {
   const esGrupo = m.tipo === 'grupo';
   const sub = (m.sub || []).map(s => `
       <li class="rp-sub">
@@ -1488,20 +1546,20 @@ function rpTarjeta(m, mesAnt, etiqueta, destacada) {
           <span class="rp-sub-nombre">${escapeHtml(s.nombre)}</span>
           <span class="rp-sub-valor">${rpValor(s.actual, s.tipo)}</span>
         </div>
-        ${s.sinComparacion ? '' : rpLineaComparacion(s, etiqueta, mesAnt)}
+        ${(sinComp || s.sinComparacion) ? '' : rpLineaComparacion(s, etiqueta, mesAnt)}
       </li>`).join('');
   return `
     <article class="rp-card${esGrupo ? ' rp-card-grupo' : ''}${destacada ? ' rp-card-destacada' : ''}">
       <h5 class="rp-card-label">${escapeHtml(m.nombre)}</h5>
       ${esGrupo ? '' : `
         <div class="rp-card-valor">${rpValor(m.actual, m.tipo)}</div>
-        ${rpLineaComparacion(m, etiqueta, mesAnt)}`}
+        ${(sinComp || m.sinComparacion) ? '' : rpLineaComparacion(m, etiqueta, mesAnt)}`}
       ${sub ? `<ul class="rp-subs">${sub}</ul>` : ''}
       ${m.nota ? `<p class="rp-nota">${escapeHtml(m.nota)}</p>` : ''}
     </article>`;
 }
 
-// ---------- Principal contenido (Top 3) con link al video ----------
+// ---------- Principal contenido (Top 3, solo Instagram) con link al video ----------
 const RP_TOP_MAX = 3;
 const RP_IFRAME_ANCHO = 340;   // ancho base de las vistas previas incrustadas
 const RP_IFRAME_ALTO = 425;    // 4:5, igual que el recuadro de portada
@@ -1696,6 +1754,7 @@ function rpPlataforma(info, p, mes) {
   const mesAnt = MESES_NOMBRES[Number(mesAnteriorIso(mes).split('-')[1]) - 1];
   const mesAct = MESES_NOMBRES[Number(String(mes).split('-')[1]) - 1];
   const metricas = p.metricas || [];
+  const sinComp = rpRedSinComparacion(info.id);
   return `
     <section class="rp-plataforma rp-${info.clase}" id="rp-${info.id}" aria-labelledby="rp-t-${info.id}">
       <header class="rp-plat-head">
@@ -1704,14 +1763,14 @@ function rpPlataforma(info, p, mes) {
           <h4 id="rp-t-${info.id}">${info.nombre}</h4>
           <p class="rp-plat-periodo">
             <span><b>${mesAct}:</b> ${p.periodo ? escapeHtml(p.periodo) : 'periodo por completar'}</span>
-            <span><b>Comparado con:</b> ${p.periodoAnterior ? escapeHtml(p.periodoAnterior) : 'mes anterior'}</span>
+            ${sinComp ? '' : `<span><b>Comparado con:</b> ${p.periodoAnterior ? escapeHtml(p.periodoAnterior) : 'mes anterior'}</span>`}
           </p>
         </div>
       </header>
 
-      <div class="rp-cards">${metricas.map((m, i) => rpTarjeta(m, mesAnt, p.comparadoCon || mesAnt.toLowerCase(), i === 0)).join('')}</div>
+      <div class="rp-cards">${metricas.map((m, i) => rpTarjeta(m, mesAnt, p.comparadoCon || mesAnt.toLowerCase(), i === 0, sinComp)).join('')}</div>
 
-      ${info.id === 'google' ? rpResenas(p.resenas) : rpTop(p.top, info.nombre)}
+      ${info.id === 'google' ? rpResenas(p.resenas) : (rpRedConTop(info.id) ? rpTop(p.top, info.nombre) : '')}
     </section>`;
 }
 
@@ -2051,8 +2110,10 @@ function puedeEditarReporte() {
   return state.currentRole === 'team' && !!state.currentTeamMember && state.currentTeamMember.id === 'ale';
 }
 
-// Asegura que el reporte tenga las 4 redes, 3 lugares de Top y las 2 reseñas
+// Asegura que el reporte tenga las 4 redes, 3 lugares de Top en Instagram y las 2 reseñas de Google
+// (Facebook y TikTok ya no llevan Top: al guardar se quita)
 function rpCompletarEstructura(datos) {
+  rpAjustarEstructura(datos);
   const base = plantillaPlataformas() || {};
   PLATAFORMAS_INFO.forEach(info => {
     if (!datos[info.id]) datos[info.id] = base[info.id] ? JSON.parse(JSON.stringify(base[info.id])) : { metricas: [] };
@@ -2061,6 +2122,8 @@ function rpCompletarEstructura(datos) {
     if (info.id === 'google') {
       if (!p.resenas) p.resenas = {};
       ['positiva', 'negativa'].forEach(k => { if (!p.resenas[k]) p.resenas[k] = { autor: null, calificacion: null, fecha: null, texto: null }; });
+    } else if (!rpRedConTop(info.id)) {
+      delete p.top;
     } else {
       if (!p.top) p.top = { criterio: 'Visualizaciones', items: [] };
       if (!Array.isArray(p.top.items)) p.top.items = [];
@@ -2092,6 +2155,30 @@ function rpGuardarEdicion() {
   const r = reporteMes(ed.slug, ed.mes, true);
   r.plataformas = nubeLimpio(ed.datos);
   state.rpEditando = null;
+  saveDatabase();
+  renderResultados();
+}
+
+// Borra de la nube el reporte del mes elegido (solo APEX CEO1).
+// La planeación y los colores del calendario de ese mes se conservan.
+function rpEliminarReporteMes() {
+  if (!puedeEditarReporte()) return;
+  const slug = state.activeClientSlug;
+  const mes = mesResultados(slug);
+  const r = reporteMes(slug, mes, false);
+  if (!tieneReporte(r)) return;
+  const cliente = (db.clientes.find(c => c.slug === slug) || {}).nombre || slug;
+  const enArchivo = !!reportesPlataformasDe(slug)[mes];
+  const aviso = `¿Eliminar el reporte de ${nombreMes(mes)} de ${cliente}?\n\n` +
+    'Se borra de la nube y no se puede deshacer. La planeación y los colores del calendario de ese mes se conservan.' +
+    (enArchivo ? '\n\nEl reporte capturado en reportes.js se seguirá mostrando.' : '');
+  if (!confirm(aviso)) return;
+  const conservar = {};
+  ['planeacion', 'calendarioColores'].forEach(k => { if (r[k] !== undefined) conservar[k] = r[k]; });
+  db.resultados[slug][mes] = conservar;
+  state.rpEditando = null;
+  state.kpiEditando = null;
+  limpiarMesVacio(slug, mes);
   saveDatabase();
   renderResultados();
 }
@@ -2169,32 +2256,34 @@ function rpTexto(base, ruta, valor, ph) {
   return `<textarea class="rp-in rp-in-area" data-ruta="${base}.${ruta}" placeholder="${escapeHtml(ph || '')}" oninput="rpEditar(this)">${escapeHtml(valor || '')}</textarea>`;
 }
 
-function rpEditorTarjeta(base, m, i, mesAct, mesAnt) {
+// sinComp = la red no se compara con el mes anterior (TikTok): solo se captura el valor del mes
+function rpEditorTarjeta(base, m, i, mesAct, mesAnt, sinComp) {
   const grupo = m.tipo === 'grupo';
   const manual = !rpVacio(m.variacion) || !rpVacio(m.diferencia);
+  const rejilla = `rp-edit-grid${sinComp ? ' rp-edit-grid-1' : ''}`;
   const subs = (m.sub || []).map((s, j) => `
     <div class="rp-edit-sub">
       ${rpCampo(base, `metricas.${i}.sub.${j}.nombre`, s.nombre, { cls: 'rp-in-sub', label: 'Nombre del dato' })}
-      <div class="rp-edit-grid">
+      <div class="${rejilla}">
         <label>${mesAct}${rpCampo(base, `metricas.${i}.sub.${j}.actual`, s.actual, { tipo: 'num' })}</label>
-        <label>${mesAnt}${rpCampo(base, `metricas.${i}.sub.${j}.anterior`, s.anterior, { tipo: 'num' })}</label>
+        ${sinComp ? '' : `<label>${mesAnt}${rpCampo(base, `metricas.${i}.sub.${j}.anterior`, s.anterior, { tipo: 'num' })}</label>`}
       </div>
     </div>`).join('');
   return `
     <article class="rp-card rp-card-edit${i === 0 ? ' rp-card-destacada' : ''}">
       ${rpCampo(base, `metricas.${i}.nombre`, m.nombre, { cls: 'rp-in-nombre', label: 'Nombre del indicador' })}
       ${grupo ? '' : `
-      <div class="rp-edit-grid">
+      <div class="${rejilla}">
         <label>${mesAct}${rpCampo(base, `metricas.${i}.actual`, m.actual, { tipo: 'num', ph: 'Ej. 21,052' })}</label>
-        <label>${mesAnt}${rpCampo(base, `metricas.${i}.anterior`, m.anterior, { tipo: 'num', ph: 'Ej. 5,343' })}</label>
+        ${sinComp ? '' : `<label>${mesAnt}${rpCampo(base, `metricas.${i}.anterior`, m.anterior, { tipo: 'num', ph: 'Ej. 5,343' })}</label>`}
       </div>
-      <details class="rp-edit-mas"${manual ? ' open' : ''}>
+      ${sinComp ? '' : `<details class="rp-edit-mas"${manual ? ' open' : ''}>
         <summary>Variación manual (si la red solo da el %)</summary>
         <div class="rp-edit-grid">
           <label>Variación${rpCampo(base, `metricas.${i}.variacion`, m.variacion, { ph: 'Ej. +282%' })}</label>
           <label>Diferencia${rpCampo(base, `metricas.${i}.diferencia`, m.diferencia, { ph: 'Ej. −1.9 mil' })}</label>
         </div>
-      </details>`}
+      </details>`}`}
       ${subs}
       <label class="rp-edit-nota">Nota (opcional)${rpTexto(base, `metricas.${i}.nota`, m.nota, 'Texto pequeño debajo del indicador')}</label>
     </article>`;
@@ -2218,7 +2307,7 @@ function rpEditorTop(base, top, red) {
             <label>Detalle (opcional)${rpCampo(base, `top.items.${i}.detalle`, it.detalle, { ph: 'Ej. 21 me gusta · 4 reposts' })}</label>
           </li>`).join('')}
       </ol>
-      <label class="rp-edit-nota">Nota (opcional)${rpTexto(base, 'top.nota', top.nota, 'Ej. TikTok muestra este ranking con 7 días')}</label>
+      <label class="rp-edit-nota">Nota (opcional)${rpTexto(base, 'top.nota', top.nota, 'Texto pequeño debajo del Top 3')}</label>
     </div>`;
 }
 
@@ -2255,19 +2344,21 @@ function rpEditorPlataforma(info, p, mes) {
   const base = info.id;
   const mesAnt = MESES_NOMBRES[Number(mesAnteriorIso(mes).split('-')[1]) - 1];
   const mesAct = MESES_NOMBRES[Number(String(mes).split('-')[1]) - 1];
+  const sinComp = rpRedSinComparacion(info.id);
   return `
     <section class="rp-plataforma rp-${info.clase} editando" id="rp-${info.id}" aria-labelledby="rp-t-${info.id}">
       <header class="rp-plat-head">
         <span class="rp-plat-icono" aria-hidden="true">${info.sigla}</span>
         <div><h4 id="rp-t-${info.id}">${info.nombre}</h4></div>
       </header>
-      <div class="rp-edit-periodos">
+      <div class="rp-edit-periodos${sinComp ? ' rp-edit-periodos-1' : ''}">
         <label>Periodo de ${mesAct}${rpCampo(base, 'periodo', p.periodo, { ph: 'Ej. 1 – 30 sep 2026' })}</label>
+        ${sinComp ? '' : `
         <label>Se compara con${rpCampo(base, 'periodoAnterior', p.periodoAnterior, { ph: 'Ej. 1 – 31 ago 2026' })}</label>
-        <label>Texto en las tarjetas ("vs …")${rpCampo(base, 'comparadoCon', p.comparadoCon, { ph: mesAnt.toLowerCase() })}</label>
+        <label>Texto en las tarjetas ("vs …")${rpCampo(base, 'comparadoCon', p.comparadoCon, { ph: mesAnt.toLowerCase() })}</label>`}
       </div>
-      <div class="rp-cards">${(p.metricas || []).map((m, i) => rpEditorTarjeta(base, m, i, mesAct, mesAnt)).join('')}</div>
-      ${info.id === 'google' ? rpEditorResenas(base, p.resenas || {}) : rpEditorTop(base, p.top || { items: [] }, info.nombre)}
+      <div class="rp-cards">${(p.metricas || []).map((m, i) => rpEditorTarjeta(base, m, i, mesAct, mesAnt, sinComp)).join('')}</div>
+      ${info.id === 'google' ? rpEditorResenas(base, p.resenas || {}) : (rpRedConTop(info.id) ? rpEditorTop(base, p.top || { items: [] }, info.nombre) : '')}
     </section>`;
 }
 

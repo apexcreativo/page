@@ -33,7 +33,7 @@ El acceso es por PIN y todo lo que se edita en el portal se guarda en la nube (F
   * Ver su **Parrilla de Contenido** del mes con formatos (Reels, Carruseles, Posts) y fechas de publicación.
   * Revisar el **Guion Escena por Escena** (qué se ve, qué se dice y texto en pantalla).
   * **Aprobar Guiones con 1 clic** o dejar comentarios y ajustes para el equipo.
-  * Consultar su **Reporte Mensual de Resultados** por plataforma: indicadores con su comparación contra el mes anterior y Top 5 de contenidos.
+  * Consultar su **Reporte Mensual de Resultados** por plataforma: indicadores con su comparación contra el mes anterior y Top 3 de contenidos de Instagram.
 
 ### 2. Acceso Equipo Apex
 * **Pestaña "Equipo Apex"** ➔ Elegir el código de acceso (APEX CEO1, APEX CEO2, APEX EQ1 o APEX EQ2) e ingresar su PIN personal (guardado en la nube; no está escrito en el código).
@@ -51,13 +51,16 @@ El acceso es por PIN y todo lo que se edita en el portal se guarda en la nube (F
 
 ## 📊 Reporte de Resultados por plataforma (`reportes.js`)
 
-La pestaña **Resumen de Resultados** muestra 4 bloques (Instagram, Facebook, TikTok y Google). Cada indicador trae su comparación contra el mes anterior; abajo va el Top 5 de contenidos con portada (o las reseñas destacadas, en Google).
+La pestaña **Resumen de Resultados** muestra 4 bloques (Instagram, Facebook, TikTok y Google). Cada indicador trae su comparación contra el mes anterior, excepto en TikTok, que solo muestra los datos del mes. Debajo, Instagram muestra el Top 3 de contenidos con portada y Google las reseñas destacadas; Facebook y TikTok solo muestran sus indicadores.
+
+* **Instagram:** Visualizaciones totales, Cuentas alcanzadas (con visitas al perfil y toques en el enlace externo), Interacciones, Publicaciones en total y Total de seguidores.
 
 * Los datos se capturan en **`reportes.js`**. El Faro · Septiembre 2026 es el ejemplo completo.
 * Para otro cliente o mes: copia el bloque de El Faro, cámbialo de cliente (slug) y de mes (`'AAAA-MM'`) y llena `actual` y `anterior`. El portal calcula la diferencia, el % y la flecha.
 * `null` se muestra como "Por completar".
-* **Principal contenido (Top 3):** se pega el link del video (Instagram, Facebook, TikTok o YouTube); la tarjeta muestra la portada del video y al darle clic se abre el video en otra pestaña. Las imágenes de `resultados/<cliente>-<AAAA-MM>/portadas/` solo se usan cuando no hay link.
-* **Edición desde el portal:** el perfil **APEX CEO1** ve el botón "✏️ Editar reporte" en Resumen de Resultados y puede cambiar todos los campos (periodos, indicadores, valores del mes anterior, notas, Top 3 y reseñas de Google). Lo que guarda se va a la nube y tiene prioridad sobre `reportes.js`.
+* **Principal contenido (Top 3, solo Instagram):** se pega el link de la publicación o reel; la tarjeta muestra la portada y al darle clic se abre el video en otra pestaña. Las imágenes de `resultados/<cliente>-<AAAA-MM>/portadas/` solo se usan cuando no hay link.
+* **Edición desde el portal:** el perfil **APEX CEO1** ve el botón "✏️ Editar reporte" en Resumen de Resultados y puede cambiar todos los campos (periodos, indicadores, valores del mes anterior, notas, Top 3 de Instagram y reseñas de Google). Lo que guarda se va a la nube y tiene prioridad sobre `reportes.js`.
+* **Eliminar un reporte:** el mismo perfil ve "🗑️ Eliminar reporte" cuando el mes tiene un reporte guardado en la nube. Pide confirmación, lo borra de la nube y conserva la planeación y los colores del calendario de ese mes. Lo capturado en `reportes.js` no se borra desde el portal.
 
 ---
 

@@ -2505,6 +2505,12 @@ img, svg {
   .rp-edit-periodos { grid-template-columns: 1fr; }
   .rp-edit-grid-3 { grid-template-columns: 1fr; }
 }
+/* Redes sin comparación con el mes anterior (TikTok): solo el valor del mes */
+.rp-edit-grid.rp-edit-grid-1 { grid-template-columns: 1fr; }
+.rp-edit-periodos.rp-edit-periodos-1 { grid-template-columns: minmax(0, 420px); }
+/* Eliminar el reporte del mes (APEX CEO1) */
+.btn.rp-btn-eliminar { color: #c8264a; }
+.btn.rp-btn-eliminar:hover { border-color: #c8264a; background: rgba(200, 38, 74, 0.08); }
 
 /* ==========================================================================
    PESTAÑA PAGOS (tabla con columnas y filas editables)
