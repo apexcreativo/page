@@ -2527,3 +2527,306 @@ img, svg {
 .pagos-col-borrar:focus-visible { outline: 2px solid #ff5733; outline-offset: 1px; }
 .portal-tabs { padding: 0 12px; gap: 0; }
 .portal-tab { padding: 12px 10px; font-size: 13px; }
+
+/* ==========================================================================
+   PAGOS · OPCIÓN B (31 oct 2026)
+   Cliente: próximo pago, avance del contrato y estado de cuenta.
+   Equipo: cobranza del mes (Vencidos, Por cobrar, Pagados) y plan de pagos.
+   ========================================================================== */
+.pg-c-pagado { color: #047857; }
+.pg-c-porpagar { color: #9a4507; }
+.pg-c-vencido { color: #b81f40; }
+.pg-c-porvenir { color: #6a5872; }
+
+/* Tarjeta principal (morada) */
+.pg-hero {
+  display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 28px; align-items: center;
+  background: linear-gradient(160deg, #441a46 0%, #311432 70%); color: #ffffff;
+  border-radius: 24px; padding: 28px; margin-bottom: 18px; box-shadow: 0 14px 34px rgba(49, 20, 50, 0.18);
+}
+.pg-hero-alerta { background: linear-gradient(160deg, #5a1838 0%, #311432 72%); }
+.pg-hero-izq { display: flex; flex-direction: column; gap: 10px; min-width: 0; }
+.pg-eyebrow { font-family: var(--font-mono); font-size: 12px; font-weight: 600; letter-spacing: 0.1em; color: #ffb199; }
+.pg-eyebrow-alerta { color: #ffb3c1; }
+.pg-eyebrow-ok { color: #8ef0c5; }
+.pg-hero-mes { font-family: var(--font-display); font-size: 22px; font-weight: 700; }
+.pg-hero-grande { font-size: 34px; font-weight: 800; }
+.pg-hero-monto { font-family: var(--font-display); font-size: 46px; font-weight: 800; line-height: 1; }
+.pg-hero-monto small { font-size: 18px; font-weight: 600; color: #e3d2e5; }
+.pg-hero-info { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; font-size: 15px; color: #f2e7f3; }
+.pg-hero-sig { font-size: 14px; color: #e3d2e5; }
+.pg-pill { display: inline-flex; align-items: center; padding: 4px 10px; border-radius: 999px; font-size: 13px; font-weight: 700; }
+.pg-pill-porpagar { background: #ffd9b0; color: #5c2a00; }
+.pg-pill-vencido { background: #ffd1db; color: #6b0f24; }
+.pg-hero-acciones { display: flex; flex-wrap: wrap; align-items: flex-start; gap: 10px; padding-top: 6px; }
+.pg-btn-claro {
+  display: inline-flex; align-items: center; min-height: 44px; padding: 0 18px; border-radius: 12px;
+  background: #ffffff; color: #311432; font-size: 14px; font-weight: 700; text-decoration: none;
+}
+.pg-btn-claro:hover { background: #fbf4fc; color: #311432; }
+.pg-btn-claro:focus-visible { outline: 3px solid #ffb199; outline-offset: 2px; }
+.pg-datos { border: 1px solid rgba(255, 255, 255, 0.4); border-radius: 12px; }
+.pg-datos summary { min-height: 44px; display: flex; align-items: center; padding: 0 16px; cursor: pointer; font-size: 14px; font-weight: 600; color: #ffffff; }
+.pg-datos p { margin: 0; padding: 0 16px 14px; font-size: 14px; line-height: 1.5; color: #f2e7f3; white-space: pre-line; max-width: 340px; }
+
+.pg-avance-contrato {
+  display: flex; flex-direction: column; gap: 12px; padding: 20px; border-radius: 18px;
+  background: rgba(255, 255, 255, 0.07); border: 1px solid rgba(255, 255, 255, 0.16);
+}
+.pg-avance-tit { display: flex; flex-wrap: wrap; align-items: baseline; justify-content: space-between; gap: 8px; }
+.pg-avance-tit span { font-family: var(--font-display); font-size: 18px; font-weight: 800; }
+.pg-avance-tit small { font-size: 13px; color: #e3d2e5; }
+.pg-segs { display: grid; gap: 6px; }
+.pg-seg { height: 14px; border-radius: 4px; box-sizing: border-box; }
+.pg-seg-pagado { background: #34d399; }
+.pg-seg-porpagar { background: #fbbf6a; }
+.pg-seg-vencido { background: #fb7185; }
+.pg-seg-porvenir { border: 1.5px solid rgba(255, 255, 255, 0.5); }
+.pg-seg-hoy { outline: 2px solid #ffffff; outline-offset: 2px; }
+.pg-seg-etiquetas { display: grid; gap: 6px; font-family: var(--font-mono); font-size: 11px; font-weight: 600; letter-spacing: 0.06em; color: #e3d2e5; text-align: center; }
+.pg-seg-etq-hoy { color: #ffffff; }
+.pg-leyenda { display: flex; flex-wrap: wrap; gap: 14px; font-size: 13px; color: #f2e7f3; }
+.pg-leyenda span { display: inline-flex; align-items: center; gap: 6px; }
+.pg-ley { display: inline-block; width: 10px; height: 10px; border-radius: 3px; box-sizing: border-box; }
+
+/* Totales */
+.pg-totales { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 14px; margin-bottom: 18px; }
+.pg-total {
+  display: flex; flex-direction: column; gap: 4px; padding: 18px 20px; border-radius: 18px;
+  background: #ffffff; border: 1px solid var(--border-subtle); box-shadow: var(--shadow-sm);
+}
+.pg-total span { font-size: 13px; color: var(--text-dim); }
+.pg-total b { font-family: var(--font-display); font-size: 24px; font-weight: 800; color: var(--text-strong); }
+.pg-total b.pg-c-pagado { color: #047857; }
+.pg-total b.pg-c-porpagar { color: #9a4507; }
+.pg-total b.pg-c-vencido { color: #b81f40; }
+.pg-total small { font-size: 13px; color: var(--text-muted); }
+
+/* Estado de cuenta */
+.pg-cuenta { background: #ffffff; border: 1px solid var(--border-subtle); border-radius: 20px; padding: 20px; margin-bottom: 18px; box-shadow: var(--shadow-sm); }
+.pg-cuenta-head { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 8px; }
+.pg-cuenta-head h4, .pg-tablero-head h4, .pg-equipo-head h4 { margin: 0; font-family: var(--font-display); font-size: 18px; font-weight: 800; color: var(--text-strong); }
+.pg-filtros { display: inline-flex; gap: 4px; padding: 4px; border-radius: 12px; background: #f3edf4; }
+.pg-filtros button {
+  min-height: 40px; padding: 0 14px; border: none; border-radius: 9px; background: transparent;
+  font-family: inherit; font-size: 13px; font-weight: 700; color: #6a5872; cursor: pointer;
+}
+.pg-filtros button.activo { background: #ffffff; color: var(--text-strong); box-shadow: 0 1px 3px rgba(49, 20, 50, 0.12); }
+.pg-filtros button:focus-visible { outline: 2px solid var(--border-focus); outline-offset: 1px; }
+.pg-tabla { display: flex; flex-direction: column; }
+.pg-fila {
+  display: grid; grid-template-columns: 150px minmax(0, 1fr) 110px 140px 170px 230px; gap: 12px; align-items: center;
+  padding: 12px 10px; border-bottom: 1px solid rgba(49, 20, 50, 0.08);
+}
+.pg-fila-head { padding-top: 6px; padding-bottom: 8px; font-size: 12px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.04em; color: var(--text-dim); }
+.pg-fila-actual { background: #fdf6ee; border-radius: 12px; }
+.pg-fila-vencida { background: #fdf1f4; border-radius: 12px; }
+.pg-f-periodo { display: flex; flex-direction: column; gap: 2px; }
+.pg-f-periodo b { font-family: var(--font-display); font-size: 16px; font-weight: 800; color: var(--text-strong); }
+.pg-f-periodo small { font-size: 12px; color: var(--text-dim); }
+.pg-f-concepto { font-size: 14px; color: var(--text-main); }
+.pg-f-monto { font-size: 15px; font-weight: 700; color: var(--text-strong); }
+.pg-f-vence { font-size: 14px; color: var(--text-muted); }
+.pg-f-lbl { display: none; }
+.pg-f-accion { display: flex; flex-wrap: wrap; align-items: center; justify-content: flex-end; gap: 8px; }
+.pg-estado { display: inline-flex; align-items: center; gap: 6px; padding: 5px 10px; border-radius: 999px; font-size: 12.5px; font-weight: 700; }
+.pg-estado-pagado { color: #047857; background: #e6f2ee; }
+.pg-estado-porpagar { color: #9a4507; background: #fbefe3; }
+.pg-estado-vencido { color: #b81f40; background: #f9e6eb; }
+.pg-estado-porvenir { color: #6a5872; background: #f3edf4; }
+.pg-vacio { margin: 0; padding: 18px 10px; font-size: 14px; color: var(--text-dim); }
+.pg-fecha { width: 150px; padding: 6px 8px; font-size: 13px; }
+.btn.pg-btn-pagar { background: #047857; color: #ffffff; border: none; }
+.btn.pg-btn-pagar:hover { background: #036548; color: #ffffff; }
+
+/* Plan de pagos (equipo) */
+.pg-equipo-cuenta { margin-top: 28px; }
+.pg-equipo-head { display: flex; flex-wrap: wrap; align-items: flex-start; justify-content: space-between; gap: 12px; margin-bottom: 14px; }
+.pg-equipo-head p { margin: 4px 0 0; font-size: 13px; color: var(--text-muted); }
+.pg-form { background: var(--bg-surface); border: 1px dashed var(--border-medium); border-radius: 16px; padding: 18px; margin-bottom: 18px; }
+.pg-form-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 12px; }
+.pg-campo { display: flex; flex-direction: column; gap: 6px; font-size: 12.5px; font-weight: 600; color: var(--text-dim); }
+.pg-campo-ancho { grid-column: 1 / -1; }
+.pg-campo-doble { display: grid; grid-template-columns: 1.4fr 1fr; gap: 8px; }
+.pg-form-error { margin: 10px 0 0; font-size: 13px; font-weight: 600; color: #b81f40; }
+.pg-form-acc { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 14px; }
+.btn.pg-btn-quitar { margin-left: auto; color: #b81f40; }
+
+/* Cobranza del mes (equipo) */
+.pg-tablero { background: #ffffff; border: 1px solid var(--border-subtle); border-radius: 20px; padding: 20px; box-shadow: var(--shadow-sm); }
+.pg-tablero-head { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 14px; }
+.pg-mes-nav { display: inline-flex; align-items: center; gap: 8px; }
+.pg-mes-nav span { min-width: 130px; text-align: center; font-size: 14px; font-weight: 700; color: var(--text-strong); }
+.pg-mes-nav .btn { min-width: 40px; min-height: 40px; justify-content: center; font-size: 18px; }
+.pg-avance { display: flex; flex-direction: column; gap: 12px; padding: 16px; border-radius: 16px; background: var(--bg-surface); margin-bottom: 16px; }
+.pg-avance-fila { display: flex; flex-wrap: wrap; align-items: baseline; justify-content: space-between; gap: 8px; }
+.pg-avance-fila b { font-family: var(--font-display); font-size: 17px; font-weight: 800; color: var(--text-strong); }
+.pg-avance-fila span { font-size: 14px; color: var(--text-muted); }
+.pg-barra { height: 12px; border-radius: 999px; background: #efe6f0; overflow: hidden; }
+.pg-barra span { display: block; height: 100%; border-radius: 999px; background: #047857; }
+.pg-kpis { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 12px; }
+.pg-kpis div { display: flex; flex-direction: column; gap: 2px; }
+.pg-kpis span { font-size: 13px; color: var(--text-dim); }
+.pg-kpis b { font-size: 19px; font-weight: 800; }
+.pg-kpis small { font-size: 12.5px; color: var(--text-muted); }
+.pg-columnas { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 14px; align-items: start; }
+.pg-col { display: flex; flex-direction: column; gap: 10px; padding: 12px; border-radius: 18px; }
+.pg-col-vencidos { background: #fbeef1; }
+.pg-col-cobrar { background: #fcf3ea; }
+.pg-col-pagados { background: #ebf5f1; }
+.pg-col-head { display: flex; align-items: center; justify-content: space-between; gap: 8px; padding: 4px 6px; }
+.pg-col-head span { display: inline-flex; align-items: center; gap: 8px; font-family: var(--font-display); font-size: 16px; font-weight: 800; }
+.pg-col-head b { min-width: 28px; height: 28px; padding: 0 8px; box-sizing: border-box; border-radius: 999px; background: #ffffff; display: inline-flex; align-items: center; justify-content: center; font-size: 13px; }
+.pg-col-vencidos .pg-col-head { color: #b81f40; }
+.pg-col-cobrar .pg-col-head { color: #9a4507; }
+.pg-col-pagados .pg-col-head { color: #047857; }
+.pg-col-vacia { margin: 0; padding: 14px; border: 1.5px dashed rgba(49, 20, 50, 0.2); border-radius: 14px; font-size: 13.5px; color: #6a5872; text-align: center; }
+.pg-item { display: flex; flex-direction: column; gap: 8px; padding: 14px; border-radius: 14px; background: #ffffff; border: 1px solid var(--border-subtle); box-shadow: 0 1px 3px rgba(49, 20, 50, 0.06); }
+.pg-item-top { display: flex; align-items: flex-start; justify-content: space-between; gap: 10px; }
+.pg-item-top > b { font-family: var(--font-display); font-size: 17px; font-weight: 800; color: var(--text-strong); white-space: nowrap; }
+.pg-item-quien { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.pg-item-quien small { font-size: 12px; color: var(--text-dim); }
+.pg-item-nombre {
+  padding: 0; border: none; background: none; font-family: inherit; font-size: 15px; font-weight: 700;
+  color: var(--text-strong); text-align: left; cursor: pointer; text-decoration: underline; text-decoration-color: rgba(49, 20, 50, 0.25); text-underline-offset: 3px;
+}
+.pg-item-nombre:hover { text-decoration-color: currentColor; }
+.pg-item-info { font-size: 13px; font-weight: 600; }
+.pg-item-acc { display: flex; flex-wrap: wrap; gap: 8px; }
+.pg-item-acc .btn { min-height: 40px; }
+.pg-sinplan { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin-top: 14px; font-size: 13px; color: var(--text-muted); }
+.pg-chip {
+  min-height: 36px; padding: 0 12px; border-radius: 999px; border: 1px solid var(--border-medium); background: #ffffff;
+  font-family: inherit; font-size: 13px; font-weight: 600; color: var(--text-strong); cursor: pointer;
+}
+.pg-chip:hover { border-color: var(--border-focus); }
+
+/* Tabla libre anterior */
+.pg-anterior { margin-top: 24px; border: 1px solid var(--border-subtle); border-radius: 16px; background: #ffffff; }
+.pg-anterior summary { min-height: 48px; display: flex; align-items: center; padding: 0 18px; cursor: pointer; font-size: 14px; font-weight: 700; color: var(--text-strong); }
+.pg-anterior[open] summary { border-bottom: 1px solid var(--border-subtle); }
+.pg-anterior > .plan-toolbar, .pg-anterior > .plan-tabla-wrap { margin: 14px; }
+
+@media (max-width: 760px) {
+  .pg-hero { padding: 22px; }
+  .pg-hero-monto { font-size: 38px; }
+  .pg-fila-head { display: none; }
+  .pg-fila {
+    grid-template-columns: 1fr auto; grid-template-areas: "periodo estado" "concepto monto" "vence vence" "accion accion";
+    gap: 6px 12px; padding: 14px 10px;
+  }
+  .pg-f-periodo { grid-area: periodo; }
+  .pg-f-estado { grid-area: estado; justify-self: end; }
+  .pg-f-concepto { grid-area: concepto; }
+  .pg-f-monto { grid-area: monto; justify-self: end; }
+  .pg-f-vence { grid-area: vence; }
+  .pg-f-lbl { display: inline; }
+  .pg-f-accion { grid-area: accion; justify-content: flex-start; }
+  .pg-f-accion:empty { display: none; }
+}
+.pg-aviso { display: flex; align-items: center; gap: 8px; margin: 0 0 14px; padding: 10px 14px; border-radius: 12px; background: #e6f2ee; color: #065f46; font-size: 14px; font-weight: 600; }
+
+/* ==========================================================================
+   HISTORIAL DE REPORTES (Resumen de Resultados · 6 nov 2026)
+   Todos los meses publicados del cliente, del más antiguo al más reciente,
+   y «Ver como cliente» para el equipo.
+   ========================================================================== */
+.rp-hist {
+  background: #ffffff; border: 1px solid var(--border-subtle); border-radius: var(--radius-xl);
+  padding: 16px 18px 10px; margin-bottom: 20px; box-shadow: var(--shadow-sm);
+}
+.rp-hist-head { display: flex; align-items: center; justify-content: space-between; gap: 10px 16px; margin-bottom: 4px; }
+.rp-hist-textos { display: flex; flex-direction: column; gap: 3px; min-width: 0; }
+.rp-hist-titulo { font-family: var(--font-mono); font-size: 11px; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; color: var(--text-dim); }
+.rp-hist-meta { font-size: 12.5px; color: var(--text-dim); }
+.rp-hist-flechas { display: flex; gap: 6px; flex: 0 0 auto; }
+.rp-hist-flecha {
+  flex: 0 0 auto; width: 36px; height: 36px; border-radius: 50%;
+  border: 1px solid var(--border-subtle); background: var(--bg-tint, #f8f1f8); color: var(--text-strong);
+  font-family: var(--font-display); font-size: 21px; font-weight: 600; line-height: 1;
+  display: inline-flex; align-items: center; justify-content: center; cursor: pointer;
+  transition: background var(--transition-fast), border-color var(--transition-fast), transform var(--transition-fast);
+}
+.rp-hist-flecha span { position: relative; top: -1px; }
+.rp-hist-flecha:hover:not(:disabled) { background: #ffffff; border-color: var(--border-medium); transform: translateY(-1px); }
+.rp-hist-flecha:disabled { opacity: 0.3; cursor: default; }
+.rp-hist-lista {
+  list-style: none; display: flex; gap: 10px; position: relative;
+  overflow-x: auto; padding: 8px 8px 16px; margin: 0 -8px -4px; scrollbar-width: thin;
+}
+.rp-hist-lista.rp-hist-mas-izq { -webkit-mask-image: linear-gradient(90deg, transparent 0, #000 36px); mask-image: linear-gradient(90deg, transparent 0, #000 36px); }
+.rp-hist-lista.rp-hist-mas-der { -webkit-mask-image: linear-gradient(90deg, #000 calc(100% - 36px), transparent 100%); mask-image: linear-gradient(90deg, #000 calc(100% - 36px), transparent 100%); }
+.rp-hist-lista.rp-hist-mas-izq.rp-hist-mas-der {
+  -webkit-mask-image: linear-gradient(90deg, transparent 0, #000 36px, #000 calc(100% - 36px), transparent 100%);
+  mask-image: linear-gradient(90deg, transparent 0, #000 36px, #000 calc(100% - 36px), transparent 100%);
+}
+.rp-hist-lista::-webkit-scrollbar { height: 6px; }
+.rp-hist-lista::-webkit-scrollbar-thumb { background: var(--border-medium); border-radius: 3px; }
+.rp-hist-lista li { flex: 0 0 auto; }
+.rp-hist-mes {
+  position: relative; min-width: 148px; display: flex; flex-direction: column; align-items: stretch; gap: 4px;
+  padding: 11px 14px 17px; border-radius: var(--radius-lg); text-align: left; cursor: pointer;
+  border: 1px solid var(--border-subtle); background: var(--bg-tint, #f8f1f8); color: var(--text-main);
+  font-family: var(--font-body);
+  transition: transform var(--transition-fast), border-color var(--transition-fast), box-shadow var(--transition-fast), background var(--transition-fast);
+}
+.rp-hist-mes:hover { border-color: var(--border-medium); background: #ffffff; transform: translateY(-1px); }
+.rp-hist-fila { display: flex; align-items: center; justify-content: space-between; gap: 8px; min-height: 18px; }
+.rp-hist-anio { font-family: var(--font-mono); font-size: 11px; font-weight: 500; letter-spacing: 0.06em; color: var(--text-dim); }
+.rp-hist-nombre { font-family: var(--font-display); font-size: 18px; font-weight: 800; letter-spacing: -0.01em; color: var(--text-strong); line-height: 1.15; }
+.rp-hist-badge {
+  font-family: var(--font-mono); font-size: 9.5px; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase;
+  padding: 2px 7px; border-radius: var(--radius-full); background: rgba(214, 61, 26, 0.1); color: var(--apex-orange); white-space: nowrap;
+}
+.rp-hist-mes.activo {
+  background: #311432; border-color: #311432; cursor: default; transform: none;
+  box-shadow: 0 6px 14px rgba(49, 20, 50, 0.22);
+}
+.rp-hist-mes.activo::after {
+  content: ''; position: absolute; left: 14px; bottom: 8px; width: 24px; height: 3px; border-radius: 2px; background: #ff7a59;
+}
+.rp-hist-mes.activo .rp-hist-nombre { color: #ffffff; }
+.rp-hist-mes.activo .rp-hist-anio { color: #d9c4db; }
+.rp-hist-mes.activo .rp-hist-badge { background: #ff5733; color: #ffffff; }
+.rp-hist-mes:focus-visible, .rp-hist-flecha:focus-visible, .rp-hist-pie-btn:focus-visible {
+  outline: 2px solid var(--apex-orange); outline-offset: 2px;
+}
+
+/* «Reporte anterior / siguiente» al final del reporte */
+.rp-hist-pie { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; margin: 4px 0 24px; }
+.rp-hist-pie-btn {
+  display: flex; flex-direction: column; align-items: flex-start; gap: 3px; text-align: left; cursor: pointer;
+  padding: 14px 18px; border-radius: var(--radius-lg); border: 1px solid var(--border-subtle);
+  background: #ffffff; box-shadow: var(--shadow-sm); font-family: var(--font-body);
+  transition: transform var(--transition-fast), border-color var(--transition-fast), box-shadow var(--transition-fast);
+}
+.rp-hist-pie-btn:hover { border-color: var(--border-medium); transform: translateY(-1px); box-shadow: 0 12px 28px rgba(49, 20, 50, 0.1); }
+.rp-hist-pie-sig { grid-column: 2; align-items: flex-end; text-align: right; }
+.rp-hist-pie-dir { font-family: var(--font-mono); font-size: 11px; font-weight: 600; letter-spacing: 0.06em; text-transform: uppercase; color: var(--text-dim); }
+.rp-hist-pie-mes { font-family: var(--font-display); font-size: 17px; font-weight: 800; color: var(--text-strong); }
+
+/* Vista del cliente (solo equipo) */
+.rp-vista-previa {
+  display: flex; align-items: center; flex-wrap: wrap; gap: 10px 14px; margin-bottom: 20px;
+  padding: 12px 14px 12px 16px; border-radius: var(--radius-lg); background: #311432; color: #f2e7f3;
+  box-shadow: 0 10px 24px rgba(49, 20, 50, 0.22);
+}
+.rp-vista-previa-ojo {
+  flex: 0 0 auto; width: 34px; height: 34px; border-radius: 50%; display: inline-flex; align-items: center; justify-content: center;
+  background: rgba(255, 255, 255, 0.12); font-size: 16px;
+}
+.rp-vista-previa p { flex: 1 1 260px; margin: 0; font-size: 13.5px; line-height: 1.5; color: #f2e7f3; }
+.rp-vista-previa strong { color: #ffffff; }
+.rp-vista-salir { background: #ffffff; color: #311432; font-weight: 700; border: none; }
+.rp-vista-salir:hover { background: #f3eaf4; color: #311432; }
+
+@media (max-width: 560px) {
+  .rp-hist { padding: 14px 14px 8px; border-radius: var(--radius-lg); }
+  .rp-hist-head { align-items: flex-start; }
+  .rp-hist-flecha { width: 34px; height: 34px; font-size: 20px; }
+  .rp-hist-mes { min-width: 118px; padding: 10px 12px 16px; }
+  .rp-hist-nombre { font-size: 16px; }
+  .rp-hist-badge { font-size: 9px; padding: 2px 6px; letter-spacing: 0.06em; }
+  .rp-hist-pie { grid-template-columns: 1fr; }
+  .rp-hist-pie-sig { grid-column: auto; }
+}

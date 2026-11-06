@@ -61,6 +61,8 @@ La pestaña **Resumen de Resultados** muestra 4 bloques (Instagram, Facebook, Ti
 * **Principal contenido (Top 3, solo Instagram):** se pega el link de la publicación o reel; la tarjeta muestra la portada y al darle clic se abre el video en otra pestaña. Las imágenes de `resultados/<cliente>-<AAAA-MM>/portadas/` solo se usan cuando no hay link.
 * **Edición desde el portal:** el perfil **APEX CEO1** ve el botón "✏️ Editar reporte" en Resumen de Resultados y puede cambiar todos los campos (periodos, indicadores, valores del mes anterior, notas, Top 3 de Instagram y reseñas de Google). Lo que guarda se va a la nube y tiene prioridad sobre `reportes.js`.
 * **Eliminar un reporte:** el mismo perfil ve "🗑️ Eliminar reporte" cuando el mes tiene un reporte guardado en la nube. Pide confirmación, lo borra de la nube y conserva la planeación y los colores del calendario de ese mes. Lo capturado en `reportes.js` no se borra desde el portal.
+* **Historial de reportes (todos los meses):** arriba del reporte, la tira "Tus reportes mensuales" muestra cada mes publicado, del más antiguo al más reciente. El cliente entra en el más reciente y cambia de mes con un clic, con las flechas ‹ › o con "Reporte anterior / siguiente" al final del reporte. Cada mes que se guarda (con "✏️ Editar reporte" o en `reportes.js`) aparece solo; los meses sin reporte no se muestran al cliente.
+* **Ver como cliente:** el equipo tiene el botón "👁 Ver como cliente" para revisar la pestaña tal como la ve el cliente (solo meses publicados y sin botones de edición). "Volver a la vista del equipo" regresa a la vista normal.
 
 ---
 
@@ -74,9 +76,15 @@ La pestaña **Resumen de Resultados** muestra 4 bloques (Instagram, Facebook, Ti
 
 ## 💳 Pestaña Pagos
 
-* Última pestaña del portal. Tabla por cliente que empieza con 4 columnas (Fecha, Concepto, Monto, Estatus) y 5 filas.
-* El equipo puede escribir en las celdas, renombrar columnas, agregar columnas ("+ Agregar columna", hasta 10) o quitarlas (✕ en el encabezado), y agregar, insertar o eliminar filas. El cliente la ve en modo lectura.
-* Se guarda en la nube en `resultados/<cliente>__pagos` (campo `pagos`).
+Última pestaña del portal. Muestra en qué periodo de pago va cada cliente.
+
+* **Cliente (estado de cuenta):** tarjeta "Tu próximo pago" (mes, monto, fecha límite y días que faltan) o aviso de pago vencido, con el botón "Enviar comprobante" (WhatsApp a APEX) y los datos para pagar. A un lado, el avance del contrato ("Vas en el mes 2 de 6") con un segmento por mes. Debajo, los totales (pagado, por pagar ahora, por venir) y la lista de meses con su estado, con filtros Todos, Pagados y Por pagar.
+* **Equipo:**
+  * "Cobranza del mes" de todos los clientes, con flechas para cambiar de mes, el porcentaje cobrado y tres columnas: Vencidos, Por cobrar y Pagados. Cada tarjeta tiene "Registrar pago" (o "Deshacer") y "Recordar por WhatsApp". Al tocar el nombre se abre el estado de cuenta de ese cliente.
+  * Debajo, el estado de cuenta del cliente elegido, tal como lo ve él, con "Registrar pago", la fecha de pago editable y "Deshacer".
+  * "Editar plan" para configurar a cada cliente: concepto, monto de cada mes, día límite de pago, primer mes, duración en meses (vacío = sin fecha de término) y datos para pagar.
+* **Estados:** Pagado, Por pagar (el siguiente pago), Vencido (pasó la fecha límite sin pago) y Por venir. Se calculan solos con la fecha del día; siempre llevan texto e icono, no solo color.
+* **Dónde se guarda:** en la nube, en `resultados/<cliente>__pagos`, campo `cobranza` (`{ concepto, monto, diaPago, inicio: 'AAAA-MM', meses, datosPago, periodos: { 'AAAA-MM': { pagado: 'AAAA-MM-DD' } } }`). La tabla libre anterior (campo `pagos`) se conserva: si tiene datos, aparece abajo en un desplegable.
 
 ---
 

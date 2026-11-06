@@ -126,7 +126,16 @@ const state = {
   resultsMonth: `${new Date().getFullYear()}-${String(new Date().getMonth() + 1).padStart(2, '0')}`,
   mesResultados: {},
   kpiEditando: null,
-  resumenEditando: false
+  resumenEditando: false,
+  rpVistaCliente: false, // equipo: ver la pestaña tal como la ve el cliente
+
+  // Pagos (mes del tablero de cobranza, filtro del estado de cuenta y edición del plan)
+  pgMes: '',
+  pgFiltro: 'todos',
+  pgEditandoPlan: false,
+  pgPlanSlug: '',
+  pgAnteriorAbierto: false,
+  pgAviso: ''
 };
 
 // ==========================================================================
@@ -204,6 +213,7 @@ async function logout() {
   nube.pinesEquipo = {};
   state.currentRole = null;
   state.currentTeamMember = null;
+  state.rpVistaCliente = false;
   db = loadDatabase();
   state.activeClientSlug = db.clientes[0] ? db.clientes[0].slug : 'palato';
   closePortalWorkspace();
@@ -957,14 +967,153 @@ function mesesConReporte(slug) {
   return Array.from(meses).sort().reverse();
 }
 
-// Mes que se está viendo para el cliente activo (por defecto, el último con reporte)
-function mesResultados(slug) {
+// Mes que se está viendo para el cliente activo (por defecto, el último con reporte).
+// comoCliente = solo meses con reporte (cliente o vista previa del equipo).
+function mesResultados(slug, comoCliente) {
   if (!state.mesResultados) state.mesResultados = {};
   const meses = mesesConReporte(slug);
+  const soloPublicados = comoCliente === undefined ? state.currentRole !== 'team' : !!comoCliente;
   let mes = state.mesResultados[slug];
-  if (!mes || (state.currentRole !== 'team' && meses.indexOf(mes) === -1)) mes = meses[0] || mesActualIso();
+  if (!mes || (soloPublicados && meses.indexOf(mes) === -1)) mes = meses[0] || mesActualIso();
   state.mesResultados[slug] = mes;
   return mes;
+}
+
+// ---------- Historial de reportes (6 nov 2026) ----------
+// Todos los meses con reporte del cliente, del más antiguo al más reciente.
+// El cliente cambia de mes desde aquí y con «Reporte anterior / siguiente» al final.
+function rpMesesHistorial(slug) {
+  return mesesConReporte(slug).filter(m => /^\d{4}-\d{2}$/.test(m)).sort();
+}
+
+function rpMesVecino(meses, mes, paso) {
+  if (paso < 0) {
+    const antes = meses.filter(m => m < mes);
+    return antes.length ? antes[antes.length - 1] : null;
+  }
+  return meses.find(m => m > mes) || null;
+}
+
+function rpHistorialHtml(slug, mes, esEquipo) {
+  const meses = rpMesesHistorial(slug);
+  if (!meses.length) return '';
+  const ultimo = meses[meses.length - 1];
+  const ant = rpMesVecino(meses, mes, -1);
+  const sig = rpMesVecino(meses, mes, 1);
+  const total = `${meses.length} ${meses.length === 1 ? 'mes publicado' : 'meses publicados'}`;
+  const pista = esEquipo ? 'el cliente los ve todos' : (meses.length > 1 ? 'elige uno para verlo' : 'aquí se irán sumando los siguientes');
+  const flecha = (m, dir) => `
+    <button type="button" class="rp-hist-flecha" ${m ? `onclick="cambiarMesResultados('${m}')"` : 'disabled'}
+      aria-label="${m ? `${dir === -1 ? 'Reporte anterior' : 'Reporte siguiente'}: ${nombreMes(m)}` : (dir === -1 ? 'No hay reportes anteriores' : 'No hay reportes más recientes')}">
+      <span aria-hidden="true">${dir === -1 ? '‹' : '›'}</span>
+    </button>`;
+  const anio = m => m.slice(0, 4);
+  const nombre = m => MESES_NOMBRES[Number(m.slice(5, 7)) - 1] || m;
+  return `
+    <section class="rp-hist" aria-label="Historial de reportes">
+      <div class="rp-hist-head">
+        <div class="rp-hist-textos">
+          <h4 class="rp-hist-titulo">${esEquipo ? 'Historial de reportes' : 'Tus reportes mensuales'}</h4>
+          <span class="rp-hist-meta">${total} · ${pista}</span>
+        </div>
+        ${ant || sig ? `<div class="rp-hist-flechas">${flecha(ant, -1)}${flecha(sig, 1)}</div>` : ''}
+      </div>
+      <ol class="rp-hist-lista">
+        ${meses.map(m => `
+          <li>
+            <button type="button" class="rp-hist-mes${m === mes ? ' activo' : ''}" onclick="cambiarMesResultados('${m}')"
+              ${m === mes ? 'aria-current="true"' : ''} aria-label="Reporte de ${nombreMes(m)}${m === ultimo ? ' (el más reciente)' : ''}">
+              <span class="rp-hist-fila">
+                <span class="rp-hist-anio">${anio(m)}</span>
+                ${m === ultimo ? '<span class="rp-hist-badge">Más reciente</span>' : ''}
+              </span>
+              <span class="rp-hist-nombre">${nombre(m)}</span>
+            </button>
+          </li>`).join('')}
+      </ol>
+    </section>`;
+}
+
+// «Reporte anterior / siguiente» al final del reporte
+function rpNavegacionMeses(slug, mes) {
+  const meses = rpMesesHistorial(slug);
+  const ant = rpMesVecino(meses, mes, -1);
+  const sig = rpMesVecino(meses, mes, 1);
+  if (!ant && !sig) return '';
+  return `
+    <nav class="rp-hist-pie" aria-label="Otros reportes">
+      ${ant ? `<button type="button" class="rp-hist-pie-btn" onclick="rpIrAMes('${ant}')">
+        <span class="rp-hist-pie-dir">← Reporte anterior</span>
+        <span class="rp-hist-pie-mes">${nombreMes(ant)}</span>
+      </button>` : ''}
+      ${sig ? `<button type="button" class="rp-hist-pie-btn rp-hist-pie-sig" onclick="rpIrAMes('${sig}')">
+        <span class="rp-hist-pie-dir">Reporte siguiente →</span>
+        <span class="rp-hist-pie-mes">${nombreMes(sig)}</span>
+      </button>` : ''}
+    </nav>`;
+}
+
+function rpIrAMes(mes) {
+  cambiarMesResultados(mes);
+  rpSubirAlInicio(false);
+}
+
+// La pestaña es su propio contenedor con scroll: se sube ella (sin mover el resto de la página)
+function rpSubirAlInicio(suave) {
+  const vista = document.getElementById('viewTab_resultados');
+  if (!vista) return;
+  if (vista.scrollHeight > vista.clientHeight && typeof vista.scrollTo === 'function') {
+    vista.scrollTo({ top: 0, behavior: suave ? 'smooth' : 'auto' });
+  } else if (vista.getBoundingClientRect().top < 0 && vista.scrollIntoView) {
+    vista.scrollIntoView({ block: 'start', behavior: suave ? 'smooth' : 'auto' });
+  }
+}
+
+// Deja a la vista el mes elegido dentro de la tira, moviéndola lo mínimo (sin mover la página)
+function rpCentrarMesActivo(raiz) {
+  const lista = raiz && raiz.querySelector('.rp-hist-lista');
+  if (!lista || lista.scrollWidth <= lista.clientWidth) return;
+  const activo = lista.querySelector('.rp-hist-mes.activo');
+  if (activo) {
+    const li = activo.parentElement;
+    const margen = 8;
+    const inicio = li.offsetLeft - margen;
+    const fin = li.offsetLeft + li.offsetWidth + margen - lista.clientWidth;
+    if (lista.scrollLeft > inicio) lista.scrollLeft = Math.max(0, inicio);
+    else if (lista.scrollLeft < fin) lista.scrollLeft = fin;
+  } else {
+    lista.scrollLeft = lista.scrollWidth; // equipo en un mes sin reporte: se ven los más recientes
+  }
+  rpBordesLista(lista);
+  lista.addEventListener('scroll', () => rpBordesLista(lista), { passive: true });
+}
+
+// Difumina la orilla de la tira cuando hay más meses de ese lado
+function rpBordesLista(lista) {
+  const max = lista.scrollWidth - lista.clientWidth;
+  lista.classList.toggle('rp-hist-mas-izq', lista.scrollLeft > 2);
+  lista.classList.toggle('rp-hist-mas-der', lista.scrollLeft < max - 2);
+}
+
+// Equipo: ver la pestaña exactamente como la ve el cliente (sin botones de edición
+// y solo con los meses publicados)
+function rpVerComoCliente(activar) {
+  if (state.currentRole !== 'team') return;
+  if (activar && state.rpEditando) return;
+  state.rpVistaCliente = !!activar;
+  state.kpiEditando = null;
+  renderResultados();
+  rpSubirAlInicio(false);
+}
+
+function rpAvisoVistaCliente(slug) {
+  const cliente = (db.clientes.find(c => c.slug === slug) || {}).nombre || 'el cliente';
+  return `
+    <div class="rp-vista-previa" role="status">
+      <span class="rp-vista-previa-ojo" aria-hidden="true">👁</span>
+      <p><strong>Vista del cliente.</strong> Así ve ${escapeHtml(cliente)} su Resumen de Resultados: solo los meses publicados y sin botones de edición.</p>
+      <button type="button" class="btn btn-sm rp-vista-salir" onclick="rpVerComoCliente(false)">Volver a la vista del equipo</button>
+    </div>`;
 }
 
 // Meses del selector: los que tienen reporte y, para el equipo, los últimos 12 meses y el siguiente
@@ -1053,11 +1202,15 @@ function renderResultados() {
   if (!container) return;
 
   const slug = state.activeClientSlug;
-  const esEquipo = state.currentRole === 'team';
+  // Vista del cliente (equipo): la pestaña se dibuja tal como la ve el cliente
+  const vistaCliente = state.currentRole === 'team' && !!state.rpVistaCliente;
+  const esEquipo = state.currentRole === 'team' && !vistaCliente;
   const conReporte = mesesConReporte(slug);
+  const avisoVista = vistaCliente ? rpAvisoVistaCliente(slug) : '';
 
   if (!esEquipo && !conReporte.length) {
     container.innerHTML = `
+      ${avisoVista}
       <div class="editor-card" style="text-align:center;padding:40px 20px;">
         <h3 style="font-family:var(--font-display);font-size:18px;color:var(--text-strong);margin-bottom:8px;">Todavía no hay reportes publicados</h3>
         <p style="font-size:13.5px;color:var(--text-muted);">Aquí verás tus resultados de cada mes en cuanto el equipo los publique.</p>
@@ -1065,12 +1218,12 @@ function renderResultados() {
     return;
   }
 
-  const mes = mesResultados(slug);
+  const mes = mesResultados(slug, !esEquipo);
   const reporte = reporteMes(slug, mes, false);
   const datos = reporte || { resumen: '', kpis: [], imagenes: [] };
   const plataformasCargadas = obtenerPlataformas(slug, mes);
   const plataformas = plataformasCargadas || (esEquipo ? plantillaPlataformas() : null);
-  const esCEO = puedeEditarReporte();
+  const esCEO = esEquipo && puedeEditarReporte();
   if (state.rpEditando && !(esCEO && state.rpEditando.slug === slug && state.rpEditando.mes === mes)) state.rpEditando = null;
   const edicion = state.rpEditando;
   const kpis = Array.isArray(datos.kpis) ? datos.kpis : [];
@@ -1078,10 +1231,11 @@ function renderResultados() {
   const pubCount = piezasMes.filter(p => p.estado === 'Publicado').length;
   const editando = state.kpiEditando;
 
-  const selector = `
+  // El equipo conserva el selector (incluye meses sin reporte); el cliente cambia de mes con el historial
+  const selector = esEquipo ? `
     <select class="form-control" style="width:auto;min-width:200px;font-size:13px;padding:6px 12px;" onchange="cambiarMesResultados(this.value)" aria-label="Mes del reporte" ${edicion ? 'disabled' : ''}>
-      ${opcionesMeses(slug).map(m => `<option value="${m}" ${m === mes ? 'selected' : ''}>${nombreMes(m)}${esEquipo && conReporte.indexOf(m) === -1 ? ' · sin reporte' : ''}</option>`).join('')}
-    </select>`;
+      ${opcionesMeses(slug).map(m => `<option value="${m}" ${m === mes ? 'selected' : ''}>${nombreMes(m)}${conReporte.indexOf(m) === -1 ? ' · sin reporte' : ''}</option>`).join('')}
+    </select>` : '';
 
   let tileFijo;
   if (datos.tileFijo && esEquipo && editando === 'fijo') {
@@ -1115,6 +1269,7 @@ function renderResultados() {
   }).join('') + (esEquipo && editando === 'nuevo' ? formularioKpi(null, 'nuevo') : '');
 
   container.innerHTML = `
+    ${avisoVista}
     <div class="results-header">
       <div>
         <h3 style="font-family:var(--font-display);font-size:20px;color:var(--text-strong);margin-bottom:4px;">Reporte de Resultados · ${nombreMes(mes)}</h3>
@@ -1122,12 +1277,15 @@ function renderResultados() {
       </div>
       <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;">
         ${selector}
+        ${esEquipo && !edicion ? `<button class="btn btn-sm btn-secondary" onclick="rpVerComoCliente(true)" title="Muestra esta pestaña tal como la ve el cliente">👁 Ver como cliente</button>` : ''}
         ${esEquipo && !plataformas ? `<button class="btn btn-sm btn-primary" onclick="agregarKpi()">+ Agregar Indicador</button>` : ''}
         ${esCEO && plataformas && !edicion ? `<button class="btn btn-sm btn-primary" onclick="rpIniciarEdicion()">✏️ Editar reporte</button>` : ''}
         ${esCEO && !edicion && tieneReporte(reporte) ? `<button class="btn btn-sm btn-secondary rp-btn-eliminar" onclick="rpEliminarReporteMes()">🗑️ Eliminar reporte</button>` : ''}
         ${edicion ? `<button class="btn btn-sm btn-secondary" onclick="rpCancelarEdicion()">Cancelar</button><button class="btn btn-sm btn-primary" onclick="rpGuardarEdicion()">Guardar cambios</button>` : ''}
       </div>
     </div>
+
+    ${edicion ? '' : rpHistorialHtml(slug, mes, esEquipo)}
 
     ${plataformas ? (edicion ? renderEditorPlataformas(edicion.datos, mes) : renderReportePlataformas(plataformas, mes, !plataformasCargadas)) : ''}
 
@@ -1143,8 +1301,11 @@ function renderResultados() {
     </div>`}
 
     ${plataformas ? '' : renderDetalleResultados(datos.detalle)}
+
+    ${edicion ? '' : rpNavegacionMeses(slug, mes)}
   `;
   rpCargarPortadas(container);
+  rpCentrarMesActivo(container);
 }
 
 function cambiarMesResultados(mes) {
@@ -2384,15 +2545,234 @@ function renderEditorPlataformas(datos, mes) {
 }
 
 // ==========================================================================
-// 1c. PESTAÑA PAGOS: tabla por cliente (4 columnas y 5 filas al inicio)
-//     Se guarda en la nube en resultados/<cliente>__pagos (campo "pagos").
-//     El equipo la edita; el cliente la ve en solo lectura.
+// 1c. PESTAÑA PAGOS (opción B, 31 oct 2026)
+//     Cliente: "Tu próximo pago", avance del contrato y estado de cuenta por mes.
+//     Equipo: cobranza del mes de todos los clientes (Vencidos, Por cobrar,
+//     Pagados) y el estado de cuenta del cliente activo, con su plan de pagos.
+//     Todo vive en resultados/<cliente>__pagos:
+//       - campo "cobranza": { concepto, monto, diaPago, inicio: 'AAAA-MM', meses,
+//         datosPago, periodos: { 'AAAA-MM': { pagado: 'AAAA-MM-DD' } } }
+//       - campo "pagos": la tabla libre anterior (se conserva y se muestra si tiene datos).
+//     El estado de cada mes se calcula: Pagado, Vencido (pasó la fecha límite sin
+//     pago), Por pagar (el siguiente pago) o Por venir.
 // ==========================================================================
 const PAGOS_CLAVE = 'pagos';
 const PAGOS_COLUMNAS_DEFAULT = ['Fecha', 'Concepto', 'Monto', 'Estatus'];
 const PAGOS_FILAS_INICIALES = 5;
 const PAGOS_MAX_COLUMNAS = 10;
+const PG_WHATSAPP_APEX = '524731647487';
+const PG_MAX_PERIODOS = 36;
+const PG_TEXTO = { pagado: 'Pagado', porpagar: 'Por pagar', vencido: 'Vencido', porvenir: 'Por venir' };
+const PG_ICONO = {
+  pagado: '<svg aria-hidden="true" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>',
+  porpagar: '<svg aria-hidden="true" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"></circle><polyline points="12 7 12 12 15.5 14"></polyline></svg>',
+  vencido: '<svg aria-hidden="true" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3 2 21h20L12 3z"></path><line x1="12" y1="10" x2="12" y2="14"></line><line x1="12" y1="17.5" x2="12" y2="17.6"></line></svg>',
+  porvenir: '<svg aria-hidden="true" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="5" width="18" height="16" rx="2"></rect><line x1="3" y1="10" x2="21" y2="10"></line></svg>'
+};
 
+// ---------- Fechas y formatos ----------
+function pgHoyIso() {
+  const d = new Date();
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+}
+function pgMesValido(m) { return /^\d{4}-(0[1-9]|1[0-2])$/.test(String(m || '')); }
+function pgMesSumar(mes, n) {
+  const p = mes.split('-').map(Number);
+  const d = new Date(p[0], p[1] - 1 + n, 1);
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
+}
+function pgFechaLimite(mes, dia) {
+  const p = mes.split('-').map(Number);
+  const ultimo = new Date(p[0], p[1], 0).getDate();
+  const d = Math.min(Math.max(1, Math.round(Number(dia)) || 1), ultimo);
+  return `${mes}-${String(d).padStart(2, '0')}`;
+}
+function pgDias(desde, hasta) {
+  return Math.round((new Date(hasta + 'T12:00:00') - new Date(desde + 'T12:00:00')) / 86400000);
+}
+function pgMesNombre(mes) { const p = mes.split('-').map(Number); return `${MESES_NOMBRES[p[1] - 1]} ${p[0]}`; }
+function pgMesMinus(mes) { return MESES_NOMBRES[Number(mes.split('-')[1]) - 1].toLowerCase(); }
+function pgMesCorto(mes) { return MESES_NOMBRES[Number(mes.split('-')[1]) - 1].slice(0, 3).toUpperCase(); }
+function pgFechaLarga(iso) { const p = iso.split('-').map(Number); return `${p[2]} de ${MESES_NOMBRES[p[1] - 1].toLowerCase()}`; }
+function pgFechaCorta(iso) { const p = iso.split('-').map(Number); return `${p[2]} ${MESES_NOMBRES[p[1] - 1].slice(0, 3).toLowerCase()} ${p[0]}`; }
+function pgFechaSinAnio(iso) { const p = iso.split('-').map(Number); return `${p[2]} ${MESES_NOMBRES[p[1] - 1].slice(0, 3).toLowerCase()}`; }
+function pgDinero(n) { return '$' + Number(n || 0).toLocaleString('es-MX', { maximumFractionDigits: 2 }); }
+function pgFaltan(dias) {
+  if (dias === 0) return 'Vence hoy';
+  if (dias === 1) return 'Falta 1 día';
+  return `Faltan ${dias} días`;
+}
+function pgHace(dias) { return dias === 1 ? 'hace 1 día' : `hace ${dias} días`; }
+
+// ---------- Datos ----------
+function pgDoc(slug, crear) {
+  if (!db.resultados) { if (!crear) return null; db.resultados = {}; }
+  if (!db.resultados[slug]) { if (!crear) return null; db.resultados[slug] = {}; }
+  if (!db.resultados[slug][PAGOS_CLAVE]) { if (!crear) return null; db.resultados[slug][PAGOS_CLAVE] = {}; }
+  return db.resultados[slug][PAGOS_CLAVE];
+}
+// Plan de pagos del cliente (null si no tiene uno válido)
+function pgCobranza(slug) {
+  const d = pgDoc(slug, false);
+  const c = d && d.cobranza;
+  if (!c || !pgMesValido(c.inicio) || !(Number(c.monto) > 0)) return null;
+  return c;
+}
+// Periodos del plan con su estado calculado a la fecha `hoy`
+function pgPeriodos(c, hoy) {
+  hoy = hoy || pgHoyIso();
+  let n = Number(c.meses) > 0 ? Math.min(Math.round(Number(c.meses)), PG_MAX_PERIODOS) : 0;
+  if (!n) { // sin fecha de término: hasta dos meses después del actual
+    const limite = pgMesSumar(hoy.slice(0, 7), 2);
+    let m = c.inicio;
+    while (m <= limite && n < PG_MAX_PERIODOS) { n++; m = pgMesSumar(m, 1); }
+    n = Math.max(1, n);
+  }
+  const reg = c.periodos || {};
+  let siguiente = false;
+  const lista = [];
+  for (let i = 0; i < n; i++) {
+    const mes = pgMesSumar(c.inicio, i);
+    const vence = pgFechaLimite(mes, c.diaPago || 5);
+    const r = reg[mes] || {};
+    let estado;
+    if (r.pagado) estado = 'pagado';
+    else if (hoy > vence) estado = 'vencido';
+    else if (!siguiente) { estado = 'porpagar'; siguiente = true; }
+    else estado = 'porvenir';
+    lista.push({ mes: mes, vence: vence, monto: Number(r.monto) > 0 ? Number(r.monto) : Number(c.monto), estado: estado, pagado: r.pagado || '', dias: pgDias(hoy, vence) });
+  }
+  return lista;
+}
+function pgSuma(lista) { return lista.reduce((t, p) => t + p.monto, 0); }
+function pgNombreCliente(slug) {
+  const cl = db.clientes.find(c => c.slug === slug);
+  return cl ? cl.nombre : slug;
+}
+
+// ---------- Enlaces de WhatsApp ----------
+function pgLinkComprobante(slug, p) {
+  const texto = `Hola, soy ${pgNombreCliente(slug)}. Les comparto mi comprobante de pago de ${pgMesNombre(p.mes)} (${pgDinero(p.monto)} MXN).`;
+  return `https://wa.me/${PG_WHATSAPP_APEX}?text=${encodeURIComponent(texto)}`;
+}
+function pgLinkRecordatorio(slug, p) {
+  const texto = `Hola, ${pgNombreCliente(slug)}. Te recordamos tu pago de ${pgMesNombre(p.mes)} por ${pgDinero(p.monto)} MXN (fecha límite: ${pgFechaLarga(p.vence)}). Cualquier duda, aquí estamos. APEX Creativo`;
+  return `https://wa.me/?text=${encodeURIComponent(texto)}`;
+}
+
+// ---------- Acciones del equipo ----------
+function pgRegistrarPago(slug, mes) {
+  if (state.currentRole !== 'team') return;
+  const c = pgCobranza(slug);
+  if (!c) return;
+  if (!c.periodos) c.periodos = {};
+  c.periodos[mes] = Object.assign({}, c.periodos[mes] || {}, { pagado: pgHoyIso() });
+  state.pgAviso = `Pago registrado: ${pgNombreCliente(slug)} · ${pgMesMinus(mes)} ${mes.slice(0, 4)}.`;
+  saveDatabase();
+  renderPagos();
+}
+function pgDeshacerPago(slug, mes) {
+  if (state.currentRole !== 'team') return;
+  const c = pgCobranza(slug);
+  if (!c || !c.periodos || !c.periodos[mes]) return;
+  if (!confirm(`¿Quitar el pago registrado de ${pgMesNombre(mes)} de ${pgNombreCliente(slug)}?`)) return;
+  delete c.periodos[mes].pagado;
+  if (!Object.keys(c.periodos[mes]).length) delete c.periodos[mes];
+  state.pgAviso = `Se quitó el pago de ${pgNombreCliente(slug)} · ${pgMesMinus(mes)} ${mes.slice(0, 4)}.`;
+  saveDatabase();
+  renderPagos();
+}
+function pgCambiarFecha(slug, mes, valor) {
+  if (state.currentRole !== 'team' || !/^\d{4}-\d{2}-\d{2}$/.test(String(valor || ''))) return;
+  const c = pgCobranza(slug);
+  if (!c) return;
+  if (!c.periodos) c.periodos = {};
+  c.periodos[mes] = Object.assign({}, c.periodos[mes] || {}, { pagado: valor });
+  saveDatabase();
+  renderPagos();
+}
+function pgVerCliente(slug) {
+  if (state.rpEditando && !confirm('Tienes cambios sin guardar en el reporte. ¿Cambiar de cliente sin guardarlos?')) return;
+  state.rpEditando = null;
+  state.kpiEditando = null;
+  state.resumenEditando = false;
+  state.pgEditandoPlan = false;
+  state.activeClientSlug = slug;
+  renderPortalWorkspace();
+  const el = document.getElementById('pgEstadoCuenta');
+  if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+}
+function pgMesTablero() {
+  if (!pgMesValido(state.pgMes)) {
+    const d = new Date();
+    d.setDate(d.getDate() + 7); // a fin de mes ya importa el mes que sigue
+    state.pgMes = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
+  }
+  return state.pgMes;
+}
+function pgCambiarMes(delta) {
+  state.pgMes = pgMesSumar(pgMesTablero(), delta);
+  renderPagos();
+}
+function pgFiltrar(filtro) {
+  state.pgFiltro = filtro;
+  renderPagos();
+}
+function pgEditarPlan(abrir) {
+  state.pgEditandoPlan = !!abrir;
+  renderPagos();
+  if (abrir) {
+    const el = document.getElementById('pgConcepto');
+    if (el) el.focus();
+  }
+}
+function pgGuardarPlan(ev) {
+  ev.preventDefault();
+  if (state.currentRole !== 'team') return;
+  const f = ev.target;
+  const error = document.getElementById('pgFormError');
+  const concepto = f.pgConcepto.value.trim() || 'Plan mensual';
+  const monto = Number(String(f.pgMonto.value).replace(/[^\d.]/g, ''));
+  const dia = Number(f.pgDia.value);
+  const inicio = `${f.pgAnio.value}-${f.pgMesInicio.value}`;
+  const mesesTxt = String(f.pgMeses.value).trim();
+  const meses = mesesTxt ? Number(mesesTxt) : 0;
+  let msg = '';
+  if (!(monto > 0)) msg = 'Escribe el monto de cada mes (por ejemplo 7000).';
+  else if (!(dia >= 1 && dia <= 31 && Number.isInteger(dia))) msg = 'El día límite debe ser un número del 1 al 31.';
+  else if (!pgMesValido(inicio)) msg = 'Elige el primer mes del plan.';
+  else if (mesesTxt && !(Number.isInteger(meses) && meses >= 1 && meses <= PG_MAX_PERIODOS)) msg = `La duración debe ser de 1 a ${PG_MAX_PERIODOS} meses, o déjala vacía si no tiene fecha de término.`;
+  if (msg) {
+    if (error) { error.textContent = msg; error.hidden = false; }
+    return;
+  }
+  const d = pgDoc(state.activeClientSlug, true);
+  const previo = d.cobranza || {};
+  d.cobranza = {
+    concepto: concepto,
+    monto: monto,
+    diaPago: dia,
+    inicio: inicio,
+    meses: meses || null,
+    datosPago: f.pgDatos.value.trim(),
+    periodos: previo.periodos || {}
+  };
+  state.pgEditandoPlan = false;
+  saveDatabase();
+  renderPagos();
+}
+function pgQuitarPlan() {
+  if (state.currentRole !== 'team') return;
+  const d = pgDoc(state.activeClientSlug, false);
+  if (!d || !d.cobranza) return;
+  if (!confirm(`¿Quitar el plan de pagos de ${pgNombreCliente(state.activeClientSlug)}? Se borran también los pagos registrados en él.`)) return;
+  delete d.cobranza;
+  state.pgEditandoPlan = false;
+  saveDatabase();
+  renderPagos();
+}
+
+// ---------- Tabla libre anterior (se conserva) ----------
 function pagosFilaNueva(n, id) {
   return { id: id || ('p' + Date.now().toString(36) + Math.random().toString(36).slice(2, 7)), textos: Array.from({ length: n }, () => '') };
 }
@@ -2419,6 +2799,11 @@ function pagosNormalizar(t) {
 function pagosLeer(slug) {
   const r = db.resultados && db.resultados[slug] && db.resultados[slug][PAGOS_CLAVE];
   return (r && r.pagos) || null;
+}
+
+function pagosTieneDatos(slug) {
+  const t = pagosLeer(slug);
+  return !!(t && Array.isArray(t.filas) && t.filas.some(f => Array.isArray(f.textos) && f.textos.some(x => String(x || '').trim())));
 }
 
 // Devuelve la tabla de pagos del cliente dentro de `db` (la crea si no existe)
@@ -2520,14 +2905,11 @@ function pagosEliminarColumna(col) {
   renderPagos();
 }
 
-function renderPagos() {
-  const container = document.getElementById('viewTab_pagos');
-  if (!container) return;
-  const esEquipo = state.currentRole === 'team';
-  const guardada = pagosLeer(state.activeClientSlug);
-  const t = pagosNormalizar(guardada ? JSON.parse(JSON.stringify(guardada)) : (esEquipo ? pagosIniciales() : { columnas: PAGOS_COLUMNAS_DEFAULT.slice(), filas: [] }));
+// La tabla libre anterior, dentro de un desplegable (solo si tiene datos)
+function pagosTablaAnteriorHtml(esEquipo) {
+  if (!pagosTieneDatos(state.activeClientSlug)) return '';
+  const t = pagosNormalizar(JSON.parse(JSON.stringify(pagosLeer(state.activeClientSlug))));
   const n = t.columnas.length;
-
   const encabezados = t.columnas.map((c, i) => esEquipo
     ? `<th scope="col">
         <div class="pagos-th">
@@ -2536,7 +2918,6 @@ function renderPagos() {
         </div>
       </th>`
     : `<th scope="col">${escapeHtml(c)}</th>`).join('');
-
   const filas = t.filas.map((f, k) => `
     <tr data-fila="${escapeHtml(f.id)}">
       <td class="plan-num">${k + 1}</td>
@@ -2549,49 +2930,349 @@ function renderPagos() {
         <button type="button" class="plan-btn plan-btn-borrar" title="Eliminar fila" aria-label="Eliminar la fila ${k + 1}" onclick="pagosEliminarFila('${escapeHtml(f.id)}')">✕</button>
       </td>` : ''}
     </tr>`).join('');
+  return `
+    <details class="pg-anterior" ${state.pgAnteriorAbierto ? 'open' : ''} ontoggle="state.pgAnteriorAbierto = this.open">
+      <summary>${esEquipo ? 'Tabla libre anterior' : 'Registro anterior de pagos'}</summary>
+      ${esEquipo ? `
+      <div class="plan-toolbar">
+        <div class="plan-toolbar-izq">
+          <button type="button" class="btn btn-sm btn-secondary" onclick="pagosAgregarColumna()" ${n >= PAGOS_MAX_COLUMNAS ? 'disabled' : ''}>+ Agregar columna</button>
+        </div>
+        <div class="plan-toolbar-der">
+          <label for="pagosCantidadFilas" class="plan-label">Agregar</label>
+          <select id="pagosCantidadFilas" class="form-control plan-select">
+            <option value="1">1 fila</option>
+            <option value="3">3 filas</option>
+            <option value="5">5 filas</option>
+            <option value="10">10 filas</option>
+          </select>
+          <button type="button" class="btn btn-sm btn-primary" onclick="pagosAgregarFilas()">+ Agregar filas</button>
+        </div>
+      </div>` : ''}
+      <div class="plan-tabla-wrap">
+        <table class="plan-tabla pagos-tabla${esEquipo ? ' editable' : ''}" style="min-width:${Math.max(560, 150 * n + (esEquipo ? 120 : 44))}px">
+          <colgroup>
+            <col class="plan-col-num">${t.columnas.map(() => '<col>').join('')}${esEquipo ? '<col class="plan-col-acc">' : ''}
+          </colgroup>
+          <thead><tr><th scope="col" class="plan-num">#</th>${encabezados}${esEquipo ? '<th scope="col" class="plan-acc"><span class="rp-sr">Acciones</span></th>' : ''}</tr></thead>
+          <tbody>${filas}</tbody>
+        </table>
+      </div>
+    </details>`;
+}
 
+// ---------- Vista: estado de cuenta (cliente; el equipo la ve con acciones) ----------
+function pgEstadoTxt(p) {
+  return p.estado === 'pagado' && p.pagado ? `Pagado · ${pgFechaSinAnio(p.pagado)}` : PG_TEXTO[p.estado];
+}
+
+function pgHeroHtml(slug, c, periodos, esEquipo) {
+  const hoy = pgHoyIso();
+  const mesHoy = hoy.slice(0, 7);
+  const vencidos = periodos.filter(p => p.estado === 'vencido');
+  const siguiente = periodos.find(p => p.estado === 'porpagar') || null;
+  const pagados = periodos.filter(p => p.estado === 'pagado');
+  const n = periodos.length;
+  const idxHoy = periodos.findIndex(p => p.mes === mesHoy);
+  const ultimo = periodos[n - 1].mes;
+
+  let lado;
+  if (vencidos.length) {
+    const p = vencidos[0];
+    lado = `
+      <span class="pg-eyebrow pg-eyebrow-alerta">${vencidos.length === 1 ? 'TIENES UN PAGO VENCIDO' : `TIENES ${vencidos.length} PAGOS VENCIDOS`}</span>
+      <span class="pg-hero-mes">${vencidos.map(v => escapeHtml(pgMesNombre(v.mes))).join(' · ')}</span>
+      <span class="pg-hero-monto">${pgDinero(pgSuma(vencidos))} <small>MXN</small></span>
+      <span class="pg-hero-info">Venció el ${pgFechaLarga(p.vence)} <span class="pg-pill pg-pill-vencido">${pgHace(-p.dias)}</span></span>
+      ${siguiente ? `<span class="pg-hero-sig">Después: ${escapeHtml(pgMesSolo2(siguiente.mes))}, ${pgDinero(siguiente.monto)}, vence el ${pgFechaLarga(siguiente.vence)}.</span>` : ''}`;
+  } else if (siguiente) {
+    lado = `
+      <span class="pg-eyebrow">TU PRÓXIMO PAGO</span>
+      <span class="pg-hero-mes">${escapeHtml(pgMesNombre(siguiente.mes))}</span>
+      <span class="pg-hero-monto">${pgDinero(siguiente.monto)} <small>MXN</small></span>
+      <span class="pg-hero-info">Fecha límite: ${pgFechaLarga(siguiente.vence)} <span class="pg-pill pg-pill-porpagar">${pgFaltan(siguiente.dias)}</span></span>`;
+  } else {
+    lado = `
+      <span class="pg-eyebrow pg-eyebrow-ok">ESTADO</span>
+      <span class="pg-hero-mes pg-hero-grande">¡Estás al día!</span>
+      <span class="pg-hero-info">Todos los pagos de tu plan están cubiertos.</span>`;
+  }
+  const objetivo = vencidos[0] || siguiente;
+  const acciones = objetivo ? (esEquipo
+    ? `<a class="pg-btn-claro" href="${pgLinkRecordatorio(slug, objetivo)}" target="_blank" rel="noopener">Recordar por WhatsApp</a>`
+    : `<a class="pg-btn-claro" href="${pgLinkComprobante(slug, objetivo)}" target="_blank" rel="noopener">Enviar comprobante</a>`) : '';
+  const datosPago = String(c.datosPago || '').trim();
+
+  let avance;
+  if (idxHoy >= 0) avance = Number(c.meses) > 0 ? `Vas en el mes ${idxHoy + 1} de ${n}` : `Mes ${idxHoy + 1} de tu plan`;
+  else if (mesHoy < c.inicio) avance = `Tu plan empieza en ${pgMesMinus(c.inicio)}`;
+  else avance = `Plan completo: ${n} ${n === 1 ? 'mes' : 'meses'}`;
+  const hayVencidos = vencidos.length > 0;
+  const segmentos = periodos.map(p => `<span class="pg-seg pg-seg-${p.estado}${p.mes === mesHoy ? ' pg-seg-hoy' : ''}" title="${escapeHtml(pgMesNombre(p.mes))}: ${PG_TEXTO[p.estado]}"></span>`).join('');
+  const etiquetas = n <= 12 ? `<div class="pg-seg-etiquetas" style="grid-template-columns:repeat(${n}, minmax(0, 1fr))" aria-hidden="true">${periodos.map(p => `<span${p.mes === mesHoy ? ' class="pg-seg-etq-hoy"' : ''}>${pgMesCorto(p.mes)}</span>`).join('')}</div>` : '';
+  const resumenBarra = `${pagados.length} de ${n} meses pagados${hayVencidos ? `, ${vencidos.length} vencido${vencidos.length === 1 ? '' : 's'}` : ''}`;
+
+  return `
+    <section class="pg-hero${hayVencidos ? ' pg-hero-alerta' : ''}" aria-label="${vencidos.length ? 'Pago vencido' : 'Tu próximo pago'}">
+      <div class="pg-hero-izq">
+        ${lado}
+        ${(acciones || datosPago) ? `
+        <div class="pg-hero-acciones">
+          ${acciones}
+          ${datosPago ? `<details class="pg-datos"><summary>Datos para pagar</summary><p>${escapeHtml(datosPago)}</p></details>` : ''}
+        </div>` : ''}
+      </div>
+      <div class="pg-avance-contrato">
+        <div class="pg-avance-tit"><span>${avance}</span><small>${pagados.length} pagado${pagados.length === 1 ? '' : 's'} · ${n - pagados.length} por pagar</small></div>
+        <div class="pg-segs" style="grid-template-columns:repeat(${n}, minmax(0, 1fr))" role="img" aria-label="${resumenBarra}">${segmentos}</div>
+        ${etiquetas}
+        <div class="pg-leyenda">
+          <span><i class="pg-ley pg-seg-pagado"></i>Pagado</span>
+          <span><i class="pg-ley pg-seg-porpagar"></i>Próximo pago</span>
+          ${hayVencidos ? '<span><i class="pg-ley pg-seg-vencido"></i>Vencido</span>' : ''}
+          <span><i class="pg-ley pg-seg-porvenir"></i>Por venir</span>
+        </div>
+      </div>
+    </section>`;
+}
+function pgMesSolo2(mes) { return MESES_NOMBRES[Number(mes.split('-')[1]) - 1]; }
+
+function pgTotalesHtml(periodos) {
+  const pagados = periodos.filter(p => p.estado === 'pagado');
+  const vencidos = periodos.filter(p => p.estado === 'vencido');
+  const siguiente = periodos.find(p => p.estado === 'porpagar');
+  const porVenir = periodos.filter(p => p.estado === 'porvenir');
+  const ahora = vencidos.concat(siguiente ? [siguiente] : []);
+  let subAhora = 'nada pendiente';
+  if (vencidos.length) subAhora = `incluye ${vencidos.length} vencido${vencidos.length === 1 ? '' : 's'}`;
+  else if (siguiente) subAhora = `${pgMesMinus(siguiente.mes)}, vence el ${pgFechaLarga(siguiente.vence)}`;
+  const subVenir = porVenir.length ? (porVenir.length === 1 ? pgMesMinus(porVenir[0].mes) : `${pgMesMinus(porVenir[0].mes)} a ${pgMesMinus(porVenir[porVenir.length - 1].mes)}`) : 'sin pagos futuros';
+  return `
+    <section class="pg-totales" aria-label="Totales">
+      <div class="pg-total"><span>Pagado</span><b class="pg-c-pagado">${pgDinero(pgSuma(pagados))}</b><small>${pagados.length} ${pagados.length === 1 ? 'mes' : 'meses'}</small></div>
+      <div class="pg-total"><span>Por pagar ahora</span><b class="${vencidos.length ? 'pg-c-vencido' : 'pg-c-porpagar'}">${pgDinero(pgSuma(ahora))}</b><small>${subAhora}</small></div>
+      <div class="pg-total"><span>Por venir</span><b>${pgDinero(pgSuma(porVenir))}</b><small>${subVenir}</small></div>
+    </section>`;
+}
+
+function pgCuentaHtml(slug, c, periodos, esEquipo) {
+  const filtro = ['todos', 'pagados', 'pendientes'].indexOf(state.pgFiltro) === -1 ? 'todos' : state.pgFiltro;
+  const visibles = periodos.filter(p => filtro === 'todos' || (filtro === 'pagados' ? p.estado === 'pagado' : p.estado !== 'pagado'));
+  const siguiente = periodos.find(p => p.estado === 'porpagar');
+  const opciones = [['todos', 'Todos'], ['pagados', 'Pagados'], ['pendientes', 'Por pagar']];
+  const s = escapeHtml(slug);
+  const filas = visibles.map(p => {
+    let accion = '';
+    if (esEquipo) {
+      accion = p.estado === 'pagado'
+        ? `<input type="date" class="form-control pg-fecha" value="${escapeHtml(p.pagado)}" aria-label="Fecha de pago de ${escapeHtml(pgMesNombre(p.mes))}" onchange="pgCambiarFecha('${s}', '${p.mes}', this.value)">
+           <button type="button" class="btn btn-sm btn-secondary" onclick="pgDeshacerPago('${s}', '${p.mes}')">Deshacer</button>`
+        : `<button type="button" class="btn btn-sm pg-btn-pagar" onclick="pgRegistrarPago('${s}', '${p.mes}')">Registrar pago</button>`;
+    } else if (p.estado === 'porpagar' || p.estado === 'vencido') {
+      accion = `<a class="btn btn-sm btn-primary" href="${pgLinkComprobante(slug, p)}" target="_blank" rel="noopener">Enviar comprobante</a>`;
+    }
+    return `
+      <div class="pg-fila${siguiente && p.mes === siguiente.mes ? ' pg-fila-actual' : ''}${p.estado === 'vencido' ? ' pg-fila-vencida' : ''}">
+        <span class="pg-f-periodo"><b>${MESES_NOMBRES[Number(p.mes.split('-')[1]) - 1]}</b><small>${p.mes.slice(0, 4)}</small></span>
+        <span class="pg-f-concepto">${escapeHtml(c.concepto || 'Plan mensual')}</span>
+        <span class="pg-f-monto">${pgDinero(p.monto)}</span>
+        <span class="pg-f-vence"><span class="pg-f-lbl">Fecha límite: </span>${pgFechaCorta(p.vence)}</span>
+        <span class="pg-f-estado"><span class="pg-estado pg-estado-${p.estado}">${PG_ICONO[p.estado]}${escapeHtml(pgEstadoTxt(p))}</span></span>
+        <span class="pg-f-accion">${accion}</span>
+      </div>`;
+  }).join('');
+  return `
+    <section class="pg-cuenta" aria-labelledby="pgTituloCuenta">
+      <div class="pg-cuenta-head">
+        <h4 id="pgTituloCuenta">Estado de cuenta</h4>
+        <div class="pg-filtros" role="group" aria-label="Filtrar pagos">
+          ${opciones.map(o => `<button type="button" aria-pressed="${filtro === o[0]}" class="${filtro === o[0] ? 'activo' : ''}" onclick="pgFiltrar('${o[0]}')">${o[1]}</button>`).join('')}
+        </div>
+      </div>
+      <div class="pg-tabla">
+        <div class="pg-fila pg-fila-head" aria-hidden="true">
+          <span>Periodo</span><span>Concepto</span><span>Monto</span><span>Fecha límite</span><span>Estado</span><span></span>
+        </div>
+        ${filas || '<p class="pg-vacio">No hay pagos en este filtro.</p>'}
+      </div>
+    </section>`;
+}
+
+// ---------- Vista: formulario del plan (equipo) ----------
+function pgFormHtml(slug, c) {
+  const hoy = new Date();
+  const inicio = c && pgMesValido(c.inicio) ? c.inicio : `${hoy.getFullYear()}-${String(hoy.getMonth() + 1).padStart(2, '0')}`;
+  const anioIni = Number(inicio.slice(0, 4));
+  const anios = [];
+  for (let a = Math.min(anioIni, hoy.getFullYear() - 1); a <= hoy.getFullYear() + 2; a++) anios.push(a);
+  return `
+    <form class="pg-form" onsubmit="pgGuardarPlan(event)" novalidate>
+      <div class="pg-form-grid">
+        <label class="pg-campo">Concepto<input id="pgConcepto" name="pgConcepto" class="form-control" value="${escapeHtml(c ? c.concepto || '' : 'Plan Apex')}" placeholder="Ej. Plan Apex"></label>
+        <label class="pg-campo">Monto de cada mes (MXN)<input name="pgMonto" class="form-control" inputmode="decimal" value="${c ? escapeHtml(String(c.monto)) : ''}" placeholder="Ej. 7000"></label>
+        <label class="pg-campo">Día límite de pago<input name="pgDia" class="form-control" type="number" min="1" max="31" value="${c ? escapeHtml(String(c.diaPago || 5)) : '5'}"></label>
+        <div class="pg-campo"><span id="pgLblInicio">Primer mes</span>
+          <div class="pg-campo-doble">
+            <select name="pgMesInicio" class="form-control" aria-labelledby="pgLblInicio">${MESES_NOMBRES.map((m, i) => { const v = String(i + 1).padStart(2, '0'); return `<option value="${v}" ${inicio.slice(5) === v ? 'selected' : ''}>${m}</option>`; }).join('')}</select>
+            <select name="pgAnio" class="form-control" aria-label="Año del primer mes">${anios.map(a => `<option value="${a}" ${a === anioIni ? 'selected' : ''}>${a}</option>`).join('')}</select>
+          </div>
+        </div>
+        <label class="pg-campo">Duración en meses<input name="pgMeses" class="form-control" type="number" min="1" max="${PG_MAX_PERIODOS}" value="${c && c.meses ? escapeHtml(String(c.meses)) : ''}" placeholder="Vacío = sin fecha de término"></label>
+        <label class="pg-campo pg-campo-ancho">Datos para pagar (los ve el cliente)<textarea name="pgDatos" class="form-control" rows="2" placeholder="Ej. Banco, número de cuenta o CLABE y a nombre de quién">${escapeHtml(c ? c.datosPago || '' : '')}</textarea></label>
+      </div>
+      <p id="pgFormError" class="pg-form-error" role="alert" hidden></p>
+      <div class="pg-form-acc">
+        <button type="submit" class="btn btn-sm btn-primary">Guardar plan</button>
+        ${c ? '<button type="button" class="btn btn-sm btn-secondary" onclick="pgEditarPlan(false)">Cancelar</button>' : ''}
+        ${c ? '<button type="button" class="btn btn-sm btn-secondary pg-btn-quitar" onclick="pgQuitarPlan()">Quitar plan</button>' : ''}
+      </div>
+    </form>`;
+}
+
+// ---------- Vista: cobranza del mes (equipo) ----------
+function pgTableroHtml() {
+  const hoy = pgHoyIso();
+  const mesT = pgMesTablero();
+  const items = [];
+  const sinPlan = [];
+  db.clientes.forEach(cl => {
+    const c = pgCobranza(cl.slug);
+    if (!c) { sinPlan.push(cl); return; }
+    pgPeriodos(c, hoy).forEach(p => {
+      if (p.mes === mesT || (p.mes < mesT && p.estado === 'vencido')) items.push({ cl: cl, c: c, p: p });
+    });
+  });
+  const vencidos = items.filter(i => i.p.estado === 'vencido');
+  const porCobrar = items.filter(i => i.p.mes === mesT && (i.p.estado === 'porpagar' || i.p.estado === 'porvenir'));
+  const pagados = items.filter(i => i.p.mes === mesT && i.p.estado === 'pagado');
+  const delMes = items.filter(i => i.p.mes === mesT);
+  const sumar = arr => arr.reduce((t, i) => t + i.p.monto, 0);
+  const total = sumar(delMes);
+  const cobrado = sumar(pagados);
+  const pct = total ? Math.round(cobrado / total * 100) : 0;
+  const cuenta = (arr, uno, varios) => `${arr.length} ${arr.length === 1 ? uno : varios}`;
+
+  const tarjeta = i => {
+    const s = escapeHtml(i.cl.slug);
+    let info;
+    if (i.p.estado === 'vencido') info = `Venció el ${pgFechaLarga(i.p.vence)} · ${pgHace(-i.p.dias)}`;
+    else if (i.p.estado === 'pagado') info = `Pagó el ${pgFechaLarga(i.p.pagado)}`;
+    else info = `Vence el ${pgFechaLarga(i.p.vence)} · ${pgFaltan(i.p.dias).toLowerCase()}`;
+    const acciones = i.p.estado === 'pagado'
+      ? `<button type="button" class="btn btn-sm btn-secondary" onclick="pgDeshacerPago('${s}', '${i.p.mes}')">Deshacer</button>`
+      : `<button type="button" class="btn btn-sm pg-btn-pagar" onclick="pgRegistrarPago('${s}', '${i.p.mes}')">Registrar pago</button>
+         <a class="btn btn-sm btn-secondary" href="${pgLinkRecordatorio(i.cl.slug, i.p)}" target="_blank" rel="noopener">Recordar por WhatsApp</a>`;
+    return `
+      <article class="pg-item">
+        <div class="pg-item-top">
+          <div class="pg-item-quien">
+            <button type="button" class="pg-item-nombre" onclick="pgVerCliente('${s}')" title="Ver estado de cuenta">${escapeHtml(i.cl.nombre)}</button>
+            <small>${escapeHtml(i.c.concepto || 'Plan mensual')} · ${escapeHtml(i.p.mes === mesT ? pgMesSolo2(i.p.mes) : pgMesNombre(i.p.mes))}</small>
+          </div>
+          <b>${pgDinero(i.p.monto)}</b>
+        </div>
+        <span class="pg-item-info pg-c-${i.p.estado}">${info}</span>
+        <div class="pg-item-acc">${acciones}</div>
+      </article>`;
+  };
+  const columna = (clase, titulo, arr, vacio) => `
+    <div class="pg-col pg-col-${clase}">
+      <div class="pg-col-head"><span>${PG_ICONO[clase === 'cobrar' ? 'porpagar' : (clase === 'vencidos' ? 'vencido' : 'pagado')]}${titulo}</span><b>${arr.length}</b></div>
+      ${arr.length ? arr.map(tarjeta).join('') : `<p class="pg-col-vacia">${vacio}</p>`}
+    </div>`;
+
+  return `
+    <section class="pg-tablero" aria-labelledby="pgTituloCobranza">
+      <div class="pg-tablero-head">
+        <h4 id="pgTituloCobranza">Cobranza de ${pgMesMinus(mesT)} ${mesT.slice(0, 4)}</h4>
+        <div class="pg-mes-nav">
+          <button type="button" class="btn btn-sm btn-secondary" aria-label="Mes anterior" onclick="pgCambiarMes(-1)">‹</button>
+          <span>${escapeHtml(pgMesNombre(mesT))}</span>
+          <button type="button" class="btn btn-sm btn-secondary" aria-label="Mes siguiente" onclick="pgCambiarMes(1)">›</button>
+        </div>
+      </div>
+      ${state.pgAviso ? `<p class="pg-aviso" role="status">${PG_ICONO.pagado}${escapeHtml(state.pgAviso)}</p>` : ''}
+      <div class="pg-avance">
+        <div class="pg-avance-fila"><b>Cobrado del mes: ${pct}%</b><span>${pgDinero(cobrado)} de ${pgDinero(total)} MXN</span></div>
+        <div class="pg-barra" role="img" aria-label="Cobrado ${pct}% del mes"><span style="width:${pct}%"></span></div>
+        <div class="pg-kpis">
+          <div><span>Vencido</span><b class="pg-c-vencido">${pgDinero(sumar(vencidos))}</b><small>${cuenta(vencidos, 'pago', 'pagos')}</small></div>
+          <div><span>Por cobrar</span><b class="pg-c-porpagar">${pgDinero(sumar(porCobrar))}</b><small>${cuenta(porCobrar, 'pago', 'pagos')}</small></div>
+          <div><span>Pagado</span><b class="pg-c-pagado">${pgDinero(cobrado)}</b><small>${cuenta(pagados, 'pago', 'pagos')}</small></div>
+        </div>
+      </div>
+      <div class="pg-columnas">
+        ${columna('vencidos', 'Vencidos', vencidos, 'Nadie tiene pagos vencidos.')}
+        ${columna('cobrar', 'Por cobrar', porCobrar, 'No hay pagos por cobrar este mes.')}
+        ${columna('pagados', 'Pagados', pagados, 'Todavía no hay pagos este mes.')}
+      </div>
+      ${sinPlan.length ? `
+      <div class="pg-sinplan">
+        <span>Sin plan de pagos:</span>
+        ${sinPlan.map(cl => `<button type="button" class="pg-chip" onclick="pgVerCliente('${escapeHtml(cl.slug)}')">${escapeHtml(cl.nombre)}</button>`).join('')}
+      </div>` : ''}
+    </section>`;
+}
+
+// ---------- Render de la pestaña ----------
+function renderPagos() {
+  const container = document.getElementById('viewTab_pagos');
+  if (!container) return;
+  const esEquipo = state.currentRole === 'team';
+  const slug = state.activeClientSlug;
+  if (state.pgPlanSlug !== slug) { state.pgPlanSlug = slug; state.pgEditandoPlan = false; }
+  const c = pgCobranza(slug);
+  const periodos = c ? pgPeriodos(c) : [];
+  const nombre = escapeHtml(pgNombreCliente(slug));
+  let subtitulo = 'Tu estado de cuenta con APEX Creativo.';
+  if (c) {
+    const fin = pgMesSumar(c.inicio, periodos.length - 1);
+    const contrato = Number(c.meses) > 0
+      ? `contrato de ${pgMesMinus(c.inicio)} ${c.inicio.slice(0, 4)} a ${pgMesMinus(fin)} ${fin.slice(0, 4)}`
+      : `desde ${pgMesMinus(c.inicio)} ${c.inicio.slice(0, 4)}, sin fecha de término`;
+    subtitulo = `${escapeHtml(c.concepto || 'Plan mensual')} · ${pgDinero(c.monto)} MXN al mes · se paga a más tardar el día ${Number(c.diaPago) || 5} · ${contrato}`;
+  }
+
+  if (!esEquipo) {
+    container.innerHTML = `
+      <div class="results-header">
+        <div>
+          <h3 style="font-family:var(--font-display);font-size:20px;color:var(--text-strong);margin-bottom:4px;">Pagos</h3>
+          <p style="font-size:13px;color:var(--text-muted);">${subtitulo}</p>
+        </div>
+      </div>
+      ${c ? pgHeroHtml(slug, c, periodos, false) + pgTotalesHtml(periodos) + pgCuentaHtml(slug, c, periodos, false) : `
+      <div class="editor-card" style="text-align:center;padding:40px 20px;">
+        <h3 style="font-family:var(--font-display);font-size:18px;color:var(--text-strong);margin-bottom:8px;">Todavía no hay pagos registrados</h3>
+        <p style="font-size:13.5px;color:var(--text-muted);">Aquí verás tus pagos en cuanto el equipo los registre.</p>
+      </div>`}
+      ${pagosTablaAnteriorHtml(false)}`;
+    return;
+  }
+
+  const editando = !c || state.pgEditandoPlan;
   container.innerHTML = `
     <div class="results-header">
       <div>
         <h3 style="font-family:var(--font-display);font-size:20px;color:var(--text-strong);margin-bottom:4px;">Pagos</h3>
-        <p style="font-size:13px;color:var(--text-muted);">Registro de pagos de la marca.</p>
+        <p style="font-size:13px;color:var(--text-muted);">Cobranza de todos los clientes y estado de cuenta de cada uno.</p>
       </div>
     </div>
-
-    ${esEquipo ? `
-    <div class="plan-toolbar">
-      <div class="plan-toolbar-izq">
-        <button type="button" class="btn btn-sm btn-secondary" onclick="pagosAgregarColumna()" ${n >= PAGOS_MAX_COLUMNAS ? 'disabled' : ''}>+ Agregar columna</button>
+    ${pgTableroHtml()}
+    <section id="pgEstadoCuenta" class="pg-equipo-cuenta" aria-labelledby="pgTituloEquipoCuenta">
+      <div class="pg-equipo-head">
+        <div>
+          <h4 id="pgTituloEquipoCuenta">Estado de cuenta de ${nombre}</h4>
+          <p>${c ? `${subtitulo}. Abajo lo ves como lo ve el cliente.` : 'Este cliente todavía no tiene plan de pagos. Configúralo para que vea su estado de cuenta.'}</p>
+        </div>
+        ${c && !editando ? '<button type="button" class="btn btn-sm btn-secondary" onclick="pgEditarPlan(true)">Editar plan</button>' : ''}
       </div>
-      <div class="plan-toolbar-der">
-        <label for="pagosCantidadFilas" class="plan-label">Agregar</label>
-        <select id="pagosCantidadFilas" class="form-control plan-select">
-          <option value="1">1 fila</option>
-          <option value="3">3 filas</option>
-          <option value="5">5 filas</option>
-          <option value="10">10 filas</option>
-        </select>
-        <button type="button" class="btn btn-sm btn-primary" onclick="pagosAgregarFilas()">+ Agregar filas</button>
-      </div>
-    </div>` : ''}
-
-    ${(!esEquipo && !t.filas.length) ? `
-      <div class="editor-card" style="text-align:center;padding:40px 20px;">
-        <h3 style="font-family:var(--font-display);font-size:18px;color:var(--text-strong);margin-bottom:8px;">Todavía no hay pagos registrados</h3>
-        <p style="font-size:13.5px;color:var(--text-muted);">Aquí verás tus pagos en cuanto el equipo los registre.</p>
-      </div>` : `
-    <div class="plan-tabla-wrap">
-      <table class="plan-tabla pagos-tabla${esEquipo ? ' editable' : ''}" style="min-width:${Math.max(560, 150 * n + (esEquipo ? 120 : 44))}px">
-        <colgroup>
-          <col class="plan-col-num">${t.columnas.map(() => '<col>').join('')}${esEquipo ? '<col class="plan-col-acc">' : ''}
-        </colgroup>
-        <thead><tr><th scope="col" class="plan-num">#</th>${encabezados}${esEquipo ? '<th scope="col" class="plan-acc"><span class="rp-sr">Acciones</span></th>' : ''}</tr></thead>
-        <tbody>${filas || `<tr><td colspan="${n + (esEquipo ? 2 : 1)}" class="plan-vacia">Sin filas. Usa "+ Agregar filas".</td></tr>`}</tbody>
-      </table>
-    </div>
-    ${esEquipo ? `<button type="button" class="plan-agregar-linea" onclick="document.getElementById('pagosCantidadFilas').value='1'; pagosAgregarFilas();">+ Agregar fila</button>` : ''}`}
-  `;
-  container.querySelectorAll('.plan-celda textarea').forEach(planAutoAltura);
+      ${editando ? pgFormHtml(slug, c) : ''}
+      ${c ? pgHeroHtml(slug, c, periodos, true) + pgTotalesHtml(periodos) + pgCuentaHtml(slug, c, periodos, true) : ''}
+    </section>
+    ${pagosTablaAnteriorHtml(true)}`;
+  state.pgAviso = '';
+  container.querySelectorAll('.pg-anterior .plan-celda textarea').forEach(planAutoAltura);
 }
 
 // Lightbox
@@ -3162,6 +3843,7 @@ function nubeSesionVencida() {
   nube.pinesEquipo = {};
   state.currentRole = null;
   state.currentTeamMember = null;
+  state.rpVistaCliente = false;
   db = loadDatabase();
   closePortalWorkspace();
   const msg = document.getElementById('authErrorMsg');
