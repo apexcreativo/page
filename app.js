@@ -2563,7 +2563,9 @@ function renderEditorPlataformas(datos, mes) {
 //     pago), Por pagar (el siguiente pago) o Por venir.
 // ==========================================================================
 const PAGOS_CLAVE = 'pagos';
-const PAGOS_COLUMNAS_DEFAULT = ['Fecha', 'Concepto', 'Monto', 'Estatus'];
+// Registro de pagos (6 nov 2026): 5 columnas fijas al empezar; se pueden renombrar y agregar más.
+const PAGOS_COLUMNAS_DEFAULT = ['Fecha de cobro', 'Fecha de pago', 'Concepto', 'Monto', 'Estado'];
+const PAGOS_COLUMNAS_ANTERIORES = ['Fecha', 'Concepto', 'Monto', 'Estatus'];
 const PAGOS_FILAS_INICIALES = 5;
 const PAGOS_MAX_COLUMNAS = 10;
 const PG_WHATSAPP_APEX = '524731647487';
@@ -2793,8 +2795,15 @@ function pagosIniciales() {
 function pagosNormalizar(t) {
   if (!Array.isArray(t.columnas) || !t.columnas.length) t.columnas = PAGOS_COLUMNAS_DEFAULT.slice();
   t.columnas = t.columnas.map(c => (typeof c === 'string' ? c : ''));
-  const n = t.columnas.length;
   if (!Array.isArray(t.filas)) t.filas = [];
+  // Tabla con las 4 columnas anteriores y todavía sin nada escrito: pasa sola a las 5 nuevas.
+  // Si ya tiene datos no se toca, para no mover de lugar lo que esté capturado.
+  const sinDatos = !t.filas.some(f => Array.isArray(f.textos) && f.textos.some(x => String(x || '').trim()));
+  if (sinDatos && t.columnas.length === PAGOS_COLUMNAS_ANTERIORES.length &&
+      t.columnas.every((c, i) => c === PAGOS_COLUMNAS_ANTERIORES[i])) {
+    t.columnas = PAGOS_COLUMNAS_DEFAULT.slice();
+  }
+  const n = t.columnas.length;
   t.filas.forEach(f => {
     const previos = Array.isArray(f.textos) ? f.textos : [];
     f.textos = Array.from({ length: n }, (_, i) => (typeof previos[i] === 'string' ? previos[i] : ''));
@@ -2911,10 +2920,13 @@ function pagosEliminarColumna(col) {
   renderPagos();
 }
 
-// La tabla libre anterior, dentro de un desplegable (solo si tiene datos)
-function pagosTablaAnteriorHtml(esEquipo) {
-  if (!pagosTieneDatos(state.activeClientSlug)) return '';
-  const t = pagosNormalizar(JSON.parse(JSON.stringify(pagosLeer(state.activeClientSlug))));
+// Registro de pagos: tabla que el equipo llena a mano y el cliente ve.
+// El equipo la ve siempre (vacía si es nueva); el cliente, solo cuando tiene algo escrito.
+function pagosTablaHtml(esEquipo) {
+  const slug = state.activeClientSlug;
+  const guardada = pagosLeer(slug);
+  if (!esEquipo && !pagosTieneDatos(slug)) return '';
+  const t = pagosNormalizar(guardada ? JSON.parse(JSON.stringify(guardada)) : pagosIniciales());
   const n = t.columnas.length;
   const encabezados = t.columnas.map((c, i) => esEquipo
     ? `<th scope="col">
@@ -2937,8 +2949,15 @@ function pagosTablaAnteriorHtml(esEquipo) {
       </td>` : ''}
     </tr>`).join('');
   return `
-    <details class="pg-anterior" ${state.pgAnteriorAbierto ? 'open' : ''} ontoggle="state.pgAnteriorAbierto = this.open">
-      <summary>${esEquipo ? 'Tabla libre anterior' : 'Registro anterior de pagos'}</summary>
+    <section class="pg-tabla" aria-labelledby="pgTablaTitulo">
+      <div class="pg-tabla-head">
+        <div>
+          <h4 id="pgTablaTitulo">Registro de pagos</h4>
+          <p>${esEquipo
+            ? 'Escribe directo en las celdas: se guarda solo y el cliente lo ve. Puedes renombrar las columnas y agregar las filas que necesites.'
+            : 'Detalle de cada pago registrado por el equipo.'}</p>
+        </div>
+      </div>
       ${esEquipo ? `
       <div class="plan-toolbar">
         <div class="plan-toolbar-izq">
@@ -2964,7 +2983,7 @@ function pagosTablaAnteriorHtml(esEquipo) {
           <tbody>${filas}</tbody>
         </table>
       </div>
-    </details>`;
+    </section>`;
 }
 
 // ---------- Vista: estado de cuenta (cliente; el equipo la ve con acciones) ----------
@@ -3252,7 +3271,7 @@ function renderPagos() {
         <h3 style="font-family:var(--font-display);font-size:18px;color:var(--text-strong);margin-bottom:8px;">Todavía no hay pagos registrados</h3>
         <p style="font-size:13.5px;color:var(--text-muted);">Aquí verás tus pagos en cuanto el equipo los registre.</p>
       </div>`}
-      ${pagosTablaAnteriorHtml(false)}`;
+      ${pagosTablaHtml(false)}`;
     return;
   }
 
@@ -3276,9 +3295,9 @@ function renderPagos() {
       ${editando ? pgFormHtml(slug, c) : ''}
       ${c ? pgHeroHtml(slug, c, periodos, true) + pgTotalesHtml(periodos) + pgCuentaHtml(slug, c, periodos, true) : ''}
     </section>
-    ${pagosTablaAnteriorHtml(true)}`;
+    ${pagosTablaHtml(true)}`;
   state.pgAviso = '';
-  container.querySelectorAll('.pg-anterior .plan-celda textarea').forEach(planAutoAltura);
+  container.querySelectorAll('.pg-tabla .plan-celda textarea').forEach(planAutoAltura);
 }
 
 // Lightbox
