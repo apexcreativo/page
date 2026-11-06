@@ -1558,9 +1558,15 @@ function rpRedSinTopAnterior(r) {
   return /\b(fb|tt)\b|facebook|tiktok/.test(t);
 }
 
-// TikTok no se compara con el mes anterior: solo muestra los datos del mes
+// TikTok no se comparaba con el mes anterior (9 oct 2026). Desde octubre 2026 sí se
+// compara (6 nov 2026); los meses anteriores siguen mostrando solo los datos del mes.
 const RP_REDES_SIN_COMPARACION = ['tiktok'];
-function rpRedSinComparacion(id) { return RP_REDES_SIN_COMPARACION.indexOf(id) !== -1; }
+const RP_COMPARA_DESDE = { tiktok: '2026-10' };
+function rpRedSinComparacion(id, mes) {
+  if (RP_REDES_SIN_COMPARACION.indexOf(id) === -1) return false;
+  const desde = RP_COMPARA_DESDE[id];
+  return !(desde && /^\d{4}-\d{2}$/.test(String(mes || '')) && String(mes) >= desde);
+}
 
 function rpNombreClave(t) {
   return String(t || '').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/\s+/g, ' ').trim();
@@ -1569,9 +1575,9 @@ function rpNombreClave(t) {
 // Estructura vigente del reporte (9 oct 2026). También se aplica a reportes ya guardados en la nube:
 // - Instagram: "Actividad en el perfil" queda dentro de "Cuentas alcanzadas"; "Interacciones" sin
 //   seguidores / no seguidores; sin "Tasa de interacción".
-// - TikTok: sin datos del mes anterior.
+// - TikTok: sin datos del mes anterior en los meses antes de octubre 2026 (rpRedSinComparacion).
 // Se usa siempre sobre una copia, nunca sobre `db`.
-function rpAjustarEstructura(pl) {
+function rpAjustarEstructura(pl, mes) {
   if (!pl) return pl;
   const ig = pl.instagram;
   if (ig && Array.isArray(ig.metricas)) {
@@ -1593,7 +1599,7 @@ function rpAjustarEstructura(pl) {
   }
   PLATAFORMAS_INFO.forEach(info => {
     const p = pl[info.id];
-    if (!p || !rpRedSinComparacion(info.id)) return;
+    if (!p || !rpRedSinComparacion(info.id, mes)) return;
     delete p.periodoAnterior;
     delete p.comparadoCon;
     const quitar = m => { if (m) ['anterior', 'diferencia', 'variacion'].forEach(k => { delete m[k]; }); };
@@ -1619,7 +1625,7 @@ function plantillaPlataformas() {
 function obtenerPlataformas(slug, mes) {
   const r = db.resultados && db.resultados[slug] && db.resultados[slug][mes];
   const base = (r && r.plataformas) || reportesPlataformasDe(slug)[mes] || null;
-  return base ? rpAjustarEstructura(JSON.parse(JSON.stringify(base))) : null;
+  return base ? rpAjustarEstructura(JSON.parse(JSON.stringify(base)), mes) : null;
 }
 
 function mesAnteriorIso(mes) {
@@ -1915,7 +1921,7 @@ function rpPlataforma(info, p, mes) {
   const mesAnt = MESES_NOMBRES[Number(mesAnteriorIso(mes).split('-')[1]) - 1];
   const mesAct = MESES_NOMBRES[Number(String(mes).split('-')[1]) - 1];
   const metricas = p.metricas || [];
-  const sinComp = rpRedSinComparacion(info.id);
+  const sinComp = rpRedSinComparacion(info.id, mes);
   return `
     <section class="rp-plataforma rp-${info.clase}" id="rp-${info.id}" aria-labelledby="rp-t-${info.id}">
       <header class="rp-plat-head">
@@ -2273,8 +2279,8 @@ function puedeEditarReporte() {
 
 // Asegura que el reporte tenga las 4 redes, 3 lugares de Top en Instagram y las 2 reseñas de Google
 // (Facebook y TikTok ya no llevan Top: al guardar se quita)
-function rpCompletarEstructura(datos) {
-  rpAjustarEstructura(datos);
+function rpCompletarEstructura(datos, mes) {
+  rpAjustarEstructura(datos, mes);
   const base = plantillaPlataformas() || {};
   PLATAFORMAS_INFO.forEach(info => {
     if (!datos[info.id]) datos[info.id] = base[info.id] ? JSON.parse(JSON.stringify(base[info.id])) : { metricas: [] };
@@ -2300,7 +2306,7 @@ function rpIniciarEdicion() {
   const slug = state.activeClientSlug;
   const mes = mesResultados(slug);
   const base = obtenerPlataformas(slug, mes) || plantillaPlataformas() || {};
-  state.rpEditando = { slug, mes, datos: rpCompletarEstructura(JSON.parse(JSON.stringify(base))) };
+  state.rpEditando = { slug, mes, datos: rpCompletarEstructura(JSON.parse(JSON.stringify(base)), mes) };
   renderResultados();
 }
 
@@ -2505,7 +2511,7 @@ function rpEditorPlataforma(info, p, mes) {
   const base = info.id;
   const mesAnt = MESES_NOMBRES[Number(mesAnteriorIso(mes).split('-')[1]) - 1];
   const mesAct = MESES_NOMBRES[Number(String(mes).split('-')[1]) - 1];
-  const sinComp = rpRedSinComparacion(info.id);
+  const sinComp = rpRedSinComparacion(info.id, mes);
   return `
     <section class="rp-plataforma rp-${info.clase} editando" id="rp-${info.id}" aria-labelledby="rp-t-${info.id}">
       <header class="rp-plat-head">

@@ -4,7 +4,7 @@
    Aquí se capturan, a mano, las métricas de cada cliente por mes.
    El portal (pestaña "Resumen de Resultados") las muestra en 4 bloques:
    Instagram, Facebook, TikTok y Google, con la comparación contra el mes
-   anterior (TikTok solo muestra los datos del mes, sin comparar), el Top 3
+   anterior (TikTok se compara desde octubre 2026; septiembre va sin comparar), el Top 3
    de contenidos de Instagram y las reseñas destacadas de Google.
    Facebook y TikTok solo llevan sus indicadores (sin Top).
 
@@ -23,7 +23,8 @@
       null = el portal muestra "Por completar".
       'comparadoCon' es el texto que aparece en la comparación ("vs agosto").
       'sinComparacion: true' muestra solo el valor del mes, sin la línea "vs mes anterior".
-      TikTok no se compara con el mes anterior: ahí solo va 'actual'.
+      TikTok: en septiembre 2026 solo va 'actual' (sin comparar); desde octubre
+      2026 lleva 'actual' y 'anterior' como las demás redes.
    4. Principal contenido (Top 3, solo en Instagram): pega en 'link' el link
       de la publicación o reel. La portada se toma del link y al darle clic
       se abre el video. 'portada' es una imagen opcional que solo se usa si
@@ -195,8 +196,7 @@ const REPORTES_PLATAFORMAS = {
     // ------------------------------------------------------------------------
     // EL FARO · OCTUBRE 2026 (capturas del 6 nov 2026)
     // Instagram y TikTok: 1 – 31 oct. Facebook: últimos 30 días (al 5 nov).
-    // Instagram se compara con el reporte de septiembre (5 sep – 4 oct);
-    // Facebook, con los 30 días previos (porcentajes de Meta).
+    // Las tres redes se comparan con el reporte de septiembre ("vs septiembre").
     // ------------------------------------------------------------------------
     '2026-10': {
       instagram: {
@@ -216,11 +216,10 @@ const REPORTES_PLATAFORMAS = {
           { nombre: 'Publicaciones en total', actual: 58, anterior: 41, sub: [
             { nombre: 'Publicaciones en el perfil', actual: null, anterior: null },
             { nombre: 'Historias', actual: null, anterior: null }
-          ], nota: 'Contenido compartido del 7 oct al 5 nov, según el panel de Instagram.' },
+          ] },
           { nombre: 'Total de seguidores', actual: 3212, anterior: 3200, sub: [
-            { nombre: 'Nuevos seguidores', actual: 66, anterior: 39 },
-            { nombre: 'Seguidores netos', actual: 11, anterior: -12 }
-          ], nota: 'Nuevos seguidores: del 7 oct al 5 nov, según el panel de Instagram.' }
+            { nombre: 'Nuevos seguidores', actual: 66, anterior: 39 }
+          ] }
         ],
         top: {
           criterio: 'Visualizaciones',
@@ -232,18 +231,22 @@ const REPORTES_PLATAFORMAS = {
         }
       },
 
+      // Facebook vs septiembre: valores del reporte de septiembre (7 sep – 4 oct).
+      // Visualizaciones: septiembre solo trae "10 mil" (redondeado), así que el % va a mano.
+      // Interacciones con el contenido no tiene dato de septiembre: va el % de Meta
+      // contra los 30 días anteriores (7 sep – 6 oct).
       facebook: {
         periodo: 'Últimos 30 días (al 5 nov 2026)',
-        periodoAnterior: '30 días anteriores',
-        comparadoCon: '30 días previos',
+        periodoAnterior: '7 sep – 4 oct 2026',
+        comparadoCon: 'septiembre',
         metricas: [
-          { nombre: 'Visualizaciones', actual: 24288, anterior: null, variacion: '+130%',
-            nota: 'Espectadores: 7.8 mil (+75.8%). Reproducciones de 3 segundos: 3.6 mil (+121%).' },
-          { nombre: 'Interacciones', actual: 1408, anterior: null, variacion: '+161%', sub: [
+          { nombre: 'Visualizaciones', actual: 24288, anterior: '10 mil', variacion: '+143%',
+            nota: 'Espectadores: 7.8 mil (septiembre: 4.4 mil). Reproducciones de 3 segundos: 3.6 mil.' },
+          { nombre: 'Interacciones', actual: 1408, anterior: 531, sub: [
             { nombre: 'Interacciones con el contenido', actual: 364, anterior: null, variacion: '+72.5%' }
           ] },
           { nombre: 'Total de seguidores', actual: null, anterior: null, sub: [
-            { nombre: 'Seguidores netos', actual: 45, anterior: null, variacion: '+309%' }
+            { nombre: 'Seguidores netos', actual: 45, anterior: 10 }
           ] },
           { nombre: 'Publicaciones en total', actual: null, anterior: null, sub: [
             { nombre: 'Publicaciones en el perfil', actual: null, anterior: null },
@@ -252,18 +255,22 @@ const REPORTES_PLATAFORMAS = {
         ]
       },
 
+      // TikTok se compara con septiembre desde este mes (septiembre sigue sin comparación).
+      // Visualizaciones: los dos meses vienen redondeados (14.9 mil y 7.9 mil), así que
+      // la diferencia y el % van a mano.
       tiktok: {
-        // TikTok no se compara con el mes anterior: solo los datos de octubre
         periodo: '1 – 31 oct 2026',
+        periodoAnterior: '1 – 30 sep 2026',
+        comparadoCon: 'septiembre',
         metricas: [
-          { nombre: 'Visualizaciones', actual: '14.9 mil' },
-          { nombre: 'Me gusta', actual: 241 },
-          { nombre: 'Nuevos seguidores', actual: null },
+          { nombre: 'Visualizaciones', actual: '14.9 mil', anterior: '7.9 mil', diferencia: '+7 mil', variacion: '+88.6%' },
+          { nombre: 'Me gusta', actual: 241, anterior: 144 },
+          { nombre: 'Nuevos seguidores', actual: null, anterior: null },
           { nombre: 'Interacciones', tipo: 'grupo', sub: [
-            { nombre: 'Comentarios', actual: 3 },
-            { nombre: 'Compartidos', actual: 79 }
+            { nombre: 'Comentarios', actual: 3, anterior: 2 },
+            { nombre: 'Compartidos', actual: 79, anterior: 16 }
           ] },
-          { nombre: 'Visualizaciones del perfil', actual: 176 }
+          { nombre: 'Visualizaciones del perfil', actual: 176, anterior: 82 }
         ]
       },
 

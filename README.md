@@ -51,7 +51,7 @@ El acceso es por PIN y todo lo que se edita en el portal se guarda en la nube (F
 
 ## 📊 Reporte de Resultados por plataforma (`reportes.js`)
 
-La pestaña **Resumen de Resultados** muestra 4 bloques (Instagram, Facebook, TikTok y Google). Cada indicador trae su comparación contra el mes anterior, excepto en TikTok, que solo muestra los datos del mes. Debajo, Instagram muestra el Top 3 de contenidos con portada y Google las reseñas destacadas; Facebook y TikTok solo muestran sus indicadores.
+La pestaña **Resumen de Resultados** muestra 4 bloques (Instagram, Facebook, TikTok y Google). Cada indicador trae su comparación contra el mes anterior ("vs septiembre", etc.). TikTok se compara desde octubre 2026; en septiembre 2026 solo muestra los datos del mes. Debajo, Instagram muestra el Top 3 de contenidos con portada y Google las reseñas destacadas; Facebook y TikTok solo muestran sus indicadores.
 
 * **Instagram:** Visualizaciones totales, Cuentas alcanzadas (con visitas al perfil y toques en el enlace externo), Interacciones, Publicaciones en total y Total de seguidores.
 
