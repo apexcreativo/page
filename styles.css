@@ -2701,11 +2701,23 @@ img, svg {
 }
 .pg-chip:hover { border-color: var(--border-focus); }
 
-/* Tabla libre anterior */
-.pg-anterior { margin-top: 24px; border: 1px solid var(--border-subtle); border-radius: 16px; background: #ffffff; }
-.pg-anterior summary { min-height: 48px; display: flex; align-items: center; padding: 0 18px; cursor: pointer; font-size: 14px; font-weight: 700; color: var(--text-strong); }
-.pg-anterior[open] summary { border-bottom: 1px solid var(--border-subtle); }
-.pg-anterior > .plan-toolbar, .pg-anterior > .plan-tabla-wrap { margin: 14px; }
+/* Registro de pagos (tabla que se llena a mano) */
+.pg-tabla {
+  margin-top: 24px; border: 1px solid var(--border-subtle); border-radius: 16px; background: #ffffff;
+  box-shadow: var(--shadow-sm); overflow: hidden;
+}
+.pg-tabla-head {
+  display: flex; align-items: baseline; justify-content: space-between; flex-wrap: wrap; gap: 6px 16px;
+  padding: 18px 18px 0;
+}
+.pg-tabla-head h4 { font-family: var(--font-display); font-size: 17px; font-weight: 800; color: var(--text-strong); }
+.pg-tabla-head p { margin-top: 3px; font-size: 13px; line-height: 1.5; color: var(--text-muted); max-width: 70ch; }
+.pg-tabla > .plan-toolbar, .pg-tabla > .plan-tabla-wrap { margin: 14px 18px 18px; }
+.pg-tabla > .plan-toolbar { margin-bottom: 0; }
+@media (max-width: 760px) {
+  .pg-tabla-head { padding: 16px 14px 0; }
+  .pg-tabla > .plan-toolbar, .pg-tabla > .plan-tabla-wrap { margin: 12px 14px 14px; }
+}
 
 @media (max-width: 760px) {
   .pg-hero { padding: 22px; }

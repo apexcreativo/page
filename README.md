@@ -58,7 +58,7 @@ La pestaña **Resumen de Resultados** muestra 4 bloques (Instagram, Facebook, Ti
 * Los datos se capturan en **`reportes.js`**. El Faro · Septiembre 2026 es el ejemplo completo.
 * Para otro cliente o mes: copia el bloque de El Faro, cámbialo de cliente (slug) y de mes (`'AAAA-MM'`) y llena `actual` y `anterior`. El portal calcula la diferencia, el % y la flecha.
 * `null` se muestra como "Por completar".
-* **Principal contenido (Top 3, solo Instagram):** se pega el link de la publicación o reel; la tarjeta muestra la portada y al darle clic se abre el video en otra pestaña. Las imágenes de `resultados/<cliente>-<AAAA-MM>/portadas/` solo se usan cuando no hay link.
+* **Principal contenido (Top 3, solo Instagram):** se pega el link de la publicación o reel; la tarjeta muestra la portada y al darle clic se abre el video en otra pestaña. Las imágenes de `resultados/<cliente>-<AAAA-MM>/portadas/` solo se usan cuando no hay link. Las portadas de El Faro · octubre 2026 van incrustadas dentro de `reportes.js` (`PORTADAS_ELFARO_2026_10`), así que ese mes no necesita carpeta de imágenes.
 * **Edición desde el portal:** el perfil **APEX CEO1** ve el botón "✏️ Editar reporte" en Resumen de Resultados y puede cambiar todos los campos (periodos, indicadores, valores del mes anterior, notas, Top 3 de Instagram y reseñas de Google). Lo que guarda se va a la nube y tiene prioridad sobre `reportes.js`.
 * **Eliminar un reporte:** el mismo perfil ve "🗑️ Eliminar reporte" cuando el mes tiene un reporte guardado en la nube. Pide confirmación, lo borra de la nube y conserva la planeación y los colores del calendario de ese mes. Lo capturado en `reportes.js` no se borra desde el portal.
 * **Historial de reportes (todos los meses):** arriba del reporte, la tira "Tus reportes mensuales" muestra cada mes publicado, del más antiguo al más reciente. El cliente entra en el más reciente y cambia de mes con un clic, con las flechas ‹ › o con "Reporte anterior / siguiente" al final del reporte. Cada mes que se guarda (con "✏️ Editar reporte" o en `reportes.js`) aparece solo; los meses sin reporte no se muestran al cliente.
@@ -84,7 +84,8 @@ La pestaña **Resumen de Resultados** muestra 4 bloques (Instagram, Facebook, Ti
   * Debajo, el estado de cuenta del cliente elegido, tal como lo ve él, con "Registrar pago", la fecha de pago editable y "Deshacer".
   * "Editar plan" para configurar a cada cliente: concepto, monto de cada mes, día límite de pago, primer mes, duración en meses (vacío = sin fecha de término) y datos para pagar.
 * **Estados:** Pagado, Por pagar (el siguiente pago), Vencido (pasó la fecha límite sin pago) y Por venir. Se calculan solos con la fecha del día; siempre llevan texto e icono, no solo color.
-* **Dónde se guarda:** en la nube, en `resultados/<cliente>__pagos`, campo `cobranza` (`{ concepto, monto, diaPago, inicio: 'AAAA-MM', meses, datosPago, periodos: { 'AAAA-MM': { pagado: 'AAAA-MM-DD' } } }`). La tabla libre anterior (campo `pagos`) se conserva: si tiene datos, aparece abajo en un desplegable.
+* **Registro de pagos (tabla manual):** al final de la pestaña. Empieza con 5 columnas — Fecha de cobro, Fecha de pago, Concepto, Monto y Estado — y 5 filas vacías. El equipo escribe directo en las celdas (se guarda solo), renombra las columnas, agrega columnas (hasta 10), agrega filas de 1, 3, 5 o 10 a la vez, inserta una fila debajo de otra (＋) o la elimina (✕). El cliente la ve en solo lectura, y solo cuando ya tiene algo escrito.
+* **Dónde se guarda:** en la nube, en `resultados/<cliente>__pagos`, campo `cobranza` (`{ concepto, monto, diaPago, inicio: 'AAAA-MM', meses, datosPago, periodos: { 'AAAA-MM': { pagado: 'AAAA-MM-DD' } } }`) y campo `pagos` (el registro de pagos, con `columnas` y `filas`).
 
 ---
 
