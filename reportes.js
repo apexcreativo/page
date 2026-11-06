@@ -190,6 +190,96 @@ const REPORTES_PLATAFORMAS = {
           negativa: { autor: null, calificacion: null, fecha: null, texto: null }
         }
       }
+    },
+
+    // ------------------------------------------------------------------------
+    // EL FARO · OCTUBRE 2026 (capturas del 6 nov 2026)
+    // Instagram y TikTok: 1 – 31 oct. Facebook: últimos 30 días (al 5 nov).
+    // Instagram se compara con el reporte de septiembre (5 sep – 4 oct);
+    // Facebook, con los 30 días previos (porcentajes de Meta).
+    // ------------------------------------------------------------------------
+    '2026-10': {
+      instagram: {
+        periodo: '1 – 31 oct 2026',
+        periodoAnterior: '5 sep – 4 oct 2026',
+        comparadoCon: 'septiembre',
+        metricas: [
+          { nombre: 'Visualizaciones totales', actual: 34695, anterior: 21052, sub: [
+            { nombre: '% de seguidores', tipo: 'porcentaje', actual: 60.9, anterior: 70.3, sinComparacion: true },
+            { nombre: '% de no seguidores', tipo: 'porcentaje', actual: 39.1, anterior: 29.7, sinComparacion: true }
+          ] },
+          { nombre: 'Cuentas alcanzadas', actual: 5477, anterior: 3381, sub: [
+            { nombre: 'Visitas al perfil', actual: 902, anterior: 326 },
+            { nombre: 'Toques en el enlace externo', actual: 32, anterior: 17 }
+          ] },
+          { nombre: 'Interacciones', actual: 827, anterior: 465 },
+          { nombre: 'Publicaciones en total', actual: 58, anterior: 41, sub: [
+            { nombre: 'Publicaciones en el perfil', actual: null, anterior: null },
+            { nombre: 'Historias', actual: null, anterior: null }
+          ], nota: 'Contenido compartido del 7 oct al 5 nov, según el panel de Instagram.' },
+          { nombre: 'Total de seguidores', actual: 3212, anterior: 3200, sub: [
+            { nombre: 'Nuevos seguidores', actual: 66, anterior: 39 },
+            { nombre: 'Seguidores netos', actual: 11, anterior: -12 }
+          ], nota: 'Nuevos seguidores: del 7 oct al 5 nov, según el panel de Instagram.' }
+        ],
+        top: {
+          criterio: 'Visualizaciones',
+          items: [
+            { link: null, portada: 'resultados/elfaro-2026-10/portadas/ig-1.jpg', titulo: 'Corte de listón', valor: '4.9 mil visualizaciones', detalle: '100 cuentas interactuaron con esta publicación' },
+            { link: null, portada: 'resultados/elfaro-2026-10/portadas/ig-2.jpg', titulo: 'Desfile de Catrinas', valor: '2.8 mil visualizaciones', detalle: null },
+            { link: null, portada: 'resultados/elfaro-2026-10/portadas/ig-3.jpg', titulo: 'A veces estoy triste :(', valor: '2.1 mil visualizaciones', detalle: null }
+          ]
+        }
+      },
+
+      facebook: {
+        periodo: 'Últimos 30 días (al 5 nov 2026)',
+        periodoAnterior: '30 días anteriores',
+        comparadoCon: '30 días previos',
+        metricas: [
+          { nombre: 'Visualizaciones', actual: 24288, anterior: null, variacion: '+130%',
+            nota: 'Espectadores: 7.8 mil (+75.8%). Reproducciones de 3 segundos: 3.6 mil (+121%).' },
+          { nombre: 'Interacciones', actual: 1408, anterior: null, variacion: '+161%', sub: [
+            { nombre: 'Interacciones con el contenido', actual: 364, anterior: null, variacion: '+72.5%' }
+          ] },
+          { nombre: 'Total de seguidores', actual: null, anterior: null, sub: [
+            { nombre: 'Seguidores netos', actual: 45, anterior: null, variacion: '+309%' }
+          ] },
+          { nombre: 'Publicaciones en total', actual: null, anterior: null, sub: [
+            { nombre: 'Publicaciones en el perfil', actual: null, anterior: null },
+            { nombre: 'Historias', actual: null, anterior: null }
+          ] }
+        ]
+      },
+
+      tiktok: {
+        // TikTok no se compara con el mes anterior: solo los datos de octubre
+        periodo: '1 – 31 oct 2026',
+        metricas: [
+          { nombre: 'Visualizaciones', actual: '14.9 mil' },
+          { nombre: 'Me gusta', actual: 241 },
+          { nombre: 'Nuevos seguidores', actual: null },
+          { nombre: 'Interacciones', tipo: 'grupo', sub: [
+            { nombre: 'Comentarios', actual: 3 },
+            { nombre: 'Compartidos', actual: 79 }
+          ] },
+          { nombre: 'Visualizaciones del perfil', actual: 176 }
+        ]
+      },
+
+      google: {
+        periodo: 'Octubre 2026',
+        periodoAnterior: 'Septiembre 2026',
+        metricas: [
+          { nombre: 'Total de reseñas', actual: null, anterior: null },
+          { nombre: 'Calificación actual', tipo: 'calificacion', actual: null, anterior: null },
+          { nombre: 'Reseñas nuevas en el mes', actual: null, anterior: null }
+        ],
+        resenas: {
+          positiva: { autor: null, calificacion: null, fecha: null, texto: null },
+          negativa: { autor: null, calificacion: null, fecha: null, texto: null }
+        }
+      }
     }
   }
 
