@@ -340,87 +340,13 @@ html:not(.js) .reveal{opacity:1;transform:none}
 
 <!-- ============================ NAVEGACIÓN ============================ -->
 <header class="nav" id="nav">
-  <a class="nav-brand" href="#inicio" aria-label="Gala del Gremio Restaurantero, inicio">
+  <a class="nav-brand" href="#votar" aria-label="Gala del Gremio Restaurantero">
     <svg class="nav-icon" viewBox="352.00 204.00 131.00 416.00" aria-hidden="true"><use href="#logo-art"/></svg>
     <span>Gala del Gremio<br>Restaurantero</span>
   </a>
-  <nav class="nav-links" aria-label="Secciones">
-    <a href="#evento">El evento</a>
-    <a href="#itinerario">Itinerario</a>
-    <a href="#resultados">Resultados</a>
-  </nav>
-  <a class="btn btn--gold btn--sm" href="#votar">Votar</a>
 </header>
 
 <main id="contenido">
-
-<!-- ============================ PORTADA ============================ -->
-<section class="hero" id="inicio">
-  <div class="pattern" aria-hidden="true"></div>
-  <i class="ribbon ribbon--tl" aria-hidden="true"></i>
-  <i class="ribbon ribbon--br" aria-hidden="true"></i>
-  <i class="ribbon ribbon--br2" aria-hidden="true"></i>
-
-  <div class="hero-inner">
-    <svg class="hero-logo" viewBox="128.50 122.50 354.50 546.50" role="img" aria-label="Logotipo de la Gala del Gremio Restaurantero"><use href="#logo-art"/></svg>
-    <h1 class="hero-title"><span>Gala del Gremio</span><span>Restaurantero</span></h1>
-    <div class="hero-cta">
-      <a class="btn btn--gold" href="#votar">Votar por mis favoritos</a>
-      <a class="btn" id="btnReservar" href="tel:+524731085742" aria-controls="reservaNota" title="Reservaciones: 473 108 5742">Reservar</a>
-    </div>
-    <p class="hero-resv" id="reservaNota" hidden>Reservaciones: <a href="tel:+524731085742">473 108 5742</a></p>
-  </div>
-</section>
-
-<!-- ============================ CUENTA REGRESIVA ============================ -->
-<div class="countdown" id="countdown">
-  <div class="wrap">
-    <p class="cd-label" id="cdLabel">La gala comienza en</p>
-    <div class="cd-grid" id="cdGrid" role="timer" aria-live="off">
-      <div><b id="cdD">--</b><span>días</span></div>
-      <svg aria-hidden="true"><use href="#star"/></svg>
-      <div><b id="cdH">--</b><span>horas</span></div>
-      <svg aria-hidden="true"><use href="#star"/></svg>
-      <div><b id="cdM">--</b><span>min</span></div>
-      <svg aria-hidden="true"><use href="#star"/></svg>
-      <div><b id="cdS">--</b><span>seg</span></div>
-    </div>
-    <p class="cd-msg gold" id="cdMsg" hidden></p>
-    <button class="btn btn--sm" type="button" id="addCal">Agregar al calendario</button>
-  </div>
-</div>
-
-<!-- ============================ EL EVENTO ============================ -->
-<section class="sec sec--evento" id="evento" aria-labelledby="evento-title">
-  <div class="pattern" aria-hidden="true"></div>
-  <div class="wrap">
-    <header class="sec-head reveal">
-      <p class="eyebrow">La noche</p>
-      <h2 class="sec-title gold" id="evento-title">Una noche para celebrar al gremio</h2>
-      <div class="orn" aria-hidden="true"><i></i><svg><use href="#star"/></svg><i></i></div>
-      <p class="sec-lead">CANIRAC Delegación Guanajuato Capital invita a la Gala del Gremio Restaurantero: una velada con alfombra roja, cóctel, cena de cuatro tiempos con chefs invitados, música en vivo y la entrega de reconocimientos a los restaurantes y a las personas que dan identidad a la gastronomía de Guanajuato.</p>
-    </header>
-  </div>
-</section>
-
-<!-- ============================ ITINERARIO ============================ -->
-<section class="sec sec--alt" id="itinerario" aria-labelledby="itin-title">
-  <div class="pattern" aria-hidden="true"></div>
-  <div class="wrap">
-    <header class="sec-head reveal">
-      <p class="eyebrow">Programa</p>
-      <h2 class="sec-title gold" id="itin-title">Itinerario</h2>
-      <div class="orn" aria-hidden="true"><i></i><svg><use href="#star"/></svg><i></i></div>
-    </header>
-    <ol class="tl">
-      <li class="reveal"><div class="t">7:00 PM</div><div class="n"><svg aria-hidden="true"><use href="#star"/></svg></div><div class="c"><h3>Recepción</h3><p>Alfombra roja</p></div></li>
-      <li class="reveal"><div class="t">7:30 PM</div><div class="n"><svg aria-hidden="true"><use href="#star"/></svg></div><div class="c"><h3>Cóctel</h3><p>Música en vivo | Exhibición de autos</p></div></li>
-      <li class="reveal"><div class="t">8:30 PM</div><div class="n"><svg aria-hidden="true"><use href="#star"/></svg></div><div class="c"><h3>Bienvenida</h3><p>Cena cuatro tiempos chef invitados<br>Música en vivo</p></div></li>
-      <li class="reveal"><div class="t">10:15 PM</div><div class="n"><svg aria-hidden="true"><use href="#star"/></svg></div><div class="c"><h3>Premiación Restaurantes</h3><p>Entrega de reconocimientos</p></div></li>
-      <li class="reveal"><div class="t">10:45 PM<small>2:00 AM</small></div><div class="n"><svg aria-hidden="true"><use href="#star"/></svg></div><div class="c"><h3>Orquesta Cumbia</h3><p>Música en vivo | Show Performance</p></div></li>
-    </ol>
-  </div>
-</section>
 
 <!-- ============================ VOTACIÓN ============================ -->
 <section class="sec vote" id="votar" aria-labelledby="votar-title">
@@ -481,8 +407,6 @@ html:not(.js) .reveal{opacity:1;transform:none}
           </header>
           <ul class="review-list" id="reviewList"></ul>
           <form class="voter" id="voterForm" novalidate>
-            <div class="field"><label for="vName">Tu nombre</label><input id="vName" name="nombre" type="text" autocomplete="name" maxlength="80" required></div>
-            <div class="field"><label for="vEst">Tu establecimiento afiliado</label><input id="vEst" name="establecimiento" type="text" list="estList" autocomplete="off" maxlength="90" required><datalist id="estList"></datalist></div>
             <p class="form-msg" id="formMsg" role="alert" hidden></p>
             <p class="demo-note" id="demoNote" hidden>Modo de prueba: todavía no se ha configurado a dónde se envían los votos, así que tu boleta solo se guardará en este dispositivo.</p>
             <div class="stage-actions">
@@ -499,7 +423,7 @@ html:not(.js) .reveal{opacity:1;transform:none}
           <h3 class="stage-title gold">¡Gracias por votar!</h3>
           <p class="lead" id="thanksMsg"></p>
           <p class="demo-note" id="thanksDemo" hidden>Modo de prueba: no hay un destino de votos configurado, así que esta boleta solo quedó guardada en este dispositivo.</p>
-          <div class="thanks-actions"><a class="btn btn--gold" href="#resultados">Ver resultados</a><button class="btn" id="again" type="button">Registrar otro voto</button></div>
+          <div class="thanks-actions"><button class="btn" id="again" type="button">Registrar otro voto</button></div>
           <ul class="review-list" id="thanksList"></ul>
         </div>
       </div>
@@ -508,29 +432,10 @@ html:not(.js) .reveal{opacity:1;transform:none}
   </div>
 </section>
 
-<!-- ============================ RESULTADOS ============================ -->
-<section class="sec results" id="resultados" aria-labelledby="res-title">
-  <div class="pattern" aria-hidden="true"></div>
-  <div class="wrap">
-    <header class="sec-head reveal">
-      <p class="eyebrow">En vivo</p>
-      <h2 class="sec-title gold" id="res-title">Resultados</h2>
-      <div class="orn" aria-hidden="true"><i></i><svg><use href="#star"/></svg><i></i></div>
-      <p class="sec-lead">Así van las votaciones en cada categoría. Se actualizan solos y cualquier persona puede verlos.</p>
-    </header>
-    <div class="res-bar">
-      <p class="res-status" id="resStatus">Cargando resultados…</p>
-      <button class="btn btn--sm" id="resRefresh" type="button">Actualizar</button>
-    </div>
-    <p class="demo-note res-demo" id="resDemo" hidden>Modo de prueba: todavía no se conecta la hoja de votos de CANIRAC, así que aquí solo se cuentan los votos hechos en este dispositivo.</p>
-    <div class="res-grid" id="resGrid"></div>
-  </div>
-</section>
-
 </main>
 
 
-<noscript><p style="position:fixed;inset:auto 0 0 0;background:#d9b844;color:#02254b;text-align:center;padding:12px;z-index:200">Activa JavaScript para usar la votación y ver los resultados.</p></noscript>
+<noscript><p style="position:fixed;inset:auto 0 0 0;background:#d9b844;color:#02254b;text-align:center;padding:12px;z-index:200">Activa JavaScript para usar la votación.</p></noscript>
 
 <!-- ============================================================
      LÓGICA
@@ -694,14 +599,6 @@ var logoHTML = function (n, extra) { return '<span class="logo lg' + n + '"' + (
 var markHTML = function (r) { return r.logo ? logoHTML(r.logo) : '<span class="mono" aria-hidden="true">' + esc(r.mono) + '</span>'; };
 
 /* ==============================================================
-   Resultados: estructura de las 7 tarjetas (el contenido se llena en renderResults)
-   ============================================================== */
-$('#resGrid').innerHTML = CATS.map(function (c, i) {
-  return '<article class="res-card reveal' + (i === CATS.length - 1 ? ' res-card--main' : '') + '" data-cat="' + c.id + '" aria-labelledby="res-h-' + c.id + '">' +
-    '<header class="res-head"><b class="gold">' + pad(i + 1) + '</b><h3 id="res-h-' + c.id + '">' + esc(c.name) + '</h3></header><div class="res-body"></div></article>';
-}).join('');
-
-/* ==============================================================
    Navegación y aparición al hacer scroll
    ============================================================== */
 var nav = $('#nav');
@@ -720,59 +617,18 @@ window.addEventListener('scroll', onScroll, { passive: true }); onScroll();
 })();
 
 /* ==============================================================
-   Cuenta regresiva
-   ============================================================== */
-(function countdown() {
-  var start = new Date(CONFIG.EVENT_START).getTime(), end = new Date(CONFIG.EVENT_END).getTime();
-  var grid = $('#cdGrid'), msg = $('#cdMsg'), label = $('#cdLabel');
-  var D = $('#cdD'), H = $('#cdH'), M = $('#cdM'), S = $('#cdS');
-  function tick() {
-    var now = Date.now(), diff = start - now;
-    if (diff <= 0) {
-      grid.hidden = true; msg.hidden = false;
-      if (now < end) { label.textContent = 'Esta noche'; msg.textContent = 'La gala está en curso'; }
-      else { label.textContent = 'Gracias por acompañarnos'; msg.textContent = 'Hasta la próxima gala'; }
-      return;
-    }
-    var s = Math.floor(diff / 1000);
-    D.textContent = Math.floor(s / 86400);
-    H.textContent = pad(Math.floor(s % 86400 / 3600));
-    M.textContent = pad(Math.floor(s % 3600 / 60));
-    S.textContent = pad(s % 60);
-    grid.setAttribute('aria-label', 'Faltan ' + D.textContent + ' días, ' + H.textContent + ' horas y ' + M.textContent + ' minutos');
-  }
-  tick(); setInterval(tick, 1000);
-})();
-
-/* Agregar al calendario (.ics) */
-$('#addCal').addEventListener('click', function () {
-  var f = function (d) { return new Date(d).toISOString().replace(/[-:]/g, '').replace(/\.\d{3}/, ''); };
-  var ics = ['BEGIN:VCALENDAR', 'VERSION:2.0', 'PRODID:-//CANIRAC Guanajuato Capital//Gala del Gremio Restaurantero//ES', 'CALSCALE:GREGORIAN',
-    'BEGIN:VEVENT', 'UID:gala-gremio-2026@canirac-guanajuato-capital', 'DTSTAMP:' + f(Date.now()),
-    'DTSTART:' + f(CONFIG.EVENT_START), 'DTEND:' + f(CONFIG.EVENT_END),
-    'SUMMARY:Gala del Gremio Restaurantero', 'LOCATION:' + CONFIG.VENUE.replace(/,/g, '\\,'),
-    'DESCRIPTION:Código de vestimenta: Formal. Reservación: 473 108 5742.',
-    'END:VEVENT', 'END:VCALENDAR'].join('\r\n');
-  var a = document.createElement('a');
-  a.href = URL.createObjectURL(new Blob([ics], { type: 'text/calendar;charset=utf-8' }));
-  a.download = 'gala-gremio-restaurantero.ics';
-  document.body.appendChild(a); a.click();
-  setTimeout(function () { URL.revokeObjectURL(a.href); a.remove(); }, 500);
-});
-
-/* ==============================================================
    VOTACIÓN
    ============================================================== */
-var state = { step: 0, view: 'cat', votes: {}, voter: { name: '', est: '' }, sent: null };
+var state = { step: 0, view: 'cat', votes: {}, sent: null };
 (function load() {
   try {
     var s = JSON.parse(store.get(CONFIG.STORAGE_KEY) || 'null');
-    if (s) { state.votes = s.votes || {}; state.voter = s.voter || state.voter; state.sent = s.sent || null; }
+    if (s) { state.votes = s.votes || {}; state.sent = s.sent || null; }
   } catch (e) {}
   Object.keys(state.votes).forEach(function (k) { if (!REST_BY_ID[state.votes[k]]) delete state.votes[k]; });
   if (state.sent) state.view = 'thanks';
 })();
-var save = function () { store.set(CONFIG.STORAGE_KEY, JSON.stringify({ votes: state.votes, voter: state.voter, sent: state.sent })); };
+var save = function () { store.set(CONFIG.STORAGE_KEY, JSON.stringify({ votes: state.votes, sent: state.sent })); };
 var count = function () { return CATS.filter(function (c) { return state.votes[c.id]; }).length; };
 var announce = function (t) { var l = $('#live'); l.textContent = ''; setTimeout(function () { l.textContent = t; }, 30); };
 
@@ -782,7 +638,7 @@ var el = {
   ballot: $('#ballotList'), chips: $('#chips'), progress: $('#progress'), progressBar: $('#progressBar'), progressText: $('#progressText'),
   viewCat: $('#viewCat'), viewReview: $('#viewReview'), viewThanks: $('#viewThanks'),
   count: $('#stageCount'), title: $('#stageTitle'), desc: $('#stageDesc'), top: $('#stageTop'), app: $('#ballotApp'),
-  reviewList: $('#reviewList'), thanksList: $('#thanksList'), form: $('#voterForm'), vName: $('#vName'), vEst: $('#vEst'),
+  reviewList: $('#reviewList'), thanksList: $('#thanksList'), form: $('#voterForm'),
   formMsg: $('#formMsg'), submit: $('#submitBtn'), demoNote: $('#demoNote'), thanksDemo: $('#thanksDemo'), thanksMsg: $('#thanksMsg')
 };
 
@@ -796,7 +652,6 @@ var cards = RESTS.map(function (r) {
   return b;
 });
 var frag = document.createDocumentFragment(); cards.forEach(function (c) { frag.appendChild(c); }); el.track.appendChild(frag);
-$('#estList').innerHTML = RESTS.map(function (r) { return '<option value="' + esc(r.name) + '">'; }).join('');
 var vis = cards.slice();
 
 function applyFilter() {
@@ -878,16 +733,14 @@ function reviewItem(i, withEdit) {
 }
 function renderReview() {
   el.reviewList.innerHTML = CATS.map(function (c, i) { return reviewItem(i, true); }).join('');
-  el.vName.value = state.voter.name || ''; el.vEst.value = state.voter.est || '';
-  el.formMsg.hidden = true; [el.vName, el.vEst].forEach(function (i) { i.removeAttribute('aria-invalid'); });
+  el.formMsg.hidden = true;
   var n = count();
   el.submit.textContent = n === CATS.length ? 'Enviar mis votos' : 'Enviar ' + n + ' de ' + CATS.length + ' votos';
   el.submit.disabled = n === 0;
   el.demoNote.hidden = !!CONFIG.VOTE_ENDPOINT;
 }
 function renderThanks() {
-  var who = (state.voter.name || '').trim().split(/\s+/)[0];
-  el.thanksMsg.textContent = (who ? who + ', tus ' : 'Tus ') + 'votos quedaron registrados. Gracias por ser parte del gremio restaurantero.';
+  el.thanksMsg.textContent = 'Tus votos quedaron registrados. Gracias por ser parte del gremio restaurantero.';
   el.thanksDemo.hidden = !(state.sent && state.sent.demo);
   el.thanksList.innerHTML = CATS.map(function (c, i) { return reviewItem(i, false); }).join('');
   $$('.rv', el.thanksList).forEach(function (b) { b.style.cursor = 'default'; b.tabIndex = -1; });
@@ -980,176 +833,28 @@ function buildPayload() {
     accion: 'votar',
     evento: CONFIG.EVENT_NAME,
     enviado: now.toISOString(),
-    votante: { nombre: state.voter.name.trim(), establecimiento: state.voter.est.trim() },
     votos: votos,
-    columnas: ['Fecha', 'Nombre', 'Establecimiento'].concat(CATS.map(function (c) { return c.name; })),
-    fila: [now.toLocaleString('es-MX', { timeZone: 'America/Mexico_City' }), state.voter.name.trim(), state.voter.est.trim()].concat(votos.map(function (v) { return v.restaurante; }))
+    columnas: ['Fecha'].concat(CATS.map(function (c) { return c.name; })),
+    fila: [now.toLocaleString('es-MX', { timeZone: 'America/Mexico_City' })].concat(votos.map(function (v) { return v.restaurante; }))
   };
 }
-function fail(msg, field) {
+function fail(msg) {
   el.formMsg.textContent = msg; el.formMsg.hidden = false;
-  [el.vName, el.vEst].forEach(function (i) { i.removeAttribute('aria-invalid'); });
-  if (field) { field.setAttribute('aria-invalid', 'true'); field.focus(); }
 }
-[el.vName, el.vEst].forEach(function (inp) {
-  inp.addEventListener('input', function () {
-    state.voter = { name: el.vName.value, est: el.vEst.value }; save();
-    inp.removeAttribute('aria-invalid'); el.formMsg.hidden = true;
-  });
-});
 el.form.addEventListener('submit', function (e) {
   e.preventDefault();
-  state.voter = { name: el.vName.value, est: el.vEst.value };
   if (!count()) return fail('Elige al menos un restaurante antes de enviar.');
-  if (state.voter.name.trim().length < 3) return fail('Escribe tu nombre para poder registrar tu voto.', el.vName);
-  if (state.voter.est.trim().length < 2) return fail('Indica a qué establecimiento afiliado perteneces.', el.vEst);
   var payload = buildPayload();
   el.submit.disabled = true; el.submit.textContent = 'Enviando…';
-  var done = function () { state.sent = { at: payload.enviado, demo: !CONFIG.VOTE_ENDPOINT }; save(); showView('thanks'); ensureVisible(); setTimeout(loadResults, CONFIG.VOTE_ENDPOINT ? 1500 : 0); };
+  var done = function () { state.sent = { at: payload.enviado, demo: !CONFIG.VOTE_ENDPOINT }; save(); showView('thanks'); ensureVisible(); };
   var error = function () { el.submit.disabled = false; renderReview(); fail('No pudimos enviar tu voto. Revisa tu conexión e inténtalo de nuevo.'); };
-  if (!CONFIG.VOTE_ENDPOINT) { urnaAdd(payload); setTimeout(done, 600); return; }
+  if (!CONFIG.VOTE_ENDPOINT) { setTimeout(done, 600); return; }
   fetch(CONFIG.VOTE_ENDPOINT, { method: 'POST', mode: 'no-cors', headers: { 'Content-Type': 'text/plain;charset=utf-8' }, body: JSON.stringify(payload) }).then(done, error);
 });
 $('#again').addEventListener('click', function () {
-  state.votes = {}; state.sent = null; state.voter = { name: '', est: '' }; state.step = 0; save();
+  state.votes = {}; state.sent = null; state.step = 0; save();
   showView('cat'); ensureVisible();
 });
-
-/* ==============================================================
-   Reservar: en teléfonos abre la llamada; en computadora muestra el número
-   ============================================================== */
-(function reservar() {
-  var a = $('#btnReservar'), note = $('#reservaNota');
-  if (!a || !note) return;
-  a.setAttribute('aria-expanded', 'false');
-  a.addEventListener('click', function (e) {
-    if (window.matchMedia && matchMedia('(pointer: coarse)').matches) return;   // teléfono o tableta: marca directamente
-    e.preventDefault();
-    note.hidden = !note.hidden;
-    a.setAttribute('aria-expanded', note.hidden ? 'false' : 'true');
-  });
-})();
-
-/* ==============================================================
-   RESULTADOS en vivo: los ve cualquier persona que abra la página
-   ============================================================== */
-var REST_BY_NORM = {}; RESTS.forEach(function (r) { REST_BY_NORM[r.n] = r; });
-var CAT_BY_NORM = {}; CATS.forEach(function (c, i) { CAT_BY_NORM[norm(c.name)] = i; });
-var RES_TOP = 5;   // restaurantes visibles por categoría antes de «Ver los N con votos»
-var res = { tally: null, loaded: 0, failed: false, loading: false, seq: 0, expanded: {}, sig: {} };
-var resEl = { grid: $('#resGrid'), status: $('#resStatus'), refresh: $('#resRefresh'), demo: $('#resDemo') };
-resEl.demo.hidden = !!CONFIG.VOTE_ENDPOINT;
-
-/* Urna local: solo en modo de prueba (sin VOTE_ENDPOINT), para poder ver cómo se comportan los resultados */
-var URNA_KEY = CONFIG.STORAGE_KEY + '-urna';
-function urnaRead() { try { var a = JSON.parse(store.get(URNA_KEY) || '[]'); return Array.isArray(a) ? a : []; } catch (e) { return []; } }
-function urnaAdd(payload) {
-  var est = norm(payload.votante.establecimiento), urna = urnaRead(), rec = { est: est, votos: {} }, at = -1;
-  payload.votos.forEach(function (v) { if (v.restaurante) rec.votos[v.categoria_id] = v.restaurante; });
-  urna.forEach(function (b, i) { if (b.est === est) at = i; });   // un establecimiento = una boleta (la última reemplaza)
-  if (at >= 0) urna[at] = rec; else urna.push(rec);
-  store.set(URNA_KEY, JSON.stringify(urna));
-}
-function emptyTally() { var t = { total: 0, cats: {} }; CATS.forEach(function (c) { t.cats[c.id] = {}; }); return t; }
-function localTally() {
-  var t = emptyTally(), urna = urnaRead(); t.total = urna.length;
-  urna.forEach(function (b) { CATS.forEach(function (c) { var n = b.votos[c.id]; if (n) t.cats[c.id][n] = (t.cats[c.id][n] || 0) + 1; }); });
-  return t;
-}
-/* Respuesta de la hoja de Google: { ok, total, categorias: [ { categoria, conteo: { "Restaurante": n } } ] } */
-function parseRemote(j) {
-  var t = emptyTally(); t.total = Math.max(0, +j.total || 0);
-  (j.categorias || []).forEach(function (cj, i) {
-    var k = CAT_BY_NORM[norm(cj.categoria || '')]; if (k == null) k = i;   // por nombre; si no coincide, por posición
-    var c = CATS[k]; if (!c) return;
-    Object.keys(cj.conteo || {}).forEach(function (name) { var n = +cj.conteo[name]; if (n > 0) t.cats[c.id][name] = (t.cats[c.id][name] || 0) + n; });
-  });
-  return t;
-}
-
-/* Ranking de una categoría: solo restaurantes de la lista, de más a menos votos (empates comparten lugar) */
-function entriesFor(c) {
-  var raw = res.tally.cats[c.id] || {}, by = {};
-  Object.keys(raw).forEach(function (name) { var r = REST_BY_NORM[norm(name)]; if (r) by[r.id] = (by[r.id] || 0) + raw[name]; });
-  var list = Object.keys(by).map(function (id) { return { rest: REST_BY_ID[id], n: by[id] }; });
-  list.sort(function (a, b) { return b.n - a.n || a.rest.name.localeCompare(b.rest.name, 'es', { sensitivity: 'base' }); });
-  var rank = 0, prev = -1;
-  list.forEach(function (e, i) { if (e.n !== prev) { rank = i + 1; prev = e.n; } e.rank = rank; });
-  return list;
-}
-var votosTxt = function (n) { return n + (n === 1 ? ' voto' : ' votos'); };
-function cardHTML(list, open) {
-  if (!list.length) return '<p class="res-none">Aún no hay votos en esta categoría.</p>';
-  var sum = list.reduce(function (s, e) { return s + e.n; }, 0);
-  var pct = function (n) { return Math.round(n / sum * 100) + ' %'; };
-  var leaders = list.filter(function (e) { return e.rank === 1; }), top = leaders[0], tie = leaders.length > 1;
-  var names = leaders.slice(0, 3).map(function (e) { return esc(e.rest.name); }).join(' · ') + (leaders.length > 3 ? ' · +' + (leaders.length - 3) : '');
-  var html = '<div class="res-lead' + (tie ? ' is-tie' : '') + '"><span class="res-mark">' + (tie ? '<svg aria-hidden="true"><use href="#star"/></svg>' : markHTML(top.rest)) + '</span>' +
-    '<div class="res-who"><p class="res-badge">' + (tie ? 'Empate en 1.er lugar' : 'Va ganando') + '</p><p class="res-name">' + names + '</p>' +
-    '<p class="res-count">' + votosTxt(top.n) + (tie ? ' cada uno' : '') + ' · ' + pct(top.n) + '</p></div></div>';
-  var rest = list.slice(leaders.length), base = Math.max(0, RES_TOP - leaders.length), shown = open ? rest : rest.slice(0, base);
-  if (rest.length) {
-    html += '<div class="res-rest">';
-    if (shown.length) html += '<ul class="res-list" role="list">' + shown.map(function (e) {
-      return '<li class="res-row"><span class="rk">' + e.rank + '</span><span class="nm">' + esc(e.rest.name) + '</span><span class="ct">' + votosTxt(e.n) + ' · ' + pct(e.n) + '</span>' +
-        '<span class="bar" aria-hidden="true"><b style="--w:' + (e.n / top.n * 100).toFixed(1) + '%"></b></span></li>';
-    }).join('') + '</ul>';
-    if (rest.length > base) html += '<button type="button" class="res-more" aria-expanded="' + (open ? 'true' : 'false') + '">' + (open ? 'Ver menos' : 'Ver los ' + list.length + ' con votos') + '</button>';
-    html += '</div>';
-  }
-  return html;
-}
-function renderResults() {
-  CATS.forEach(function (c) {
-    var card = $('[data-cat="' + c.id + '"]', resEl.grid), body = $('.res-body', card);
-    var list = res.tally ? entriesFor(c) : null, open = !!res.expanded[c.id];
-    var sig = list ? JSON.stringify([list.map(function (e) { return [e.rest.id, e.n]; }), open]) : (res.failed ? 'fail' : 'load');
-    if (res.sig[c.id] === sig) return;   // sin cambios: no se vuelve a dibujar
-    res.sig[c.id] = sig;
-    body.innerHTML = list ? cardHTML(list, open) : '<p class="res-none">' + (res.failed ? 'No pudimos cargar los resultados. Toca «Actualizar» para reintentar.' : 'Cargando resultados…') + '</p>';
-  });
-}
-function renderStatus() {
-  var h, hora = function (ms) { return new Date(ms).toLocaleTimeString('es-MX', { hour: 'numeric', minute: '2-digit' }); };
-  if (!res.tally) h = res.loading ? 'Cargando resultados…' : 'No pudimos cargar los resultados.';
-  else {
-    var n = res.tally.total;
-    h = '<b>' + n + '</b> ' + (n === 1 ? 'boleta recibida' : 'boletas recibidas') + ' · Actualizado a las ' + hora(res.loaded);
-    if (res.failed) h += ' · <span class="warn">no se pudo actualizar</span>';
-  }
-  resEl.status.innerHTML = h;
-}
-function loadResults() {
-  var mine = ++res.seq, req;
-  res.loading = true; resEl.refresh.disabled = true; renderStatus();
-  if (!CONFIG.VOTE_ENDPOINT) req = Promise.resolve(localTally());
-  else {
-    var ctl = window.AbortController ? new AbortController() : null, timer = setTimeout(function () { if (ctl) ctl.abort(); }, 15000);
-    var url = CONFIG.VOTE_ENDPOINT + (CONFIG.VOTE_ENDPOINT.indexOf('?') < 0 ? '?' : '&') + 'accion=resultados&_=' + Date.now();
-    req = fetch(url, { cache: 'no-store', signal: ctl ? ctl.signal : undefined })
-      .then(function (r) { if (!r.ok) throw new Error('HTTP ' + r.status); return r.json(); })
-      .then(function (j) { if (!j || j.ok === false) throw new Error('respuesta no válida'); return parseRemote(j); })
-      .then(function (t) { clearTimeout(timer); return t; }, function (e) { clearTimeout(timer); throw e; });
-  }
-  return req.then(function (t) { if (mine === res.seq) { res.tally = t; res.loaded = Date.now(); res.failed = false; } },
-                  function () { if (mine === res.seq) res.failed = true; })
-    .then(function () { if (mine !== res.seq) return; res.loading = false; resEl.refresh.disabled = false; renderResults(); renderStatus(); });
-}
-resEl.refresh.addEventListener('click', loadResults);
-resEl.grid.addEventListener('click', function (e) {
-  var b = e.target.closest ? e.target.closest('.res-more') : null; if (!b) return;
-  var id = b.closest('.res-card').dataset.cat;
-  res.expanded[id] = !res.expanded[id]; renderResults();
-  var again = $('[data-cat="' + id + '"] .res-more', resEl.grid); if (again) again.focus();
-});
-/* Actualización automática mientras la sección se está viendo */
-var resInView = false;
-if ('IntersectionObserver' in window) new IntersectionObserver(function (en) {
-  resInView = en[0].isIntersecting;
-  if (resInView && CONFIG.VOTE_ENDPOINT && Date.now() - res.loaded > 20000) loadResults();
-}).observe($('#resultados'));
-setInterval(function () { if (CONFIG.VOTE_ENDPOINT && resInView && document.visibilityState === 'visible') loadResults(); }, CONFIG.RESULTS_REFRESH_MS);
-renderResults(); renderStatus(); loadResults();
 
 /* ==============================================================
    Arranque
