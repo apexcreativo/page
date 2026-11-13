@@ -7,7 +7,7 @@
   <link rel="icon" href="favicon.svg" type="image/svg+xml">
   <link rel="icon" href="favicon-32.png" type="image/png" sizes="32x32">
   <link rel="apple-touch-icon" href="apple-touch-icon.png">
-  <link rel="stylesheet" href="styles.css?v=2026-11-06-5">
+  <link rel="stylesheet" href="styles.css?v=2026-11-07-1">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <style>
@@ -60,7 +60,7 @@
       <div class="auth-card">
         <div class="logo-symbol" style="margin: 0 auto 16px; width:48px; height:48px; font-size:24px;">A</div>
         <h3 style="font-family:var(--font-display);font-size:22px;color:var(--text-strong);margin-bottom:6px;">Acceso al Workspace</h3>
-        <p style="font-size:13px;color:var(--text-muted);margin-bottom:20px;">Revisa tu parrilla de contenido, aprueba guiones y consulta tus resultados mensuales.</p>
+        <p style="font-size:13px;color:var(--text-muted);margin-bottom:20px;">Revisa tu parrilla de contenido y consulta tus resultados mensuales.</p>
 
         <div class="auth-tabs">
           <button class="auth-tab-btn active" id="authTabClient">Acceso Clientes</button>
@@ -120,7 +120,6 @@
         <button class="portal-tab active" data-tab="resultados">📊 Resumen de Resultados</button>
         <button class="portal-tab" data-tab="planeacion">📝 Planeación</button>
         <button class="portal-tab" data-tab="parrilla">📅 Parrilla de Contenido</button>
-        <button class="portal-tab" data-tab="produccion">🎬 Plan de Producción & Guiones</button>
         <button class="portal-tab" data-tab="tareas" id="tabBtnTareas">📋 Tablero de Colaboradores</button>
         <button class="portal-tab" data-tab="ajustes" id="tabBtnAjustes">⚙️ Ajustes de Agencia</button>
         <button class="portal-tab" data-tab="pagos">💳 Pagos</button>
@@ -165,22 +164,6 @@
         <!-- Llenado por app.js -->
       </div>
 
-      <!-- Pestaña 2: Producción & Guiones -->
-      <div class="tab-content" id="viewTab_produccion" hidden>
-        <div class="prod-layout">
-          <div class="prod-sidebar">
-            <div class="sidebar-header">
-              <span class="mono" style="font-size:11px;color:var(--text-dim);text-transform:uppercase;">Producciones del Mes</span>
-            </div>
-            <div class="prod-items-list" id="prodSidebarList">
-              <!-- Dinámico -->
-            </div>
-          </div>
-          <div class="prod-main-editor" id="prodMainEditor">
-            <!-- Dinámico -->
-          </div>
-        </div>
-      </div>
 
       <!-- Pestaña 3: Tareas de Colaboradores (Equipo) -->
       <div class="tab-content" id="viewTab_tareas" hidden>
@@ -211,7 +194,7 @@
   </div>
 
   <!-- SCRIPTS -->
-  <script src="reportes.js?v=2026-11-06-5"></script>
-  <script src="app.js?v=2026-11-06-5"></script>
+  <script src="reportes.js?v=2026-11-07-1"></script>
+  <script src="app.js?v=2026-11-07-1"></script>
 </body>
 </html>

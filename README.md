@@ -31,8 +31,7 @@ El acceso es por PIN y todo lo que se edita en el portal se guarda en la nube (F
   *(Al dar clic, el cliente entra directamente a su parrilla sin tener que escribir nada).*
 * **Qué puede hacer el cliente:**
   * Ver su **Parrilla de Contenido** del mes con formatos (Reels, Carruseles, Posts) y fechas de publicación.
-  * Revisar el **Guion Escena por Escena** (qué se ve, qué se dice y texto en pantalla).
-  * **Aprobar Guiones con 1 clic** o dejar comentarios y ajustes para el equipo.
+  * Tocar un día o una pieza de la parrilla para ver su detalle (formato, estado, responsable y link de la publicación).
   * Consultar su **Reporte Mensual de Resultados** por plataforma: indicadores con su comparación contra el mes anterior y Top 3 de contenidos de Instagram.
 
 ### 2. Acceso Equipo Apex
@@ -43,6 +42,8 @@ El acceso es por PIN y todo lo que se edita en el portal se guarda en la nube (F
   * **Tablero de Colaboradores & Labores:**
     * Filtrar tareas por responsable: Mitzi (edición/levantamiento), Alexa (grabación/actuación), Influencers aliados, Alejandra (dirección/pauta).
     * Mover piezas entre estados: *Por Grabar*, *Grabado*, *Editado*, *Publicado*.
+    * Al tocar una tarjeta se abre esa pieza en la Parrilla de su cliente, lista para editar.
+  * **Parrilla de Contenido:** en el panel de cada día, "+ Agregar Pieza a este Día" y "✏️ Editar" abren el formulario de la pieza: título, fecha, formato, estado, responsable, duración, link y notas. Se guarda solo; "Listo" lo cierra. Cambiar la fecha mueve la pieza a ese día.
   * **Gestor Dinámico de Equipo:** Agregar nuevos colaboradores sobre la marcha según varíe el equipo.
   * **Reportes de Métricas:** Las métricas de cada cliente y mes se capturan en `reportes.js` (ver abajo).
   * **Respaldos:** Descargar una copia completa de la base de datos en archivo `.json` con un solo clic.
@@ -58,7 +59,7 @@ La pestaña **Resumen de Resultados** muestra 4 bloques (Instagram, Facebook, Ti
 * Los datos se capturan en **`reportes.js`**. El Faro · Septiembre 2026 es el ejemplo completo.
 * Para otro cliente o mes: copia el bloque de El Faro, cámbialo de cliente (slug) y de mes (`'AAAA-MM'`) y llena `actual` y `anterior`. El portal calcula la diferencia, el % y la flecha.
 * `null` se muestra como "Por completar".
-* **Principal contenido (Top 3, solo Instagram):** se pega el link de la publicación o reel; la tarjeta muestra la portada y al darle clic se abre el video en otra pestaña. Las imágenes de `resultados/<cliente>-<AAAA-MM>/portadas/` solo se usan cuando no hay link. Las portadas de El Faro · octubre 2026 van incrustadas dentro de `reportes.js` (`PORTADAS_ELFARO_2026_10`), así que ese mes no necesita carpeta de imágenes.
+* **Principal contenido (Top 3, solo Instagram):** se pega el link de la publicación o reel; la tarjeta muestra la portada y al darle clic se abre el video en otra pestaña. Las imágenes de `resultados/<cliente>-<AAAA-MM>/portadas/` solo se usan cuando no hay link. Las portadas de El Faro · octubre 2026 están en la raíz del sitio (`portada-elfaro-oct-1.jpg`, `-2`, `-3`), sin carpeta.
 * **Edición desde el portal:** el perfil **APEX CEO1** ve el botón "✏️ Editar reporte" en Resumen de Resultados y puede cambiar todos los campos (periodos, indicadores, valores del mes anterior, notas, Top 3 de Instagram y reseñas de Google). Lo que guarda se va a la nube y tiene prioridad sobre `reportes.js`.
 * **Eliminar un reporte:** el mismo perfil ve "🗑️ Eliminar reporte" cuando el mes tiene un reporte guardado en la nube. Pide confirmación, lo borra de la nube y conserva la planeación y los colores del calendario de ese mes. Lo capturado en `reportes.js` no se borra desde el portal.
 * **Historial de reportes (todos los meses):** arriba del reporte, la tira "Tus reportes mensuales" muestra cada mes publicado, del más antiguo al más reciente. El cliente entra en el más reciente y cambia de mes con un clic, con las flechas ‹ › o con "Reporte anterior / siguiente" al final del reporte. Cada mes que se guarda (con "✏️ Editar reporte" o en `reportes.js`) aparece solo; los meses sin reporte no se muestran al cliente.
@@ -70,6 +71,7 @@ La pestaña **Resumen de Resultados** muestra 4 bloques (Instagram, Facebook, Ti
 
 * **Pestaña Planeación:** tabla de 3 columnas por cliente y por mes. El equipo puede escribir en las celdas, renombrar las columnas, agregar filas (1, 3, 5 o 10 a la vez), insertar o eliminar filas y colorear celdas con "🎨 Colorear celdas". El cliente la ve en modo lectura.
 * **Parrilla de Contenido:** con "🎨 Colorear días" el equipo pinta los días del calendario; tocar un día con el mismo color se lo quita.
+* **Plan de Producción & Guiones:** la pestaña se quitó el 7 nov 2026. Las piezas se editan en la Parrilla. Los guiones y requerimientos que ya existían se conservan en la nube (colección `producciones`), aunque ya no se muestran.
 * Todo se guarda en la nube, en el documento del mes de cada cliente (`resultados/<cliente>__<AAAA-MM>`, campos `planeacion` y `calendarioColores`).
 
 ---

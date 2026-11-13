@@ -108,16 +108,13 @@ const state = {
   activeClientSlug: 'palato',
   
   // Navegación dentro del portal
-  activeTab: 'resultados', // 'resultados' | 'planeacion' | 'parrilla' | 'produccion' | 'tareas' | 'ajustes' | 'pagos'
-  
+  activeTab: 'resultados', // 'resultados' | 'planeacion' | 'parrilla' | 'tareas' | 'ajustes' | 'pagos'
+
   // Calendario
   calYear: new Date().getFullYear(),
   calMonth: new Date().getMonth(),
   selectedDayIso: '',
-  
-  // Editor de producción
-  activeProdId: null,
-  prodFilterStatus: '',
+  parrillaEditandoId: null, // pieza que el equipo está editando en el panel del día
   
   // Tablero de tareas
   taskFilterAssignee: 'todos',
@@ -316,6 +313,8 @@ function renderPortalWorkspace() {
   if (state.currentRole === 'client' && (state.activeTab === 'tareas' || state.activeTab === 'ajustes')) {
     state.activeTab = 'resultados';
   }
+  // La pestaña "Plan de Producción & Guiones" ya no existe (7 nov 2026): sus piezas se ven en la parrilla
+  if (state.activeTab === 'produccion') state.activeTab = 'parrilla';
 
   // Activar botón de pestaña actual
   document.querySelectorAll('.portal-tab').forEach(btn => {
@@ -323,7 +322,7 @@ function renderPortalWorkspace() {
   });
 
   // Ocultar todos los paneles y mostrar el activo
-  ['resultados', 'planeacion', 'parrilla', 'produccion', 'tareas', 'ajustes', 'pagos'].forEach(tabName => {
+  ['resultados', 'planeacion', 'parrilla', 'tareas', 'ajustes', 'pagos'].forEach(tabName => {
     const el = document.getElementById(`viewTab_${tabName}`);
     if (el) el.hidden = state.activeTab !== tabName;
   });
@@ -332,7 +331,6 @@ function renderPortalWorkspace() {
   if (state.activeTab === 'parrilla') renderParrilla();
   if (state.activeTab === 'planeacion') renderPlaneacion();
   if (state.activeTab === 'pagos') renderPagos();
-  if (state.activeTab === 'produccion') renderProduccion();
   if (state.activeTab === 'tareas') renderTareas();
   if (state.activeTab === 'resultados') renderResultados();
   if (state.activeTab === 'ajustes') renderAjustes();
@@ -344,7 +342,8 @@ function renderPortalWorkspace() {
 const MESES_NOMBRES = ['Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio', 'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre'];
 const DIAS_NOMBRES = ['Dom', 'Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb'];
 
-function renderParrilla() {
+// opciones.sinPanel = solo redibuja el calendario (para no perder lo que se está escribiendo en el panel del día)
+function renderParrilla(opciones) {
   const y = state.calYear;
   const m = state.calMonth;
   const calTitle = document.getElementById('calMonthDisplay');
@@ -390,7 +389,7 @@ function renderParrilla() {
           if (p.formato === 'Carrusel') formatColor = 'var(--color-carrusel)';
           if (p.formato === 'Post') formatColor = 'var(--color-post)';
           return `
-            <div class="content-chip" style="--chip-color:${formatColor}" onclick="event.stopPropagation(); openProdFromCal('${p.id}')">
+            <div class="content-chip" style="--chip-color:${formatColor}" onclick="event.stopPropagation(); parrillaAbrirPieza('${p.id}')">
               <span class="chip-format">${p.formato} · ${p.estado}</span>
               <span class="chip-title">${escapeHtml(p.titulo || 'Sin título')}</span>
             </div>
@@ -431,7 +430,7 @@ function renderParrilla() {
     calSummaryEl.textContent = `${countTotal} piezas programadas · ${countGrab} grabadas · ${countPub} publicadas`;
   }
 
-  renderDayDetailPanel();
+  if (!(opciones && opciones.sinPanel)) renderDayDetailPanel();
 }
 
 function selectDay(fechaIso) {
@@ -439,282 +438,195 @@ function selectDay(fechaIso) {
   renderParrilla();
 }
 
+// ---------- Panel del día: piezas de la parrilla (7 nov 2026) ----------
+// La pestaña "Plan de Producción & Guiones" se quitó. Lo que ahí se capturaba de cada pieza
+// (título, fecha, formato, estado, responsable, duración, link y notas) se edita ahora aquí,
+// en el panel del día. Los datos siguen en la nube igual (colección "producciones"); el guion
+// por escenas y los requerimientos que ya existan se conservan, solo dejan de mostrarse.
+const PIEZA_FORMATOS = ['Reel', 'Carrusel', 'Post', 'Historia'];
+const PIEZA_ESTADOS = ['Pendiente', 'Grabado', 'Editado', 'Publicado'];
+const PARRILLA_CAJA = 'background:var(--bg-surface-elevated);border:1px solid var(--border-medium);border-radius:var(--radius-lg);padding:18px 22px;margin-top:16px;';
+
+function parrillaFechaValida(f) {
+  return /^\d{4}-\d{2}-\d{2}$/.test(String(f || ''));
+}
+
+// Opciones de un select; conserva un valor guardado que ya no esté en la lista
+function parrillaOpciones(lista, actual, vacio) {
+  const opciones = lista.slice();
+  if (actual && opciones.indexOf(actual) === -1) opciones.push(actual);
+  return (vacio ? `<option value="">${vacio}</option>` : '') +
+    opciones.map(v => `<option value="${escapeHtml(v)}" ${v === actual ? 'selected' : ''}>${escapeHtml(v)}</option>`).join('');
+}
+
+// Tarjeta de una pieza: vista (equipo y cliente) o formulario (equipo, si la está editando)
+function parrillaPiezaHtml(p, esEquipo) {
+  const id = p.id;
+  if (esEquipo && state.parrillaEditandoId === id) {
+    const responsables = (db.colaboradores || []).map(c => c && c.nombre).filter(Boolean);
+    return `
+      <div class="pz-card pz-editando" id="pz_${id}">
+        <div class="pz-form">
+          <label class="pz-campo pz-full">Título
+            <input type="text" class="form-control" id="pzTitulo_${id}" value="${escapeHtml(p.titulo || '')}" placeholder="Ej. Reel de micheladas del viernes"
+              oninput="updateProdField('${id}', 'titulo', this.value)" onchange="renderParrilla({ sinPanel: true })">
+          </label>
+          <label class="pz-campo">Fecha
+            <input type="date" class="form-control" value="${parrillaFechaValida(p.fecha) ? p.fecha : ''}" onchange="parrillaCambiarFecha('${id}', this.value)">
+          </label>
+          <label class="pz-campo">Formato
+            <select class="form-control" onchange="parrillaCampo('${id}', 'formato', this.value)">${parrillaOpciones(PIEZA_FORMATOS, p.formato)}</select>
+          </label>
+          <label class="pz-campo">Estado
+            <select class="form-control" onchange="parrillaCampo('${id}', 'estado', this.value)">${parrillaOpciones(PIEZA_ESTADOS, p.estado)}</select>
+          </label>
+          <label class="pz-campo">Responsable
+            <select class="form-control" onchange="parrillaCampo('${id}', 'actuacion', this.value)">${parrillaOpciones(responsables, p.actuacion, 'Sin asignar')}</select>
+          </label>
+          <label class="pz-campo">Duración
+            <input type="text" class="form-control" value="${escapeHtml(p.duracion || '')}" placeholder="30 seg" oninput="updateProdField('${id}', 'duracion', this.value)">
+          </label>
+          <label class="pz-campo pz-full">Link de la publicación o del video
+            <input type="url" class="form-control" value="${escapeHtml(p.link || '')}" placeholder="https://www.instagram.com/reel/…" oninput="updateProdField('${id}', 'link', this.value)">
+          </label>
+          <label class="pz-campo pz-full">Notas
+            <textarea class="form-control" rows="2" placeholder="Copy, ideas, pendientes…" oninput="updateProdField('${id}', 'notas', this.value)">${escapeHtml(p.notas || '')}</textarea>
+          </label>
+        </div>
+        <div class="pz-acciones">
+          <button type="button" class="btn btn-sm btn-secondary" style="color:#f87171;" onclick="deleteProduction('${id}')">Eliminar</button>
+          <button type="button" class="btn btn-sm btn-primary" onclick="parrillaCerrarEdicion()">Listo</button>
+        </div>
+      </div>`;
+  }
+  const link = rpLinkSeguro(p.link);
+  return `
+    <div class="pz-card" id="pz_${id}" style="display:flex;align-items:center;justify-content:space-between;background:var(--bg-surface);padding:12px 16px;border-radius:var(--radius-md);border:1px solid var(--border-subtle);flex-wrap:wrap;gap:10px;">
+      <div>
+        <span class="badge" style="background:var(--bg-surface-elevated);color:var(--apex-orange);margin-bottom:4px;">${escapeHtml(p.formato || '')} · ${escapeHtml(p.estado || '')}</span>
+        <h5 style="color:var(--text-strong);font-size:15px;font-weight:600;">${escapeHtml(p.titulo || 'Sin título')}</h5>
+        <p style="font-size:12px;color:var(--text-dim);font-family:var(--font-mono);">Asignado a: ${escapeHtml(p.actuacion || 'Sin asignar')} · ${escapeHtml(p.duracion || 's/d')}</p>
+        ${link ? `<a class="pz-link" href="${escapeHtml(link)}" target="_blank" rel="noopener noreferrer">Ver publicación ↗</a>` : ''}
+      </div>
+      ${esEquipo ? `
+        <div style="display:flex;gap:8px;">
+          <button type="button" class="btn btn-sm btn-secondary" onclick="parrillaEditar('${id}')">✏️ Editar</button>
+          <button type="button" class="btn btn-sm btn-secondary" style="color:#f87171;" onclick="deleteProduction('${id}')">Eliminar</button>
+        </div>` : ''}
+    </div>`;
+}
+
 function renderDayDetailPanel() {
   const panel = document.getElementById('dayDetailPanel');
   if (!panel) return;
+  const esEquipo = state.currentRole === 'team';
+  const slug = state.activeClientSlug;
+  // Piezas sin fecha (p. ej. si a alguna se le borró): solo el equipo las ve, para ponerles fecha
+  const sinFecha = esEquipo ? db.producciones.filter(p => p.clienteSlug === slug && !parrillaFechaValida(p.fecha)) : [];
 
-  if (!state.selectedDayIso) {
+  if (!state.selectedDayIso && !sinFecha.length) {
     panel.innerHTML = '';
     panel.hidden = true;
     return;
   }
 
-  const piezas = db.producciones.filter(p => p.clienteSlug === state.activeClientSlug && p.fecha === state.selectedDayIso);
-  const dateObj = new Date(`${state.selectedDayIso}T12:00:00`);
-  const formattedDate = `${DIAS_NOMBRES[dateObj.getDay()]} ${dateObj.getDate()} de ${MESES_NOMBRES[dateObj.getMonth()]} de ${dateObj.getFullYear()}`;
-
-  panel.hidden = false;
-  panel.innerHTML = `
-    <div style="background:var(--bg-surface-elevated);border:1px solid var(--border-medium);border-radius:var(--radius-lg);padding:18px 22px;margin-top:16px;">
-      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;flex-wrap:wrap;gap:10px;">
-        <h4 style="font-family:var(--font-display);font-size:16px;color:var(--text-strong);">📅 Contenido del ${formattedDate}</h4>
-        ${state.currentRole === 'team' ? `
-          <button class="btn btn-sm btn-primary" onclick="createProduction('${state.selectedDayIso}')">+ Agregar Pieza a este Día</button>
-        ` : ''}
-      </div>
-      ${piezas.length === 0 ? `
-        <p style="color:var(--text-dim);font-size:13.5px;">No hay piezas programadas para esta fecha.</p>
-      ` : `
-        <div style="display:flex;flex-direction:column;gap:10px;">
-          ${piezas.map(p => `
-            <div style="display:flex;align-items:center;justify-content:space-between;background:var(--bg-surface);padding:12px 16px;border-radius:var(--radius-md);border:1px solid var(--border-subtle);flex-wrap:wrap;gap:10px;">
-              <div>
-                <span class="badge" style="background:var(--bg-surface-elevated);color:var(--apex-orange);margin-bottom:4px;">${p.formato} · ${p.estado}</span>
-                <h5 style="color:var(--text-strong);font-size:15px;font-weight:600;">${escapeHtml(p.titulo || 'Sin título')}</h5>
-                <p style="font-size:12px;color:var(--text-dim);font-family:var(--font-mono);">Asignado a: ${p.actuacion || 'Sin asignar'} · ${p.duracion || 's/d'}</p>
-              </div>
-              <div style="display:flex;gap:8px;">
-                <button class="btn btn-sm btn-secondary" onclick="openProdFromCal('${p.id}')">Ver Guion Completo</button>
-                ${state.currentRole === 'team' ? `
-                  <button class="btn btn-sm btn-secondary" style="color:#f87171;" onclick="deleteProduction('${p.id}')">Eliminar</button>
-                ` : ''}
-              </div>
-            </div>
-          `).join('')}
+  let html = '';
+  if (state.selectedDayIso) {
+    const piezas = db.producciones.filter(p => p.clienteSlug === slug && p.fecha === state.selectedDayIso);
+    const dateObj = new Date(`${state.selectedDayIso}T12:00:00`);
+    const formattedDate = `${DIAS_NOMBRES[dateObj.getDay()]} ${dateObj.getDate()} de ${MESES_NOMBRES[dateObj.getMonth()]} de ${dateObj.getFullYear()}`;
+    html += `
+      <div style="${PARRILLA_CAJA}">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;flex-wrap:wrap;gap:10px;">
+          <h4 style="font-family:var(--font-display);font-size:16px;color:var(--text-strong);">📅 Contenido del ${formattedDate}</h4>
+          ${esEquipo ? `
+            <button class="btn btn-sm btn-primary" onclick="createProduction('${state.selectedDayIso}')">+ Agregar Pieza a este Día</button>
+          ` : ''}
         </div>
-      `}
-    </div>
-  `;
-}
-
-function openProdFromCal(prodId) {
-  state.activeProdId = prodId;
-  state.activeTab = 'produccion';
-  renderPortalWorkspace();
-}
-
-// ==========================================================================
-// 2. MÓDULO PRODUCCIÓN & GUIONES (Escena por Escena)
-// ==========================================================================
-function renderProduccion() {
-  const piezas = db.producciones.filter(p => p.clienteSlug === state.activeClientSlug);
-
-  // Si no hay pieza activa o no pertenece al cliente, elegir la primera
-  if (!state.activeProdId || !piezas.some(p => p.id === state.activeProdId)) {
-    if (piezas.length > 0) state.activeProdId = piezas[0].id;
-    else state.activeProdId = null;
-  }
-
-  // Encabezado de la lista con el botón para agregar producciones (solo equipo)
-  const headerLista = document.querySelector('#viewTab_produccion .sidebar-header');
-  if (headerLista) {
-    headerLista.style.display = 'flex';
-    headerLista.style.alignItems = 'center';
-    headerLista.style.justifyContent = 'space-between';
-    headerLista.style.gap = '8px';
-    headerLista.innerHTML = `
-      <span class="mono" style="font-size:11px;color:var(--text-dim);text-transform:uppercase;">Producciones del Mes</span>
-      ${state.currentRole === 'team' ? `<button class="btn btn-sm btn-primary" style="font-size:11px;padding:4px 10px;white-space:nowrap;" onclick="createProduction()" title="Agregar una nueva producción para este cliente">+ Agregar</button>` : ''}`;
-  }
-
-  // Renderizar Lista Lateral
-  const listEl = document.getElementById('prodSidebarList');
-  if (listEl) {
-    if (piezas.length === 0) {
-      listEl.innerHTML = '<div style="padding:24px;text-align:center;color:var(--text-dim);font-size:13px;">Sin producciones para este cliente.</div>';
-    } else {
-      listEl.innerHTML = piezas.map(p => `
-        <button class="prod-item-btn ${p.id === state.activeProdId ? 'active' : ''}" onclick="selectProduction('${p.id}')">
-          <div class="item-btn-title">${escapeHtml(p.titulo || 'Sin título')}</div>
-          <div class="item-btn-meta">
-            <span>${p.fecha ? p.fecha.slice(5) : 's/f'}</span> ·
-            <span>${p.formato}</span> ·
-            <span style="color:${p.estado === 'Publicado' ? 'var(--apex-emerald)' : 'var(--text-dim)'}">${p.estado}</span>
-          </div>
-        </button>
-      `).join('');
-    }
-  }
-
-  // Renderizar Editor de Guion
-  const editorEl = document.getElementById('prodMainEditor');
-  if (!editorEl) return;
-
-  const currentProd = piezas.find(p => p.id === state.activeProdId);
-  if (!currentProd) {
-    editorEl.innerHTML = `
-      <div style="text-align:center;padding:60px 20px;">
-        <h3 style="color:var(--text-strong);margin-bottom:12px;">Selecciona o crea una producción</h3>
-        <p style="color:var(--text-muted);font-size:14px;margin-bottom:20px;">Elige una pieza del menú izquierdo para desglosar su guion y plan de grabación.</p>
-        ${state.currentRole === 'team' ? `<button class="btn btn-primary" onclick="createProduction()">+ Nueva Producción</button>` : ''}
-      </div>
-    `;
-    return;
-  }
-
-  // Calcular segundos totales
-  const totalSegundos = (currentProd.guion || []).reduce((acc, escena) => {
-    const s = parseFloat(String(escena.seg || '0').replace(',', '.'));
-    return acc + (isNaN(s) ? 0 : s);
-  }, 0);
-
-  const isClient = state.currentRole === 'client';
-  const readOnlyAttr = isClient ? 'disabled' : '';
-
-  editorEl.innerHTML = `
-    <!-- Barra de Aprobación de Cliente -->
-    <div class="client-approval-bar">
-      <div>
-        <h4 style="font-family:var(--font-display);font-size:15px;color:var(--text-strong);margin-bottom:2px;">
-          ${currentProd.aprobadoCliente ? '✅ Guion Aprobado por el Cliente' : '⏳ Pendiente de Aprobación del Cliente'}
-        </h4>
-        <p style="font-size:12.5px;color:var(--text-muted);">
-          ${currentProd.comentarioCliente ? `Nota del cliente: "${escapeHtml(currentProd.comentarioCliente)}"` : 'Revisa las escenas y confirma si está listo para grabación.'}
-        </p>
-      </div>
-      <div style="display:flex;gap:8px;">
-        ${isClient ? `
-          <button class="btn btn-sm ${currentProd.aprobadoCliente ? 'btn-secondary' : 'btn-primary'}" onclick="toggleClientApproval('${currentProd.id}')">
-            ${currentProd.aprobadoCliente ? 'Quitar Aprobación' : '✓ Aprobar Guion Ahora'}
-          </button>
-          <button class="btn btn-sm btn-secondary" onclick="promptClientComment('${currentProd.id}')">
-            💬 Dejar Comentario
-          </button>
+        ${piezas.length === 0 ? `
+          <p style="color:var(--text-dim);font-size:13.5px;">No hay piezas programadas para esta fecha.</p>
         ` : `
-          <button class="btn btn-sm btn-secondary" onclick="toggleClientApproval('${currentProd.id}')">
-            ${currentProd.aprobadoCliente ? 'Marcar Pendiente' : 'Marcar Aprobado por Cliente'}
-          </button>
+          <div style="display:flex;flex-direction:column;gap:10px;">
+            ${piezas.map(p => parrillaPiezaHtml(p, esEquipo)).join('')}
+          </div>
         `}
-      </div>
-    </div>
-
-    <!-- Área 1: Datos Generales -->
-    <div class="editor-card">
-      <div class="editor-card-header">
-        <div class="editor-card-title">
-          <span class="card-tag-num">ÁREA 1</span> Información General de la Pieza
+      </div>`;
+  }
+  if (sinFecha.length) {
+    html += `
+      <div style="${PARRILLA_CAJA}">
+        <h4 style="font-family:var(--font-display);font-size:16px;color:var(--text-strong);margin-bottom:4px;">🗂️ Piezas sin fecha (${sinFecha.length})</h4>
+        <p style="color:var(--text-dim);font-size:13px;margin-bottom:12px;">Ponles una fecha para que aparezcan en el calendario.</p>
+        <div style="display:flex;flex-direction:column;gap:10px;">
+          ${sinFecha.map(p => parrillaPiezaHtml(p, true)).join('')}
         </div>
-      </div>
-      <div class="form-grid-3">
-        <div class="form-group col-full">
-          <label class="form-label">Título de la Idea</label>
-          <input type="text" class="form-control" value="${escapeHtml(currentProd.titulo || '')}" ${readOnlyAttr} oninput="updateProdField('${currentProd.id}', 'titulo', this.value)" placeholder="Título atractivo">
-        </div>
-        <div class="form-group">
-          <label class="form-label">Fecha Programada</label>
-          <input type="date" class="form-control" value="${currentProd.fecha || ''}" ${readOnlyAttr} onchange="updateProdField('${currentProd.id}', 'fecha', this.value)">
-        </div>
-        <div class="form-group">
-          <label class="form-label">Formato</label>
-          <select class="form-control" ${readOnlyAttr} onchange="updateProdField('${currentProd.id}', 'formato', this.value)">
-            <option ${currentProd.formato === 'Reel' ? 'selected' : ''}>Reel</option>
-            <option ${currentProd.formato === 'Carrusel' ? 'selected' : ''}>Carrusel</option>
-            <option ${currentProd.formato === 'Post' ? 'selected' : ''}>Post</option>
-            <option ${currentProd.formato === 'Historia' ? 'selected' : ''}>Historia</option>
-          </select>
-        </div>
-        <div class="form-group">
-          <label class="form-label">Estado de Producción</label>
-          <select class="form-control" ${readOnlyAttr} onchange="updateProdField('${currentProd.id}', 'estado', this.value)">
-            <option ${currentProd.estado === 'Pendiente' ? 'selected' : ''}>Pendiente</option>
-            <option ${currentProd.estado === 'Grabado' ? 'selected' : ''}>Grabado</option>
-            <option ${currentProd.estado === 'Editado' ? 'selected' : ''}>Editado</option>
-            <option ${currentProd.estado === 'Publicado' ? 'selected' : ''}>Publicado</option>
-          </select>
-        </div>
-        <div class="form-group">
-          <label class="form-label">Responsable / Actuación</label>
-          <select class="form-control" ${readOnlyAttr} onchange="updateProdField('${currentProd.id}', 'actuacion', this.value)">
-            <option value="">Seleccionar colaborador...</option>
-            ${db.colaboradores.map(col => `
-              <option value="${col.nombre}" ${currentProd.actuacion === col.nombre ? 'selected' : ''}>${col.nombre} (${col.rol})</option>
-            `).join('')}
-          </select>
-        </div>
-        <div class="form-group">
-          <label class="form-label">Duración Estimada</label>
-          <input type="text" class="form-control" value="${escapeHtml(currentProd.duracion || '')}" ${readOnlyAttr} oninput="updateProdField('${currentProd.id}', 'duracion', this.value)" placeholder="30 seg">
-        </div>
-        <div class="form-group">
-          <label class="form-label">Link del Video Final</label>
-          <input type="url" class="form-control" value="${escapeHtml(currentProd.link || '')}" ${readOnlyAttr} oninput="updateProdField('${currentProd.id}', 'link', this.value)" placeholder="https://drive.google.com/...">
-        </div>
-      </div>
-    </div>
-
-    <!-- Área 2: Guion Escena por Escena -->
-    <div class="editor-card">
-      <div class="editor-card-header">
-        <div class="editor-card-title">
-          <span class="card-tag-num">ÁREA 2</span> Guion & Desglose Técnico
-        </div>
-        <div class="mono" style="font-size:12px;color:var(--apex-orange);">
-          ${(currentProd.guion || []).length} escenas · Total: ${Math.round(totalSegundos * 10) / 10} s
-        </div>
-      </div>
-      <div class="guion-table-wrap">
-        <table class="guion-table">
-          <thead>
-            <tr>
-              <th style="width:40px;text-align:center;">#</th>
-              <th style="width:26%;">Qué se ve (Visual)</th>
-              <th style="width:30%;">Lo que se dice (Audio / Voz)</th>
-              <th style="width:18%;">Cómo lo dice (Tono)</th>
-              <th style="width:18%;">Texto en Pantalla</th>
-              <th style="width:65px;text-align:center;">Seg</th>
-              ${!isClient ? '<th style="width:35px;"></th>' : ''}
-            </tr>
-          </thead>
-          <tbody>
-            ${(currentProd.guion || []).map((escena, idx) => `
-              <tr>
-                <td style="text-align:center;font-family:var(--font-mono);color:var(--text-dim);">${idx + 1}</td>
-                <td><textarea class="guion-input" ${readOnlyAttr} oninput="updateSceneField('${currentProd.id}', ${idx}, 've', this.value)">${escapeHtml(escena.ve || '')}</textarea></td>
-                <td><textarea class="guion-input" ${readOnlyAttr} oninput="updateSceneField('${currentProd.id}', ${idx}, 'dice', this.value)">${escapeHtml(escena.dice || '')}</textarea></td>
-                <td><textarea class="guion-input" ${readOnlyAttr} oninput="updateSceneField('${currentProd.id}', ${idx}, 'como', this.value)">${escapeHtml(escena.como || '')}</textarea></td>
-                <td><textarea class="guion-input" ${readOnlyAttr} oninput="updateSceneField('${currentProd.id}', ${idx}, 'texto', this.value)">${escapeHtml(escena.texto || '')}</textarea></td>
-                <td><input type="text" class="guion-input" style="text-align:center;min-height:0;height:36px;" value="${escapeHtml(escena.seg || '')}" ${readOnlyAttr} oninput="updateSceneField('${currentProd.id}', ${idx}, 'seg', this.value)"></td>
-                ${!isClient ? `
-                  <td style="vertical-align:middle;text-align:center;">
-                    <button class="btn btn-sm btn-secondary" style="padding:4px 8px;color:#f87171;" onclick="deleteScene('${currentProd.id}', ${idx})">×</button>
-                  </td>
-                ` : ''}
-              </tr>
-            `).join('')}
-          </tbody>
-        </table>
-      </div>
-      ${!isClient ? `
-        <button class="btn btn-sm btn-primary" onclick="addScene('${currentProd.id}')">+ Agregar Escena</button>
-      ` : ''}
-    </div>
-
-    <!-- Área 3: Requerimientos & Notas -->
-    <div class="editor-card">
-      <div class="editor-card-header">
-        <div class="editor-card-title">
-          <span class="card-tag-num">ÁREA 3</span> Requerimientos de Grabación y Notas del Equipo
-        </div>
-      </div>
-      <div class="form-grid-3">
-        <div class="form-group col-full">
-          <label class="form-label">Requerimientos (Utilería, vestuario, iluminación, locación)</label>
-          <textarea class="form-control" rows="2" ${readOnlyAttr} oninput="updateProdField('${currentProd.id}', 'requerimientos', this.value)">${escapeHtml(currentProd.requerimientos || '')}</textarea>
-        </div>
-        <div class="form-group col-full">
-          <label class="form-label">Notas Adicionales</label>
-          <textarea class="form-control" rows="2" ${readOnlyAttr} oninput="updateProdField('${currentProd.id}', 'notas', this.value)">${escapeHtml(currentProd.notas || '')}</textarea>
-        </div>
-      </div>
-    </div>
-  `;
+      </div>`;
+  }
+  panel.hidden = false;
+  panel.innerHTML = html;
 }
 
-function selectProduction(id) {
-  state.activeProdId = id;
-  renderProduccion();
+// Abre una pieza en la parrilla: va a su mes, marca su día y, para el equipo, abre su formulario.
+// Se usa al tocar una pieza del calendario y desde el Tablero de Colaboradores.
+function parrillaAbrirPieza(prodId) {
+  const p = db.producciones.find(x => x.id === prodId);
+  if (!p) return;
+  if (parrillaFechaValida(p.fecha)) {
+    state.calYear = Number(p.fecha.slice(0, 4));
+    state.calMonth = Number(p.fecha.slice(5, 7)) - 1;
+    state.selectedDayIso = p.fecha;
+  }
+  state.parrillaEditandoId = state.currentRole === 'team' ? p.id : null;
+  state.activeTab = 'parrilla';
+  renderPortalWorkspace();
+  parrillaMostrarPieza(p.id, {});
 }
 
+function parrillaEditar(prodId) {
+  state.parrillaEditandoId = prodId;
+  renderParrilla();
+  parrillaMostrarPieza(prodId, { enfocar: true });
+}
+
+function parrillaCerrarEdicion() {
+  state.parrillaEditandoId = null;
+  renderParrilla();
+}
+
+// Formato, estado y responsable: se guarda y se actualiza el calendario sin cerrar el formulario
+function parrillaCampo(prodId, campo, valor) {
+  updateProdField(prodId, campo, valor);
+  renderParrilla({ sinPanel: true });
+}
+
+// Cambiar la fecha mueve la pieza a ese día (y a ese mes) y la deja abierta
+function parrillaCambiarFecha(prodId, valor) {
+  if (!parrillaFechaValida(valor)) { renderParrilla(); return; } // una pieza no se queda sin fecha
+  updateProdField(prodId, 'fecha', valor);
+  state.calYear = Number(valor.slice(0, 4));
+  state.calMonth = Number(valor.slice(5, 7)) - 1;
+  state.selectedDayIso = valor;
+  renderParrilla();
+  parrillaMostrarPieza(prodId, {});
+}
+
+// Lleva la pieza a la vista dentro de la pestaña (sin mover el resto de la página)
+function parrillaMostrarPieza(prodId, opciones) {
+  opciones = opciones || {};
+  const caja = document.getElementById('viewTab_parrilla');
+  const el = document.getElementById('pz_' + prodId);
+  if (caja && el && caja.scrollHeight > caja.clientHeight) {
+    const arriba = el.getBoundingClientRect().top - caja.getBoundingClientRect().top + caja.scrollTop - 90;
+    caja.scrollTo({ top: Math.max(0, arriba), behavior: 'smooth' });
+  }
+  const titulo = document.getElementById('pzTitulo_' + prodId);
+  if (titulo && opciones.enfocar) {
+    titulo.focus({ preventScroll: true });
+    if (opciones.seleccionar) titulo.select();
+  }
+}
+
+// ---------- Datos de cada pieza (colección "producciones") ----------
 function createProduction(fechaDefecto) {
   const newProd = {
     id: 'p_' + Date.now().toString(36) + Math.random().toString(36).slice(2, 6),
@@ -736,15 +648,16 @@ function createProduction(fechaDefecto) {
   };
   db.producciones.push(newProd);
   saveDatabase();
-  state.activeProdId = newProd.id;
+  state.parrillaEditandoId = newProd.id;
   renderPortalWorkspace();
+  parrillaMostrarPieza(newProd.id, { enfocar: true, seleccionar: true });
 }
 
 function deleteProduction(id) {
-  if (confirm('¿Eliminar esta producción de contenido?')) {
+  if (confirm('¿Eliminar esta pieza de la parrilla?')) {
     db.producciones = db.producciones.filter(p => p.id !== id);
     saveDatabase();
-    if (state.activeProdId === id) state.activeProdId = null;
+    if (state.parrillaEditandoId === id) state.parrillaEditandoId = null;
     renderPortalWorkspace();
   }
 }
@@ -754,55 +667,6 @@ function updateProdField(id, field, value) {
   if (p) {
     p[field] = value;
     saveDatabase();
-  }
-}
-
-function updateSceneField(prodId, sceneIdx, field, value) {
-  const p = db.producciones.find(item => item.id === prodId);
-  if (p && p.guion && p.guion[sceneIdx]) {
-    p.guion[sceneIdx][field] = value;
-    saveDatabase();
-  }
-}
-
-function addScene(prodId) {
-  const p = db.producciones.find(item => item.id === prodId);
-  if (p) {
-    if (!p.guion) p.guion = [];
-    p.guion.push({ ve: '', dice: '', como: '', texto: '', seg: '5' });
-    saveDatabase();
-    renderProduccion();
-  }
-}
-
-function deleteScene(prodId, sceneIdx) {
-  const p = db.producciones.find(item => item.id === prodId);
-  if (p && p.guion) {
-    p.guion.splice(sceneIdx, 1);
-    if (p.guion.length === 0) p.guion.push({ ve: '', dice: '', como: '', texto: '', seg: '' });
-    saveDatabase();
-    renderProduccion();
-  }
-}
-
-function toggleClientApproval(prodId) {
-  const p = db.producciones.find(item => item.id === prodId);
-  if (p) {
-    p.aprobadoCliente = !p.aprobadoCliente;
-    saveDatabase();
-    renderProduccion();
-  }
-}
-
-function promptClientComment(prodId) {
-  const p = db.producciones.find(item => item.id === prodId);
-  if (p) {
-    const comentario = prompt('Escribe tus observaciones o ajustes para el equipo de producción:', p.comentarioCliente || '');
-    if (comentario !== null) {
-      p.comentarioCliente = comentario;
-      saveDatabase();
-      renderProduccion();
-    }
   }
 }
 
@@ -931,11 +795,10 @@ function moveTaskStatus(prodId, newStatus) {
   }
 }
 
+// Desde el tablero, la pieza se abre en la parrilla de su cliente (7 nov 2026)
 function openProdFromKanban(clientSlug, prodId) {
   state.activeClientSlug = clientSlug;
-  state.activeProdId = prodId;
-  state.activeTab = 'produccion';
-  renderPortalWorkspace();
+  parrillaAbrirPieza(prodId);
 }
 
 // ==========================================================================

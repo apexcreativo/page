@@ -8,7 +8,7 @@
   <link rel="icon" href="favicon.svg" type="image/svg+xml">
   <link rel="icon" href="favicon-32.png" type="image/png" sizes="32x32">
   <link rel="apple-touch-icon" href="apple-touch-icon.png">
-  <link rel="stylesheet" href="styles.css?v=2026-11-06-5">
+  <link rel="stylesheet" href="styles.css?v=2026-11-07-1">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 </head>
@@ -92,8 +92,6 @@
 
   <!-- ======================================================================
        COTIZACIONES
-       Precios de referencia (MXN, antes de IVA). Para cambiarlos, edita
-       los textos dentro de <span class="price-amount">.
        ====================================================================== -->
   <section class="section" id="cotizaciones" style="border-top: 1px solid var(--border-subtle);">
     <div class="container">
@@ -109,10 +107,6 @@
           <span class="price-level">Nivel 1</span>
           <h3 class="price-name">Impulso</h3>
           <p class="price-tagline">Contenido visual profesional para tu marca.</p>
-          <div class="price-value">
-            <span class="price-amount">$2,900</span>
-            <span class="price-period">MXN / sesión</span>
-          </div>
           <ul class="price-features">
             <li>Sesión de producción de 2 horas</li>
             <li>8 fotografías profesionales</li>
@@ -126,10 +120,6 @@
           <span class="price-level">Nivel 2</span>
           <h3 class="price-name">Apex</h3>
           <p class="price-tagline">Gestión integral de tus redes sociales.</p>
-          <div class="price-value">
-            <span class="price-amount">$7,000</span>
-            <span class="price-period">MXN / mes</span>
-          </div>
           <ul class="price-features">
             <li><b>Estrategia:</b> estrategia de redes sociales y calendario de contenido</li>
             <li><b>Contenido:</b> 12 publicaciones al mes, piezas gráficas para redes y producción de fotos y videos en 2 visitas al mes</li>
@@ -144,10 +134,6 @@
           <span class="price-level">Nivel 3 · Recomendado</span>
           <h3 class="price-name">Apex Pro</h3>
           <p class="price-tagline">Presencia de marca completa, digital y física.</p>
-          <div class="price-value">
-            <span class="price-amount">$12,000</span>
-            <span class="price-period">MXN / mes</span>
-          </div>
           <ul class="price-features">
             <li><b>Todo lo de Apex</b>, ampliado y con valor agregado</li>
             <li>20 publicaciones al mes (en lugar de 12)</li>
@@ -179,7 +165,6 @@
               <tr><th scope="row">Piezas físicas</th><td class="no">✗</td><td class="no">✗</td><td>3</td></tr>
               <tr><th scope="row">Página web</th><td class="no">✗</td><td class="no">✗</td><td class="yes">✓</td></tr>
               <tr><th scope="row">Consultoría</th><td class="no">✗</td><td class="no">✗</td><td class="yes">✓</td></tr>
-              <tr class="compare-total"><th scope="row">Inversión (MXN)</th><td>$2,900</td><td>$7,000 / mes</td><td>$12,000 / mes</td></tr>
             </tbody>
           </table>
         </div>
@@ -195,7 +180,7 @@
           <div class="addon-item"><span>Estrategia de marca personal y figura pública</span></div>
           <div class="addon-item"><span>Pauta digital (gestión, sin inversión publicitaria)</span></div>
         </div>
-        <p class="price-note">Precios en pesos mexicanos, antes de IVA. Para proyectos en Colombia cotizamos en COP. La inversión en anuncios se paga directo a las plataformas.</p>
+        <p class="price-note">Para proyectos en Colombia cotizamos en COP. La inversión en anuncios se paga directo a las plataformas.</p>
       </div>
     </div>
   </section>
@@ -281,7 +266,7 @@
         <div class="auth-card">
           <div class="logo-symbol" style="margin: 0 auto 16px; width:48px; height:48px; font-size:24px;">A</div>
           <h3 style="font-family:var(--font-display);font-size:22px;color:var(--text-strong);margin-bottom:6px;">Acceso al Workspace</h3>
-          <p style="font-size:13px;color:var(--text-muted);margin-bottom:20px;">Revisa tu parrilla de contenido, aprueba guiones y consulta tus resultados mensuales.</p>
+          <p style="font-size:13px;color:var(--text-muted);margin-bottom:20px;">Revisa tu parrilla de contenido y consulta tus resultados mensuales.</p>
 
           <div class="auth-tabs">
             <button class="auth-tab-btn active" id="authTabClient">Acceso Clientes</button>
@@ -318,7 +303,7 @@
         </div>
       </div>
 
-      <!-- PANTALLA 2: WORKSPACE INTERNO (PARRILLA, GUIONES, TAREAS, RESULTADOS) -->
+      <!-- PANTALLA 2: WORKSPACE INTERNO (PARRILLA, TAREAS, RESULTADOS) -->
       <div class="workspace-body" id="portalWorkspaceBody" hidden>
         
         <!-- Encabezado de Cliente Activo -->
@@ -341,7 +326,6 @@
           <button class="portal-tab active" data-tab="resultados">📊 Resumen de Resultados</button>
           <button class="portal-tab" data-tab="planeacion">📝 Planeación</button>
           <button class="portal-tab" data-tab="parrilla">📅 Parrilla de Contenido</button>
-          <button class="portal-tab" data-tab="produccion">🎬 Plan de Producción & Guiones</button>
           <button class="portal-tab" data-tab="tareas" id="tabBtnTareas">📋 Tablero de Colaboradores</button>
           <button class="portal-tab" data-tab="ajustes" id="tabBtnAjustes">⚙️ Ajustes de Agencia</button>
           <button class="portal-tab" data-tab="pagos">💳 Pagos</button>
@@ -388,22 +372,6 @@
           <!-- Llenado por app.js -->
         </div>
 
-        <!-- Pestaña 2: Producción & Guiones -->
-        <div class="tab-content" id="viewTab_produccion" hidden>
-          <div class="prod-layout">
-            <div class="prod-sidebar">
-              <div class="sidebar-header">
-                <span class="mono" style="font-size:11px;color:var(--text-dim);text-transform:uppercase;">Producciones del Mes</span>
-              </div>
-              <div class="prod-items-list" id="prodSidebarList">
-                <!-- Llenado por app.js -->
-              </div>
-            </div>
-            <div class="prod-main-editor" id="prodMainEditor">
-              <!-- Editor escena por escena lleno por app.js -->
-            </div>
-          </div>
-        </div>
 
         <!-- Pestaña 3: Tablero de Tareas de Colaboradores (Solo Equipo) -->
         <div class="tab-content" id="viewTab_tareas" hidden>
@@ -436,7 +404,7 @@
   </div>
 
   <!-- SCRIPTS -->
-  <script src="reportes.js?v=2026-11-06-5"></script>
-  <script src="app.js?v=2026-11-06-5"></script>
+  <script src="reportes.js?v=2026-11-07-1"></script>
+  <script src="app.js?v=2026-11-07-1"></script>
 </body>
 </html>
