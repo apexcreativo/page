@@ -356,13 +356,13 @@ html:not(.js) .reveal{opacity:1;transform:none}
       <p class="eyebrow">Votación</p>
       <h2 class="sec-title gold" id="votar-title">Vota por tus favoritos</h2>
       <div class="orn" aria-hidden="true"><i></i><svg><use href="#star"/></svg><i></i></div>
-      <p class="sec-lead">Elige un restaurante en cada una de las 7 categorías. Escribe su nombre para encontrarlo al instante y desliza para recorrer a todos los afiliados.</p>
+      <p class="sec-lead">Elige un restaurante en cada una de las 6 categorías. Escribe su nombre para encontrarlo al instante y desliza para recorrer a todos los afiliados.</p>
     </header>
 
     <div class="ballot-app reveal" id="ballotApp">
       <aside class="ballot" aria-label="Tu boleta">
-        <div class="ballot-head"><h3>Tu boleta</h3><b id="progressText">0 de 7</b></div>
-        <div class="progress" id="progress" role="progressbar" aria-label="Categorías votadas" aria-valuemin="0" aria-valuemax="7" aria-valuenow="0"><i id="progressBar"></i></div>
+        <div class="ballot-head"><h3>Tu boleta</h3><b id="progressText">0 de 6</b></div>
+        <div class="progress" id="progress" role="progressbar" aria-label="Categorías votadas" aria-valuemin="0" aria-valuemax="6" aria-valuenow="0"><i id="progressBar"></i></div>
         <ol class="ballot-list" id="ballotList"></ol>
       </aside>
 
@@ -498,15 +498,14 @@ var PRUEBA = /[?&]prueba(?:[=&]|$)/i.test(location.search);   // ?prueba: votos 
 var TABLERO = PRUEBA ? 'prueba' : 'conteo';
 var STORAGE_KEY = CONFIG.STORAGE_KEY + (PRUEBA ? '-prueba' : '');
 
-/* ----- Las 7 categorías que se votan ----- */
+/* ----- Las 6 categorías que se votan ----- */
 var CATS = [
   { id:'excelencia',  name:'Excelencia Gastronómica',            short:'Excelencia',            desc:'Calidad de platillos, técnica, creatividad y consistencia.' },
   { id:'experiencia', name:'Mejor Experiencia Restaurantera',    short:'Mejor experiencia',     desc:'Servicio, hospitalidad, ambiente y atención al comensal.' },
   { id:'innovacion',  name:'Innovación Gastronómica',            short:'Innovación',            desc:'Propuestas originales y evolución de la oferta culinaria.' },
   { id:'identidad',   name:'Identidad y Tradición Guanajuatense',short:'Identidad y tradición', desc:'Preservación de recetas, ingredientes y patrimonio local.' },
   { id:'revelacion',  name:'Restaurante Revelación del Año',     short:'Revelación del año',    desc:'Nuevos establecimientos con propuesta y crecimiento destacado.' },
-  { id:'compromiso',  name:'Compromiso Social y Sustentable',    short:'Compromiso social',     desc:'Prácticas responsables, apoyo local e impacto ambiental.' },
-  { id:'anio',        name:'Restaurante del Año',                short:'Restaurante del Año',   desc:'Máxima distinción al establecimiento más destacado del año.' }
+  { id:'compromiso',  name:'Compromiso Social y Sustentable',    short:'Compromiso social',     desc:'Prácticas responsables, apoyo local e impacto ambiental.' }
 ];
 
 /* ----- Restaurantes afiliados: [nombre, número de logo]  (0 = sin logo → muestra monograma) -----
@@ -632,7 +631,7 @@ var markHTML = function (r) { return r.logo ? logoHTML(r.logo) : '<span class="m
    Resultados: estructura de las 7 tarjetas (el contenido se llena en renderResults)
    ============================================================== */
 $('#resGrid').innerHTML = CATS.map(function (c, i) {
-  return '<article class="res-card reveal' + (i === CATS.length - 1 ? ' res-card--main' : '') + '" data-cat="' + c.id + '" aria-labelledby="res-h-' + c.id + '">' +
+  return '<article class="res-card reveal" data-cat="' + c.id + '" aria-labelledby="res-h-' + c.id + '">' +
     '<header class="res-head"><b class="gold">' + pad(i + 1) + '</b><h3 id="res-h-' + c.id + '">' + esc(c.name) + '</h3></header><div class="res-body"></div></article>';
 }).join('');
 
@@ -911,7 +910,8 @@ function nubeLista() {
   return nube.carga;
 }
 function tableroRef(fs) { return fs.collection('gala').doc(TABLERO); }
-function tableroInicial() { var c = {}; CATS.forEach(function (k) { c[k.id] = {}; }); return { total: 0, ultima: '', c: c }; }
+/* Las reglas de Firestore piden el tablero con estas 7 llaves; "anio" (Restaurante del Año) ya no se vota y queda vacía */
+function tableroInicial() { var c = {}; ['excelencia', 'experiencia', 'innovacion', 'identidad', 'revelacion', 'compromiso', 'anio'].forEach(function (k) { c[k] = {}; }); return { total: 0, ultima: '', c: c }; }
 function nubeVotar(votos) {
   return nubeLista().then(function (fs) {
     var ref = tableroRef(fs);
@@ -967,18 +967,16 @@ function entriesFor(c) {
 var votosTxt = function (n) { return n + (n === 1 ? ' voto' : ' votos'); };
 function cardHTML(list, open) {
   if (!list.length) return '<p class="res-none">Aún no hay votos en esta categoría.</p>';
-  var sum = list.reduce(function (s, e) { return s + e.n; }, 0);
-  var pct = function (n) { return Math.round(n / sum * 100) + ' %'; };
   var leaders = list.filter(function (e) { return e.rank === 1; }), top = leaders[0], tie = leaders.length > 1;
   var names = leaders.slice(0, 3).map(function (e) { return esc(e.rest.name); }).join(' · ') + (leaders.length > 3 ? ' · +' + (leaders.length - 3) : '');
   var html = '<div class="res-lead' + (tie ? ' is-tie' : '') + '"><span class="res-mark">' + (tie ? '<svg aria-hidden="true"><use href="#star"/></svg>' : markHTML(top.rest)) + '</span>' +
     '<div class="res-who"><p class="res-badge">' + (tie ? 'Empate en 1.er lugar' : 'Va ganando') + '</p><p class="res-name">' + names + '</p>' +
-    '<p class="res-count">' + votosTxt(top.n) + (tie ? ' cada uno' : '') + ' · ' + pct(top.n) + '</p></div></div>';
+    '<p class="res-count">' + votosTxt(top.n) + (tie ? ' cada uno' : '') + '</p></div></div>';
   var rest = list.slice(leaders.length), base = Math.max(0, RES_TOP - leaders.length), shown = open ? rest : rest.slice(0, base);
   if (rest.length) {
     html += '<div class="res-rest">';
     if (shown.length) html += '<ul class="res-list" role="list">' + shown.map(function (e) {
-      return '<li class="res-row"><span class="rk">' + e.rank + '</span><span class="nm">' + esc(e.rest.name) + '</span><span class="ct">' + votosTxt(e.n) + ' · ' + pct(e.n) + '</span>' +
+      return '<li class="res-row"><span class="rk">' + e.rank + '</span><span class="nm">' + esc(e.rest.name) + '</span><span class="ct">' + votosTxt(e.n) + '</span>' +
         '<span class="bar" aria-hidden="true"><b style="--w:' + (e.n / top.n * 100).toFixed(1) + '%"></b></span></li>';
     }).join('') + '</ul>';
     if (rest.length > base) html += '<button type="button" class="res-more" aria-expanded="' + (open ? 'true' : 'false') + '">' + (open ? 'Ver menos' : 'Ver los ' + list.length + ' con votos') + '</button>';
