@@ -297,6 +297,8 @@ html:not(.js) .reveal{opacity:1;transform:none}
 .res-more:hover{color:var(--gold-100)}
 .res-none{padding:6px 0;color:var(--ink-faint);font-size:.95rem}
 @media (max-width:1000px){.res-grid{grid-template-columns:repeat(2,minmax(0,1fr))}}
+/* Con 8 categorías, la última fila (2 tarjetas) queda centrada en pantallas anchas */
+@media (min-width:1001px){.res-grid{grid-template-columns:repeat(6,minmax(0,1fr))}.res-card{grid-column:span 2}.res-card:nth-child(3n+1):nth-last-child(2){grid-column:2/span 2}.res-card:nth-child(3n+1):last-child{grid-column:3/span 2}}
 @media (max-width:700px){.res-grid{grid-template-columns:1fr}.res-card--main .res-body{display:flex;align-items:stretch}}
 
 .hero-resv{font-size:1rem;color:var(--ink)}
@@ -360,13 +362,13 @@ html:not(.js) .reveal{opacity:1;transform:none}
       <p class="eyebrow">Votación</p>
       <h2 class="sec-title gold" id="votar-title">Vota por tus favoritos</h2>
       <div class="orn" aria-hidden="true"><i></i><svg><use href="#star"/></svg><i></i></div>
-      <p class="sec-lead">Elige un restaurante en cada una de las 6 categorías. Escribe su nombre para encontrarlo al instante y desliza para recorrer a todos los afiliados.</p>
+      <p class="sec-lead">Elige un restaurante en cada una de las 8 categorías. Escribe su nombre para encontrarlo al instante y desliza para recorrer a todos los afiliados.</p>
     </header>
 
     <div class="ballot-app reveal" id="ballotApp">
       <aside class="ballot" aria-label="Tu boleta">
-        <div class="ballot-head"><h3>Tu boleta</h3><b id="progressText">0 de 6</b></div>
-        <div class="progress" id="progress" role="progressbar" aria-label="Categorías votadas" aria-valuemin="0" aria-valuemax="6" aria-valuenow="0"><i id="progressBar"></i></div>
+        <div class="ballot-head"><h3>Tu boleta</h3><b id="progressText">0 de 8</b></div>
+        <div class="progress" id="progress" role="progressbar" aria-label="Categorías votadas" aria-valuemin="0" aria-valuemax="8" aria-valuenow="0"><i id="progressBar"></i></div>
         <ol class="ballot-list" id="ballotList"></ol>
       </aside>
 
@@ -520,14 +522,16 @@ var PRUEBA = /[?&]prueba(?:[=&]|$)/i.test(location.search);   // ?prueba: votos 
 var TABLERO = PRUEBA ? 'prueba' : 'conteo';
 var STORAGE_KEY = CONFIG.STORAGE_KEY + (PRUEBA ? '-prueba' : '');
 
-/* ----- Las 6 categorías que se votan ----- */
+/* ----- Las 8 categorías que se votan (lámina de CANIRAC, 17 nov 2026) ----- */
 var CATS = [
-  { id:'excelencia',  name:'Excelencia Gastronómica',            short:'Excelencia',            desc:'Calidad de platillos, técnica, creatividad y consistencia.' },
-  { id:'experiencia', name:'Mejor Experiencia Restaurantera',    short:'Mejor experiencia',     desc:'Servicio, hospitalidad, ambiente y atención al comensal.' },
-  { id:'innovacion',  name:'Innovación Gastronómica',            short:'Innovación',            desc:'Propuestas originales y evolución de la oferta culinaria.' },
-  { id:'identidad',   name:'Identidad y Tradición Guanajuatense',short:'Identidad y tradición', desc:'Preservación de recetas, ingredientes y patrimonio local.' },
-  { id:'revelacion',  name:'Restaurante Revelación del Año',     short:'Revelación del año',    desc:'Nuevos establecimientos con propuesta y crecimiento destacado.' },
-  { id:'compromiso',  name:'Compromiso Social y Sustentable',    short:'Compromiso social',     desc:'Prácticas responsables, apoyo local e impacto ambiental.' }
+  { id:'excelencia',  name:'Mérito a la Excelencia Gastronómica',             short:'Excelencia',              desc:'Calidad de platillos, técnica, creatividad y consistencia.' },
+  { id:'experiencia', name:'Mérito a la Mejor Experiencia Restaurantera',     short:'Mejor experiencia',       desc:'Servicio, hospitalidad, ambiente y atención al comensal.' },
+  { id:'cafeteria',   name:'Mérito a la Cafetería y Repostería',              short:'Cafetería y repostería',  desc:'Reconocimiento al establecimiento que destaca por la calidad de sus productos, servicio, innovación y experiencia gastronómica.' },
+  { id:'identidad',   name:'Mérito a la Identidad y Tradición Guanajuatense', short:'Identidad y tradición',   desc:'Preservación de recetas, ingredientes y patrimonio local.' },
+  { id:'revelacion',  name:'Mérito al Restaurante Revelación del Año',        short:'Revelación del año',      desc:'Nuevos establecimientos abiertos este año con propuesta y crecimiento destacado.' },
+  { id:'compromiso',  name:'Mérito al Compromiso Social y Sustentabilidad',   short:'Compromiso social',       desc:'Prácticas responsables, apoyo local e impacto ambiental.' },
+  { id:'pequeno',     name:'Mérito al Pequeño Establecimiento',               short:'Pequeño establecimiento', desc:'Reconocimiento a los pequeños negocios que con menos de 8 mesas, hacen de su esfuerzo y perseverancia, una notable contribución al desarrollo económico local.' },
+  { id:'productor',   name:'Mérito al Productor Gastronómico',                short:'Productor gastronómico',  desc:'Reconocimiento a productores que destacan por la calidad de sus productos, compromiso e impulso a la economía local.' }
 ];
 
 /* ----- Restaurantes afiliados: [nombre, número de logo]  (0 = sin logo → muestra monograma) -----
@@ -967,8 +971,8 @@ function nubeLista() {
   return nube.carga;
 }
 function tableroRef(fs) { return fs.collection('gala').doc(TABLERO); }
-/* Las reglas de Firestore piden el tablero con estas 7 llaves; "anio" (Restaurante del Año) ya no se vota y queda vacía */
-function tableroInicial() { var c = {}; ['excelencia', 'experiencia', 'innovacion', 'identidad', 'revelacion', 'compromiso', 'anio'].forEach(function (k) { c[k] = {}; }); return { total: 0, ultima: '', c: c }; }
+/* Tablero vacío con las 8 categorías actuales (las reglas de Firestore piden exactamente estas llaves al crearlo) */
+function tableroInicial() { var c = {}; CATS.forEach(function (k) { c[k.id] = {}; }); return { total: 0, ultima: '', c: c }; }
 function nubeVotar(votos, quien) {
   return nubeLista().then(function (fs) {
     var ref = tableroRef(fs);
