@@ -108,7 +108,7 @@ const state = {
   activeClientSlug: 'palato',
   
   // Navegación dentro del portal
-  activeTab: 'resultados', // 'resultados' | 'planeacion' | 'parrilla' | 'tareas' | 'ajustes' | 'pagos'
+  activeTab: 'resultados', // 'resultados' | 'planeacion' | 'parrilla' | 'tareas' | 'ajustes' | 'pagos' | 'gala'
 
   // Calendario
   calYear: new Date().getFullYear(),
@@ -132,7 +132,11 @@ const state = {
   pgEditandoPlan: false,
   pgPlanSlug: '',
   pgAnteriorAbierto: false,
-  pgAviso: ''
+  pgAviso: '',
+
+  // Votación de la Gala CANIRAC (solo equipo)
+  galaFiltro: 'reales', // 'reales' | 'pruebas'
+  galaBuscar: ''
 };
 
 // ==========================================================================
@@ -211,6 +215,8 @@ async function logout() {
   state.currentRole = null;
   state.currentTeamMember = null;
   state.rpVistaCliente = false;
+  galaDejarDeEscuchar();
+  galaDatos.boletas = null;
   db = loadDatabase();
   state.activeClientSlug = db.clientes[0] ? db.clientes[0].slug : 'palato';
   closePortalWorkspace();
@@ -308,6 +314,11 @@ function renderPortalWorkspace() {
   const tabAjustes = document.getElementById('tabBtnAjustes');
   if (tabTareas) tabTareas.hidden = state.currentRole !== 'team';
   if (tabAjustes) tabAjustes.hidden = state.currentRole !== 'team';
+  // Votación de la gala: solo el equipo APEX y solo con el cliente CANIRAC
+  const tabGala = document.getElementById('tabBtnGala');
+  const galaVisible = galaPermitido();
+  if (tabGala) tabGala.hidden = !galaVisible;
+  if (state.activeTab === 'gala' && !galaVisible) state.activeTab = 'resultados';
 
   // Si el cliente estaba en una pestaña de equipo, mandarlo a la primera pestaña (resultados)
   if (state.currentRole === 'client' && (state.activeTab === 'tareas' || state.activeTab === 'ajustes')) {
@@ -322,7 +333,7 @@ function renderPortalWorkspace() {
   });
 
   // Ocultar todos los paneles y mostrar el activo
-  ['resultados', 'planeacion', 'parrilla', 'tareas', 'ajustes', 'pagos'].forEach(tabName => {
+  ['resultados', 'planeacion', 'parrilla', 'tareas', 'ajustes', 'pagos', 'gala'].forEach(tabName => {
     const el = document.getElementById(`viewTab_${tabName}`);
     if (el) el.hidden = state.activeTab !== tabName;
   });
@@ -334,6 +345,7 @@ function renderPortalWorkspace() {
   if (state.activeTab === 'tareas') renderTareas();
   if (state.activeTab === 'resultados') renderResultados();
   if (state.activeTab === 'ajustes') renderAjustes();
+  if (state.activeTab === 'gala') renderGala(); else galaDejarDeEscuchar();
 }
 
 // ==========================================================================
@@ -3732,6 +3744,8 @@ function nubeSesionVencida() {
   state.currentRole = null;
   state.currentTeamMember = null;
   state.rpVistaCliente = false;
+  galaDejarDeEscuchar();
+  galaDatos.boletas = null;
   db = loadDatabase();
   closePortalWorkspace();
   const msg = document.getElementById('authErrorMsg');
@@ -3796,6 +3810,257 @@ function nubeArranque() {
 // ==========================================================================
 // UTILIDADES & MANEJO DEL DOM
 // ==========================================================================
+// ==========================================================================
+// VOTACIÓN DE LA GALA CANIRAC (17 nov 2026) · solo equipo APEX
+// Cada boleta de canirac.html se guarda en la colección "gala_votos" con nombre, restaurante
+// que vota y sus votos. Las reglas de Firestore solo dejan leerlas a una sesión de equipo.
+// Las categorías y los restaurantes son los mismos de canirac.html: si cambian allá, cambiarlos aquí.
+// ==========================================================================
+const GALA_CLIENTE = 'canirac';
+const GALA_CATEGORIAS = [
+  { id: 'excelencia', nombre: 'Mérito a la Excelencia Gastronómica', corto: 'Excelencia' },
+  { id: 'experiencia', nombre: 'Mérito a la Mejor Experiencia Restaurantera', corto: 'Mejor experiencia' },
+  { id: 'cafeteria', nombre: 'Mérito a la Cafetería y Repostería', corto: 'Cafetería y repostería' },
+  { id: 'identidad', nombre: 'Mérito a la Identidad y Tradición Guanajuatense', corto: 'Identidad y tradición' },
+  { id: 'revelacion', nombre: 'Mérito al Restaurante Revelación del Año', corto: 'Revelación del año' },
+  { id: 'compromiso', nombre: 'Mérito al Compromiso Social y Sustentabilidad', corto: 'Compromiso social' },
+  { id: 'pequeno', nombre: 'Mérito al Pequeño Establecimiento', corto: 'Pequeño establecimiento' },
+  { id: 'productor', nombre: 'Mérito al Productor Gastronómico', corto: 'Productor gastronómico' }
+];
+const GALA_RESTAURANTES = ["Hacienda El Fresno", "Escarola", "Rancheros", "Bodega 4", "Black Ice", "Terraza Dada", "Terraza La Joya", "Mezquilate", "La Vaca Argentina", "Casa Valadez", "Amatxi", "Mr. Rucio", "Rustika", "La Antojería", "Mariscos Reyes", "Ixaliano", "Club Café", "Casa Estela y Virgilio", "Hotel Embajadoras", "Quedas Bien", "El Sabor de Guanajuato", "Oajillo", "Pulpo Loco", "Nuevo Campo Viejo", "Mariscos La Curva", "Emma Restaurante", "Delica Mitsu", "Sr. Spaguetti", "Las Bóvedas", "Mariscos El Amigo de Silao", "El Faro", "Canastillo de Flores", "Supérales", "Boungiorno", "Peccato di Gola", "Colibrí", "Casa Cuévano", "Chela & Chuchita", "Stilo Eventos", "La Trattoria", "T-Tela Pibil", "Munchick", "Bar Tradicional Luna", "La Calleja", "Peter's Pizza", "Peter's Pizza Centro", "Uli Uli Poke Bowls", "La Fonda del Minero", "Pollo Feliz Silao", "El Chavalón", "De Corazón a Corazón", "Hacienda San Matías", "Panza Llena Corazón Contento", "El Tapatío", "Dulcería La Catrina", "La Tasca de la Paz", "Carnes en su Jugo del Charro", "Corazón Mexicano", "Crepazo", "El Parrillero", "RZ Banquetes", "Macanela", "El Rincón de Alo", "La Oreja de Van Gogh", "Van Gogh", "La Santurrona", "Burritos y Tacos El Potro Loco", "Casa Ofelia", "Tras Lomita", "María Cocina Urbana", "Yessi Cafetería y Repostería", "La Vie en Rose", "Pizza Baez Centro", "Pizza Baez Euquerio", "El Embarcadero", "Trattoria Terraza"];
+function galaNorm(s) {
+  return String(s || '').normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase().replace(/[^a-z0-9]+/g, ' ').trim();
+}
+const GALA_NOMBRE_REST = {};
+GALA_RESTAURANTES.forEach(n => { GALA_NOMBRE_REST[galaNorm(n).replace(/ /g, '-')] = n; });
+function galaNombreRest(id) { return GALA_NOMBRE_REST[id] || (id ? String(id).replace(/-/g, ' ') : ''); }
+
+const galaDatos = { boletas: null, error: '', quitar: null, actualizado: 0 };
+
+function galaPermitido() {
+  return state.currentRole === 'team' && state.activeClientSlug === GALA_CLIENTE;
+}
+function galaDejarDeEscuchar() {
+  if (galaDatos.quitar) {
+    try { galaDatos.quitar(); } catch (e) { /* sin acción */ }
+    galaDatos.quitar = null;
+  }
+}
+// Escucha la colección en vivo mientras la pestaña está abierta
+function galaEscuchar() {
+  if (galaDatos.quitar) return;
+  if (!nube.fs) {
+    galaDatos.error = 'No hay conexión con la nube. Revisa tu internet y toca «Actualizar».';
+    return;
+  }
+  galaDatos.error = '';
+  galaDatos.quitar = nube.fs.collection('gala_votos').onSnapshot(snap => {
+    const lista = [];
+    snap.forEach(doc => {
+      const x = doc.data() || {};
+      const fecha = x.enviado && typeof x.enviado.toDate === 'function' ? x.enviado.toDate() : null;
+      lista.push({
+        id: doc.id,
+        tablero: x.tablero === 'prueba' ? 'prueba' : 'conteo',
+        nombre: String(x.nombre || '').trim(),
+        restaurante: String(x.restaurante || '').trim(),
+        votos: x.votos && typeof x.votos === 'object' ? x.votos : {},
+        fecha
+      });
+    });
+    lista.sort((a, b) => (b.fecha ? b.fecha.getTime() : 0) - (a.fecha ? a.fecha.getTime() : 0));
+    galaDatos.boletas = lista;
+    galaDatos.error = '';
+    galaDatos.actualizado = Date.now();
+    if (state.activeTab === 'gala' && galaPermitido()) galaPintar();
+  }, err => {
+    console.warn('No se pudieron leer las boletas de la gala:', err);
+    galaDatos.quitar = null;
+    galaDatos.error = String((err && err.code) || '').indexOf('permission-denied') !== -1
+      ? 'Tu sesión no tiene permiso para ver las boletas. Cierra sesión y vuelve a entrar con tu PIN de equipo.'
+      : 'No se pudieron cargar las boletas. Revisa tu internet y toca «Actualizar».';
+    if (state.activeTab === 'gala' && galaPermitido()) galaPintar();
+  });
+}
+function galaActualizar() {
+  galaDejarDeEscuchar();
+  galaDatos.boletas = null;
+  galaEscuchar();
+  galaPintar();
+}
+function galaFiltrar(filtro) {
+  state.galaFiltro = filtro === 'pruebas' ? 'pruebas' : 'reales';
+  galaPintar();
+}
+function galaBuscarTexto(valor) {
+  state.galaBuscar = String(valor || '');
+  galaPintarRegistro();
+}
+
+// Boletas del tablero elegido (reales o de prueba) y, si hay búsqueda, solo las que coinciden
+function galaBoletas(conBusqueda) {
+  const tablero = state.galaFiltro === 'pruebas' ? 'prueba' : 'conteo';
+  let lista = (galaDatos.boletas || []).filter(b => b.tablero === tablero);
+  const q = galaNorm(state.galaBuscar);
+  if (conBusqueda && q) lista = lista.filter(b => galaNorm(b.nombre + ' ' + b.restaurante).indexOf(q) !== -1);
+  return lista;
+}
+function galaFecha(d, conHora) {
+  if (!d) return '—';
+  const f = d.toLocaleDateString('es-MX', { day: 'numeric', month: 'short', year: 'numeric', timeZone: 'America/Mexico_City' });
+  return conHora ? f + ', ' + d.toLocaleTimeString('es-MX', { hour: 'numeric', minute: '2-digit', timeZone: 'America/Mexico_City' }) : f;
+}
+
+function renderGala() {
+  const cont = document.getElementById('viewTab_gala');
+  if (!cont) return;
+  if (!cont.querySelector('#galaRaiz')) {
+    cont.innerHTML = `
+      <div class="gl" id="galaRaiz">
+        <section class="gl-hero">
+          <div class="gl-hero-txt">
+            <p class="gl-eyebrow">Gala del Gremio Restaurantero · solo equipo APEX</p>
+            <h3 class="gl-titulo">Votación</h3>
+            <p class="gl-sub">Quién votó, por qué restaurante y por quién votó en cada categoría. Se actualiza sola mientras tienes abierta esta pestaña.</p>
+          </div>
+          <div class="gl-hero-num"><b id="galaTotal">—</b><span id="galaTotalTxt">boletas</span></div>
+        </section>
+
+        <div class="gl-barra">
+          <div class="pg-filtros" role="group" aria-label="Qué boletas ver">
+            <button type="button" id="galaFiltroReales" onclick="galaFiltrar('reales')">Votos reales</button>
+            <button type="button" id="galaFiltroPruebas" onclick="galaFiltrar('pruebas')">Votos de prueba</button>
+          </div>
+          <div class="gl-barra-acc">
+            <button type="button" class="btn btn-sm btn-secondary" onclick="galaActualizar()">🔄 Actualizar</button>
+            <button type="button" class="btn btn-sm btn-primary" id="galaBtnDescargar" onclick="galaDescargar()">⬇️ Descargar para Excel</button>
+          </div>
+        </div>
+
+        <div class="pg-totales" id="galaTotales"></div>
+
+        <section class="gl-bloque">
+          <div class="gl-bloque-head">
+            <h4>Registro de votos</h4>
+            <label class="gl-buscar"><span class="rp-sr">Buscar por nombre o restaurante</span>
+              <input type="search" id="galaBuscar" class="form-control" placeholder="Buscar por nombre o restaurante…" oninput="galaBuscarTexto(this.value)" autocomplete="off">
+            </label>
+          </div>
+          <div id="galaRegistro"></div>
+        </section>
+
+        <section class="gl-bloque">
+          <div class="gl-bloque-head"><h4>Resultados por categoría</h4><small>Todos los restaurantes con votos</small></div>
+          <div class="gl-res" id="galaResultados"></div>
+        </section>
+      </div>`;
+  }
+  const buscar = document.getElementById('galaBuscar');
+  if (buscar && buscar.value !== state.galaBuscar) buscar.value = state.galaBuscar;
+  galaEscuchar();
+  galaPintar();
+}
+
+function galaPintar() {
+  if (!document.getElementById('galaRaiz')) return;
+  const reales = state.galaFiltro !== 'pruebas';
+  const fr = document.getElementById('galaFiltroReales'), fp = document.getElementById('galaFiltroPruebas');
+  if (fr) { fr.classList.toggle('activo', reales); fr.setAttribute('aria-pressed', reales ? 'true' : 'false'); }
+  if (fp) { fp.classList.toggle('activo', !reales); fp.setAttribute('aria-pressed', !reales ? 'true' : 'false'); }
+
+  const lista = galaBoletas(false);
+  const cargando = galaDatos.boletas === null && !galaDatos.error;
+  document.getElementById('galaTotal').textContent = cargando || galaDatos.error ? '—' : String(lista.length);
+  document.getElementById('galaTotalTxt').textContent = (lista.length === 1 ? 'boleta' : 'boletas') + (reales ? '' : ' de prueba');
+  const conNombre = lista.filter(b => b.nombre).length;
+  const restaurantes = new Set(lista.map(b => galaNorm(b.restaurante)).filter(Boolean)).size;
+  const ultima = lista.find(b => b.fecha);
+  document.getElementById('galaTotales').innerHTML = `
+    <div class="pg-total"><span>Boletas</span><b>${cargando ? '—' : lista.length}</b><small>${reales ? 'cuentan en los resultados' : 'no cuentan en los resultados'}</small></div>
+    <div class="pg-total"><span>Con nombre</span><b>${cargando ? '—' : conNombre}</b><small>${lista.length - conNombre > 0 ? (lista.length - conNombre) + ' sin nombre (antes del 17 nov)' : 'todas con nombre'}</small></div>
+    <div class="pg-total"><span>Restaurantes que votaron</span><b>${cargando ? '—' : restaurantes}</b><small>según lo que escribió cada persona</small></div>
+    <div class="pg-total"><span>Última boleta</span><b class="gl-total-fecha">${ultima ? galaFecha(ultima.fecha, true) : '—'}</b><small>hora del centro de México</small></div>`;
+  const desc = document.getElementById('galaBtnDescargar');
+  if (desc) desc.disabled = !lista.length;
+  galaPintarRegistro();
+  galaPintarResultados(lista);
+}
+
+function galaPintarRegistro() {
+  const cont = document.getElementById('galaRegistro');
+  if (!cont) return;
+  if (galaDatos.error) { cont.innerHTML = `<p class="gl-aviso gl-aviso-error">${escapeHtml(galaDatos.error)}</p>`; return; }
+  if (galaDatos.boletas === null) { cont.innerHTML = '<p class="gl-aviso">Cargando boletas…</p>'; return; }
+  const todas = galaBoletas(false), lista = galaBoletas(true);
+  if (!todas.length) {
+    cont.innerHTML = `<p class="gl-aviso">${state.galaFiltro === 'pruebas' ? 'No hay boletas de prueba.' : 'Todavía no hay votos.'}</p>`;
+    return;
+  }
+  if (!lista.length) { cont.innerHTML = `<p class="gl-aviso">Ninguna boleta coincide con «${escapeHtml(state.galaBuscar.trim())}».</p>`; return; }
+  const cab = GALA_CATEGORIAS.map(c => `<th scope="col" title="${escapeHtml(c.nombre)}">${escapeHtml(c.corto)}</th>`).join('');
+  const filas = lista.map((b, i) => `
+    <tr>
+      <td class="gl-num">${lista.length - i}</td>
+      <td class="gl-fecha">${galaFecha(b.fecha, true)}</td>
+      <td class="gl-nombre">${b.nombre ? escapeHtml(b.nombre) : '<span class="gl-vacio" title="Boleta anterior al 17 nov: todavía no se pedía el nombre">—</span>'}</td>
+      <td class="gl-rest">${b.restaurante ? escapeHtml(b.restaurante) : '<span class="gl-vacio">—</span>'}</td>
+      ${GALA_CATEGORIAS.map(c => b.votos[c.id] ? `<td>${escapeHtml(galaNombreRest(b.votos[c.id]))}</td>` : '<td><span class="gl-vacio">—</span></td>').join('')}
+    </tr>`).join('');
+  cont.innerHTML = `
+    <p class="gl-cuenta">${lista.length === todas.length ? `${todas.length} ${todas.length === 1 ? 'boleta' : 'boletas'}, de la más reciente a la más antigua` : `${lista.length} de ${todas.length} boletas`}</p>
+    <div class="gl-tabla-wrap">
+      <table class="gl-tabla">
+        <thead><tr><th scope="col" class="gl-num">#</th><th scope="col">Fecha y hora</th><th scope="col">Nombre</th><th scope="col">Restaurante que vota</th>${cab}</tr></thead>
+        <tbody>${filas}</tbody>
+      </table>
+    </div>`;
+}
+
+function galaPintarResultados(lista) {
+  const cont = document.getElementById('galaResultados');
+  if (!cont) return;
+  if (galaDatos.error || galaDatos.boletas === null) { cont.innerHTML = ''; return; }
+  cont.innerHTML = GALA_CATEGORIAS.map((c, i) => {
+    const cuenta = {};
+    lista.forEach(b => { const id = b.votos[c.id]; if (id) cuenta[id] = (cuenta[id] || 0) + 1; });
+    const ranking = Object.keys(cuenta).map(id => ({ nombre: galaNombreRest(id), n: cuenta[id] }))
+      .sort((a, b) => b.n - a.n || a.nombre.localeCompare(b.nombre, 'es', { sensitivity: 'base' }));
+    let lugar = 0, previo = -1;
+    ranking.forEach((r, k) => { if (r.n !== previo) { lugar = k + 1; previo = r.n; } r.lugar = lugar; });
+    const max = ranking.length ? ranking[0].n : 1;
+    return `
+      <article class="gl-cat">
+        <header><b>${String(i + 1).padStart(2, '0')}</b><h5>${escapeHtml(c.nombre)}</h5></header>
+        ${ranking.length ? `<ol class="gl-rank">${ranking.map(r => `
+          <li><span class="gl-lugar">${r.lugar}</span><span class="gl-rnom">${escapeHtml(r.nombre)}</span><span class="gl-votos">${r.n} ${r.n === 1 ? 'voto' : 'votos'}</span>
+            <span class="gl-barra-v" aria-hidden="true"><i style="width:${(r.n / max * 100).toFixed(1)}%"></i></span></li>`).join('')}
+        </ol>` : '<p class="gl-aviso">Sin votos todavía.</p>'}
+      </article>`;
+  }).join('');
+}
+
+// Descarga lo que se ve en el registro (reales o de prueba, con la búsqueda) en CSV que abre Excel
+function galaDescargar() {
+  const lista = galaBoletas(true);
+  if (!lista.length) return;
+  const celda = v => '"' + String(v == null ? '' : v).replace(/"/g, '""') + '"';
+  const zona = { timeZone: 'America/Mexico_City' };
+  const filas = [['Fecha', 'Hora', 'Nombre', 'Restaurante que vota'].concat(GALA_CATEGORIAS.map(c => c.nombre))]
+    .concat(lista.map(b => [
+      b.fecha ? b.fecha.toLocaleDateString('es-MX', Object.assign({ day: '2-digit', month: '2-digit', year: 'numeric' }, zona)) : '',
+      b.fecha ? b.fecha.toLocaleTimeString('es-MX', Object.assign({ hour: '2-digit', minute: '2-digit', hour12: false }, zona)) : '',
+      b.nombre, b.restaurante
+    ].concat(GALA_CATEGORIAS.map(c => galaNombreRest(b.votos[c.id] || '')))));
+  const csv = '﻿' + filas.map(f => f.map(celda).join(',')).join('\r\n');
+  const hoy = new Date().toLocaleDateString('en-CA', zona);
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(new Blob([csv], { type: 'text/csv;charset=utf-8' }));
+  a.download = `votacion-gala-canirac-${hoy}${state.galaFiltro === 'pruebas' ? '-pruebas' : ''}.csv`;
+  document.body.appendChild(a);
+  a.click();
+  setTimeout(() => { URL.revokeObjectURL(a.href); a.remove(); }, 500);
+}
+
 function escapeHtml(str) {
   return String(str || '')
     .replace(/&/g, '&amp;')

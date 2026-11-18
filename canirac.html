@@ -264,9 +264,6 @@ html:not(.js) .reveal{opacity:1;transform:none}
 
 /* ---------- Resultados ---------- */
 .res-bar{display:flex;align-items:center;justify-content:center;gap:12px 18px;flex-wrap:wrap;margin:0 auto clamp(22px,3vw,34px);text-align:center}
-.res-status{font-size:.92rem;color:var(--ink-dim)}
-.res-status b{font-weight:400;font-size:1.08rem;color:var(--gold-200)}
-.res-status .warn{color:#f3b3a8}
 .res-demo{max-width:64ch;margin:0 auto clamp(20px,3vw,30px)}
 .res-grid{display:grid;gap:clamp(14px,2vw,22px);grid-template-columns:repeat(3,minmax(0,1fr))}
 .res-card{display:flex;flex-direction:column;min-width:0;border:1px solid var(--line);border-radius:22px;padding:clamp(20px,2.4vw,28px);background:linear-gradient(180deg,rgba(255,255,255,.045),rgba(255,255,255,.01))}
@@ -286,11 +283,10 @@ html:not(.js) .reveal{opacity:1;transform:none}
 .res-name{margin-top:3px;font-size:1.22rem;line-height:1.2;color:var(--gold-100);overflow-wrap:anywhere}
 .res-count{margin-top:3px;font-size:.9rem;color:var(--ink-dim)}
 .res-list{display:grid;gap:13px;margin:0;padding:0;list-style:none}
-.res-row{display:grid;grid-template-columns:26px minmax(0,1fr) auto;column-gap:10px;row-gap:6px;align-items:baseline}
-.res-row .rk{font-family:var(--f-display);font-weight:700;font-stretch:80%;font-size:1.1rem;color:var(--gold-400)}
+.res-row{display:grid;grid-template-columns:minmax(0,1fr) auto;column-gap:10px;row-gap:6px;align-items:baseline}
 .res-row .nm{font-size:.98rem;line-height:1.25;overflow-wrap:anywhere}
 .res-row .ct{font-size:.82rem;color:var(--ink-dim);white-space:nowrap}
-.res-row .bar{grid-column:2/-1;display:block;height:5px;border-radius:5px;background:rgba(246,242,230,.1);overflow:hidden}
+.res-row .bar{grid-column:1/-1;display:block;height:5px;border-radius:5px;background:rgba(246,242,230,.1);overflow:hidden}
 .res-row .bar b{display:block;height:100%;width:var(--w,0);border-radius:5px;background:var(--gold-grad);animation:grow .9s cubic-bezier(.2,.7,.2,1) both}
 @keyframes grow{from{width:0}}
 .res-more{margin-top:14px;padding:2px 0;border:0;border-bottom:1px solid var(--line-strong);background:none;cursor:pointer;font-size:.8rem;letter-spacing:.14em;text-transform:uppercase;color:var(--gold-300)}
@@ -467,7 +463,6 @@ html:not(.js) .reveal{opacity:1;transform:none}
       <p class="sec-lead">Así van las votaciones en cada categoría. Se actualizan solas a medida que la gente vota.</p>
     </header>
     <div class="res-bar">
-      <p class="res-status" id="resStatus">Cargando resultados…</p>
       <button class="btn btn--sm" id="resRefresh" type="button">Actualizar</button>
     </div>
     <p class="demo-note res-demo" id="resDemo" hidden>Modo de prueba: aquí solo se cuentan las boletas de prueba.</p>
@@ -1007,7 +1002,7 @@ function nubeEscuchar(alCambiar, alFallar) {
    ============================================================== */
 var RES_TOP = 4;   // solo se muestran los 4 restaurantes con más votos de cada categoría
 var res = { tally: null, loaded: 0, failed: false, offline: false, sig: {}, quitar: null };
-var resEl = { sec: $('#resultados'), grid: $('#resGrid'), status: $('#resStatus'), refresh: $('#resRefresh'), demo: $('#resDemo') };
+var resEl = { sec: $('#resultados'), grid: $('#resGrid'), refresh: $('#resRefresh'), demo: $('#resDemo') };
 resEl.demo.hidden = !PRUEBA;
 
 function tallyDe(d) {
@@ -1026,12 +1021,12 @@ function entriesFor(c) {
   return list;
 }
 var votosTxt = function (n) { return n + (n === 1 ? ' voto' : ' votos'); };
-/* Los 4 con más votos: lugar, nombre, votos y barra (proporcional al primero) */
+/* Los 4 con más votos: nombre, votos y barra (proporcional al primero) */
 function cardHTML(list) {
   if (!list.length) return '<p class="res-none">Aún no hay votos en esta categoría.</p>';
   var top = list[0];
   return '<ul class="res-list" role="list">' + list.slice(0, RES_TOP).map(function (e) {
-    return '<li class="res-row"><span class="rk">' + e.rank + '</span><span class="nm">' + esc(e.rest.name) + '</span><span class="ct">' + votosTxt(e.n) + '</span>' +
+    return '<li class="res-row"><span class="nm">' + esc(e.rest.name) + '</span><span class="ct">' + votosTxt(e.n) + '</span>' +
       '<span class="bar" aria-hidden="true"><b style="--w:' + (e.n / top.n * 100).toFixed(1) + '%"></b></span></li>';
   }).join('') + '</ul>';
 }
@@ -1045,26 +1040,15 @@ function renderResults() {
     body.innerHTML = list ? cardHTML(list) : '<p class="res-none">' + (res.failed ? 'No pudimos cargar los resultados. Toca «Actualizar» para reintentar.' : 'Cargando resultados…') + '</p>';
   });
 }
-function renderStatus() {
-  var h, hora = function (ms) { return new Date(ms).toLocaleTimeString('es-MX', { hour: 'numeric', minute: '2-digit' }); };
-  if (!res.tally) h = res.failed ? 'No pudimos cargar los resultados.' : 'Cargando resultados…';
-  else {
-    var n = res.tally.total;
-    h = '<b>' + n + '</b> ' + (n === 1 ? 'boleta recibida' : 'boletas recibidas') + ' · ' +
-      (res.offline ? '<span class="warn">sin conexión, se muestra lo último</span>' : 'En vivo · actualizado a las ' + hora(res.loaded));
-    if (res.failed) h += ' · <span class="warn">se perdió la conexión</span>';
-  }
-  resEl.status.innerHTML = h;
-}
 function dejarDeEscuchar() { if (res.quitar) { res.quitar(); res.quitar = null; } }
 function escucharResultados() {
   dejarDeEscuchar();
-  res.failed = false; resEl.refresh.disabled = true; renderStatus();
+  res.failed = false; resEl.refresh.disabled = true;
   res.quitar = nubeEscuchar(function (d, cache) {
     res.tally = tallyDe(d); res.loaded = Date.now(); res.failed = false; res.offline = !!cache;
-    resEl.refresh.disabled = false; renderResults(); renderStatus();
+    resEl.refresh.disabled = false; renderResults();
   }, function () {
-    res.failed = true; res.quitar = null; resEl.refresh.disabled = false; renderResults(); renderStatus();
+    res.failed = true; res.quitar = null; resEl.refresh.disabled = false; renderResults();
   });
 }
 function mostrarResultados() {
@@ -1077,7 +1061,7 @@ document.addEventListener('visibilitychange', function () {
   if (document.visibilityState === 'hidden') dejarDeEscuchar(); else if (!res.quitar) escucharResultados();
 });
 resEl.refresh.addEventListener('click', escucharResultados);
-renderResults(); renderStatus();
+renderResults();
 
 /* ==============================================================
    Arranque
