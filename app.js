@@ -3817,6 +3817,8 @@ function nubeArranque() {
 // Las categorías y los restaurantes son los mismos de canirac.html: si cambian allá, cambiarlos aquí.
 // ==========================================================================
 const GALA_CLIENTE = 'canirac';
+// Votación cerrada: fecha y hora del cierre (null = abierta). Los votos guardados no se borran: quedan aquí.
+const GALA_CIERRE = '2026-11-19T23:58:00-06:00';
 const GALA_CATEGORIAS = [
   { id: 'excelencia', nombre: 'Mérito a la Excelencia Gastronómica', corto: 'Excelencia' },
   { id: 'experiencia', nombre: 'Mérito a la Mejor Experiencia Restaurantera', corto: 'Mejor experiencia' },
@@ -3920,8 +3922,10 @@ function renderGala() {
         <section class="gl-hero">
           <div class="gl-hero-txt">
             <p class="gl-eyebrow">Gala del Gremio Restaurantero · solo equipo APEX</p>
-            <h3 class="gl-titulo">Votación</h3>
-            <p class="gl-sub">Quién votó, por qué restaurante y por quién votó en cada categoría. Se actualiza sola mientras tienes abierta esta pestaña.</p>
+            <h3 class="gl-titulo">${GALA_CIERRE ? 'Votación cerrada' : 'Votación'}</h3>
+            <p class="gl-sub">${GALA_CIERRE
+              ? 'La votación se cerró el ' + galaFecha(new Date(GALA_CIERRE), true) + ' Aquí quedan guardados todos los votos: quién votó, por qué restaurante y por quién votó en cada categoría.'
+              : 'Quién votó, por qué restaurante y por quién votó en cada categoría. Se actualiza sola mientras tienes abierta esta pestaña.'}</p>
           </div>
           <div class="gl-hero-num"><b id="galaTotal">—</b><span id="galaTotalTxt">boletas</span></div>
         </section>
@@ -3950,7 +3954,7 @@ function renderGala() {
         </section>
 
         <section class="gl-bloque">
-          <div class="gl-bloque-head"><h4>Resultados por categoría</h4><small>Todos los restaurantes con votos</small></div>
+          <div class="gl-bloque-head"><h4>${GALA_CIERRE ? 'Resultados finales por categoría' : 'Resultados por categoría'}</h4><small>Todos los restaurantes con votos</small></div>
           <div class="gl-res" id="galaResultados"></div>
         </section>
       </div>`;

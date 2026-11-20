@@ -300,6 +300,13 @@ html:not(.js) .reveal{opacity:1;transform:none}
 .hero-resv{font-size:1rem;color:var(--ink)}
 .hero-resv a{text-decoration:none;border-bottom:1px solid var(--line-strong);color:var(--gold-100)}
 .thanks-actions{display:flex;flex-wrap:wrap;gap:12px;justify-content:center}
+
+/* ---------- Votación cerrada ---------- */
+.closed{max-width:640px;margin:0 auto;text-align:center;padding:clamp(32px,5vw,52px) clamp(22px,4vw,48px);border:1px solid var(--line-strong);border-radius:28px;background:linear-gradient(180deg,rgba(217,184,68,.13),rgba(217,184,68,.03) 72%)}
+.closed .lead{margin:14px auto 0;max-width:40ch;color:var(--ink-dim)}
+.closed .thanks-actions{margin-top:28px}
+.vote.is-closed{min-height:100vh;min-height:100svh}
+.vote.is-closed .eyebrow{text-wrap:balance}
 .sec--evento{padding-block:clamp(56px,7vw,100px)}
 .sec--evento .sec-head{margin-bottom:0}
 .sec--evento .sec-lead{font-size:clamp(1.02rem,.96rem + .3vw,1.2rem);line-height:1.65}
@@ -336,6 +343,7 @@ html:not(.js) .reveal{opacity:1;transform:none}
     <symbol id="i-chev-l" viewBox="0 0 24 24"><path d="M15 5l-7 7 7 7" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></symbol>
     <symbol id="i-chev-r" viewBox="0 0 24 24"><path d="M9 5l7 7-7 7" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></symbol>
     <symbol id="i-search" viewBox="0 0 24 24"><circle cx="10.5" cy="10.5" r="6.5" fill="none" stroke="currentColor" stroke-width="1.8"/><path d="M15.5 15.5L21 21" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></symbol>
+    <symbol id="i-lock" viewBox="0 0 24 24"><rect x="5" y="10.5" width="14" height="10" rx="2.2" fill="none" stroke="currentColor" stroke-width="2.2"/><path d="M8.2 10.5V7.9a3.8 3.8 0 0 1 7.6 0v2.6" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"/></symbol>
     <symbol id="i-arrow" viewBox="0 0 22 14"><path d="M1 7h19M14 1l6 6-6 6" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></symbol>
   </defs>
 </svg>
@@ -360,6 +368,14 @@ html:not(.js) .reveal{opacity:1;transform:none}
       <div class="orn" aria-hidden="true"><i></i><svg><use href="#star"/></svg><i></i></div>
       <p class="sec-lead">Elige un restaurante en cada una de las 8 categorías. Escribe su nombre para encontrarlo al instante y desliza para recorrer a todos los afiliados.</p>
     </header>
+
+    <!-- Votación cerrada (CONFIG.VOTACION_CERRADA) -->
+    <div class="closed reveal" id="closedPanel" hidden>
+      <div class="thanks-ico"><svg aria-hidden="true"><use href="#i-lock"/></svg></div>
+      <h3 class="stage-title gold">Ya no se reciben más votos</h3>
+      <p class="lead">Todos los votos quedaron registrados. Gracias por ser parte del gremio restaurantero.</p>
+      <div class="thanks-actions" id="closedActions" hidden><a class="btn btn--gold" href="#resultados">Ver resultados</a></div>
+    </div>
 
     <div class="ballot-app reveal" id="ballotApp">
       <aside class="ballot" aria-label="Tu boleta">
@@ -495,6 +511,12 @@ function main() {
 
      Para probar sin afectar los resultados reales, abre la página con ?prueba al final del
      link (por ejemplo canirac.html?prueba): esos votos van a «gala/prueba» y no cuentan.
+
+   ► VOTACIÓN CERRADA
+     Con VOTACION_CERRADA: true la página ya no deja votar (tampoco con ?prueba) y muestra el aviso
+     «Votación cerrada». Los votos guardados no se tocan: el equipo los ve en el portal de APEX,
+     pestaña «Votación Gala» del cliente CANIRAC. Para volver a abrir, pon false.
+     RESULTADOS_AL_CERRAR: true = todos ven los resultados finales; false = solo el equipo, en el portal.
 */
 var CONFIG = {
   /* Datos públicos por diseño, igual que en el portal: la seguridad la dan las reglas de Firestore. */
@@ -511,8 +533,11 @@ var CONFIG = {
   EVENT_START:   '2026-11-27T19:00:00-06:00',   // hora de Guanajuato (UTC-6)
   EVENT_END:     '2026-11-28T02:00:00-06:00',
   VENUE:         'Jardín Hacienda San Matías, Guanajuato',
-  STORAGE_KEY:   'gala-gremio-2026-boleta'
+  STORAGE_KEY:   'gala-gremio-2026-boleta',
+  VOTACION_CERRADA:     true,
+  RESULTADOS_AL_CERRAR: false
 };
+var CERRADA = !!CONFIG.VOTACION_CERRADA;
 var PRUEBA = /[?&]prueba(?:[=&]|$)/i.test(location.search);   // ?prueba: votos aparte, no cuentan
 var TABLERO = PRUEBA ? 'prueba' : 'conteo';
 var STORAGE_KEY = CONFIG.STORAGE_KEY + (PRUEBA ? '-prueba' : '');
@@ -969,6 +994,7 @@ function tableroRef(fs) { return fs.collection('gala').doc(TABLERO); }
 /* Tablero vacío con las 8 categorías actuales (las reglas de Firestore piden exactamente estas llaves al crearlo) */
 function tableroInicial() { var c = {}; CATS.forEach(function (k) { c[k.id] = {}; }); return { total: 0, ultima: '', c: c }; }
 function nubeVotar(votos, quien) {
+  if (CERRADA) return Promise.reject(new Error('La votación está cerrada'));
   return nubeLista().then(function (fs) {
     var ref = tableroRef(fs);
     var enviar = function () {
@@ -1066,8 +1092,26 @@ renderResults();
 /* ==============================================================
    Arranque
    ============================================================== */
-showView(state.view);
-if (state.yaVoto) mostrarResultados();
+/* Votación cerrada: sin boleta ni envío; aviso y, si se configuró, los resultados finales para todos */
+function cerrarVotacion() {
+  $('#votar').classList.add('is-closed');
+  $('#votar .eyebrow').textContent = CONFIG.EVENT_NAME;
+  $('#votar-title').textContent = 'Votación cerrada';
+  $('#votar .sec-lead').textContent = 'Gracias a todos los que eligieron a sus favoritos en las 8 categorías.';
+  el.app.hidden = true;
+  $('#closedPanel').hidden = false;
+  if (!CONFIG.RESULTADOS_AL_CERRAR) return;
+  $('#closedActions').hidden = false;
+  $('#resultados .eyebrow').textContent = 'Resultados finales';
+  $('#resultados .sec-lead').textContent = 'Así quedaron las votaciones en cada categoría.';
+  resEl.refresh.hidden = true;
+  mostrarResultados();
+}
+if (CERRADA) cerrarVotacion();
+else {
+  showView(state.view);
+  if (state.yaVoto) mostrarResultados();
+}
 }
 if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', main); else main();
 })();
