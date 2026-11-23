@@ -2884,6 +2884,7 @@ img, svg {
 .gl-hero-num span { font-size: 13px; color: #e3d2e5; }
 .gl-barra { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 12px; }
 .gl-barra-acc { display: flex; flex-wrap: wrap; gap: 8px; }
+.gl-barra-izq { display: flex; flex-wrap: wrap; gap: 10px; }
 .gl-total-fecha { font-size: 17px !important; line-height: 1.3; }
 .gl-bloque { background: #ffffff; border: 1px solid var(--border-subtle); border-radius: 20px; padding: 20px; box-shadow: var(--shadow-sm); }
 .gl-bloque-head { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 12px; }

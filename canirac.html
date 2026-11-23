@@ -305,7 +305,19 @@ html:not(.js) .reveal{opacity:1;transform:none}
 .closed{max-width:640px;margin:0 auto;text-align:center;padding:clamp(32px,5vw,52px) clamp(22px,4vw,48px);border:1px solid var(--line-strong);border-radius:28px;background:linear-gradient(180deg,rgba(217,184,68,.13),rgba(217,184,68,.03) 72%)}
 .closed .lead{margin:14px auto 0;max-width:40ch;color:var(--ink-dim)}
 .closed .thanks-actions{margin-top:28px}
-.vote.is-closed{min-height:100vh;min-height:100svh}
+.vote.is-closed,.vote.is-done{min-height:100vh;min-height:100svh}
+/* Después de votar: solo la confirmación, sin boleta ni encabezado */
+.vote.is-done .sec-head{display:none}
+.ballot-app.is-done{grid-template-columns:1fr}
+.ballot-app.is-done .ballot{display:none}
+.ballot-app.is-done .stage{width:100%;max-width:640px;margin:0 auto;border:0;padding:0;background:none;overflow:visible}
+.thanks.closed .stage-count{margin-top:4px}
+.thanks.closed .stage-title{text-wrap:balance}
+/* Votación de nominados: solo 4 por categoría, en cuadrícula fija (sin carrusel ni flechas) */
+.track{grid-auto-flow:row;grid-template-rows:none;grid-template-columns:repeat(4,minmax(0,1fr));overflow:visible;margin:0;padding:6px 0 4px;cursor:default;-webkit-mask-image:none;mask-image:none}
+.card{height:auto;min-height:168px;aspect-ratio:5/6}
+.arrow{display:none!important}
+@media (max-width:900px){.track{grid-template-columns:repeat(2,minmax(0,1fr))}}
 .vote.is-closed .eyebrow{text-wrap:balance}
 .sec--evento{padding-block:clamp(56px,7vw,100px)}
 .sec--evento .sec-head{margin-bottom:0}
@@ -366,7 +378,7 @@ html:not(.js) .reveal{opacity:1;transform:none}
       <p class="eyebrow">Votación</p>
       <h2 class="sec-title gold" id="votar-title">Vota por tus favoritos</h2>
       <div class="orn" aria-hidden="true"><i></i><svg><use href="#star"/></svg><i></i></div>
-      <p class="sec-lead">Elige un restaurante en cada una de las 8 categorías. Escribe su nombre para encontrarlo al instante y desliza para recorrer a todos los afiliados.</p>
+      <p class="sec-lead">Elige a tu favorito entre los 4 nominados de cada una de las 8 categorías. Cada restaurante afiliado vota una sola vez.</p>
     </header>
 
     <!-- Votación cerrada (CONFIG.VOTACION_CERRADA) -->
@@ -374,7 +386,6 @@ html:not(.js) .reveal{opacity:1;transform:none}
       <div class="thanks-ico"><svg aria-hidden="true"><use href="#i-lock"/></svg></div>
       <h3 class="stage-title gold">Ya no se reciben más votos</h3>
       <p class="lead">Todos los votos quedaron registrados. Gracias por ser parte del gremio restaurantero.</p>
-      <div class="thanks-actions" id="closedActions" hidden><a class="btn btn--gold" href="#resultados">Ver resultados</a></div>
     </div>
 
     <div class="ballot-app reveal" id="ballotApp">
@@ -391,11 +402,11 @@ html:not(.js) .reveal{opacity:1;transform:none}
         <div id="viewDatos" hidden>
           <header class="stage-head">
             <p class="stage-count">Antes de votar</p>
-            <p class="stage-desc">Escribe tu nombre y el restaurante que representas.</p>
+            <p class="stage-desc">Escribe tu nombre completo y elige el restaurante afiliado a CANIRAC que representas. Cada restaurante puede votar una sola vez.</p>
           </header>
           <form class="voter" id="datosForm" novalidate>
-            <div class="field"><label for="vName">Tu nombre</label><input id="vName" name="nombre" type="text" autocomplete="name" maxlength="80" required></div>
-            <div class="field"><label for="vEst">Restaurante que vota</label><input id="vEst" name="restaurante" type="text" list="estList" autocomplete="off" maxlength="90" required><datalist id="estList"></datalist></div>
+            <div class="field"><label for="vName">Nombre completo</label><input id="vName" name="nombre" type="text" autocomplete="name" maxlength="80" required></div>
+            <div class="field"><label for="vEst">Restaurante afiliado a CANIRAC</label><input id="vEst" name="restaurante" type="text" list="estList" autocomplete="off" maxlength="90" placeholder="Escribe y elige de la lista" required><datalist id="estList"></datalist></div>
             <p class="form-msg" id="datosMsg" role="alert" hidden></p>
             <div class="stage-actions">
               <span class="spacer"></span>
@@ -411,12 +422,12 @@ html:not(.js) .reveal{opacity:1;transform:none}
             <h3 class="stage-title" id="stageTitle"></h3>
             <p class="stage-desc" id="stageDesc"></p>
           </header>
-          <div class="search">
+          <div class="search" hidden>
             <svg aria-hidden="true"><use href="#i-search"/></svg>
             <input id="q" type="search" inputmode="search" autocomplete="off" autocapitalize="off" spellcheck="false" placeholder="Escribe el nombre del restaurante…" aria-label="Buscar restaurante por nombre" aria-controls="track">
             <button class="search-clear" id="qClear" type="button" aria-label="Borrar búsqueda" hidden>&times;</button>
           </div>
-          <div class="meta">
+          <div class="meta" hidden>
             <span id="resultCount" role="status" aria-live="polite"></span>
             <span class="hint"><svg viewBox="0 0 22 14" aria-hidden="true"><use href="#i-arrow"/></svg>Desliza para ver más · toca para elegir</span>
           </div>
@@ -454,13 +465,11 @@ html:not(.js) .reveal{opacity:1;transform:none}
         </div>
 
         <!-- Vista: gracias -->
-        <div class="thanks" id="viewThanks" hidden>
+        <div class="thanks closed" id="viewThanks" hidden>
           <div class="thanks-ico"><svg aria-hidden="true"><use href="#i-check"/></svg></div>
-          <h3 class="stage-title gold">¡Gracias por votar!</h3>
-          <p class="lead" id="thanksMsg"></p>
-          <p class="demo-note" id="thanksDemo" hidden>Modo de prueba: esta boleta quedó guardada aparte y no cuenta en los resultados oficiales.</p>
-          <div class="thanks-actions"><a class="btn btn--gold" href="#resultados">Ver resultado</a><button class="btn" id="again" type="button">Registrar otro voto</button></div>
-          <ul class="review-list" id="thanksList"></ul>
+          <p class="stage-count">Voto registrado</p>
+          <h3 class="stage-title gold">¡Gracias por tu voto!</h3>
+          <p class="demo-note" id="thanksDemo" hidden>Modo de prueba: esta boleta quedó guardada aparte y no cuenta en la votación real.</p>
         </div>
       </div>
     </div>
@@ -468,28 +477,10 @@ html:not(.js) .reveal{opacity:1;transform:none}
   </div>
 </section>
 
-<!-- ============================ RESULTADOS (aparecen después de votar) ============================ -->
-<section class="sec results" id="resultados" aria-labelledby="res-title" hidden>
-  <div class="pattern" aria-hidden="true"></div>
-  <div class="wrap">
-    <header class="sec-head reveal">
-      <p class="eyebrow">En vivo</p>
-      <h2 class="sec-title gold" id="res-title">Resultados</h2>
-      <div class="orn" aria-hidden="true"><i></i><svg><use href="#star"/></svg><i></i></div>
-      <p class="sec-lead">Así van las votaciones en cada categoría. Se actualizan solas a medida que la gente vota.</p>
-    </header>
-    <div class="res-bar">
-      <button class="btn btn--sm" id="resRefresh" type="button">Actualizar</button>
-    </div>
-    <p class="demo-note res-demo" id="resDemo" hidden>Modo de prueba: aquí solo se cuentan las boletas de prueba.</p>
-    <div class="res-grid" id="resGrid"></div>
-  </div>
-</section>
-
 </main>
 
 
-<noscript><p style="position:fixed;inset:auto 0 0 0;background:#d9b844;color:#02254b;text-align:center;padding:12px;z-index:200">Activa JavaScript para usar la votación y ver los resultados.</p></noscript>
+<noscript><p style="position:fixed;inset:auto 0 0 0;background:#d9b844;color:#02254b;text-align:center;padding:12px;z-index:200">Activa JavaScript para votar.</p></noscript>
 
 <!-- ============================================================
      LÓGICA
@@ -503,20 +494,22 @@ function main() {
    CONFIGURACIÓN — edita solo esta parte
    ==============================================================
 
-   ► VOTOS Y RESULTADOS EN VIVO
-     Los votos se guardan en la nube de APEX Creativo (Firebase, proyecto apex-creativo-portal):
-     cada boleta en la colección «gala_votos» y la suma de todas en el documento «gala/conteo».
-     Las reglas de Firestore solo dejan crear boletas y sumar exactamente 1 voto por boleta.
-     Después de votar, la página muestra los resultados y se actualizan solos para todos.
+   ► NUEVA VOTACIÓN (22 nov 2026): 4 NOMINADOS POR CATEGORÍA, UN SOLO VOTO POR RESTAURANTE
+     Antes de votar se pide el nombre completo de quien vota y el restaurante afiliado (de la lista).
+     Cada boleta se guarda en la nube de APEX Creativo (Firebase, proyecto apex-creativo-portal) en
+     «gala2/final/votos/{restaurante}»: el id del documento es el restaurante que vota y las reglas de
+     Firestore solo dejan crearlo una vez, así que un segundo voto del mismo restaurante se rechaza en la
+     base de datos, no solo en la pantalla. «gala2/final/votaron/{restaurante}» solo avisa que ya votó.
+     Los resultados no se muestran en la página: el equipo APEX los ve en el portal (pestaña «Votación Gala»
+     del cliente CANIRAC). La votación anterior («gala_votos» y «gala/conteo») se conserva aparte.
 
-     Para probar sin afectar los resultados reales, abre la página con ?prueba al final del
-     link (por ejemplo canirac.html?prueba): esos votos van a «gala/prueba» y no cuentan.
+     Para probar sin afectar la votación real, abre la página con ?prueba al final del link
+     (por ejemplo canirac.html?prueba): esas boletas van a «gala2/prueba» y no cuentan.
 
    ► VOTACIÓN CERRADA
      Con VOTACION_CERRADA: true la página ya no deja votar (tampoco con ?prueba) y muestra el aviso
-     «Votación cerrada». Los votos guardados no se tocan: el equipo los ve en el portal de APEX,
-     pestaña «Votación Gala» del cliente CANIRAC. Para volver a abrir, pon false.
-     RESULTADOS_AL_CERRAR: true = todos ven los resultados finales; false = solo el equipo, en el portal.
+     «Votación cerrada». Para cerrarla también en la base de datos, gala2Abierta() en las reglas debe
+     devolver false. Los votos guardados no se tocan.
 */
 var CONFIG = {
   /* Datos públicos por diseño, igual que en el portal: la seguridad la dan las reglas de Firestore. */
@@ -533,13 +526,13 @@ var CONFIG = {
   EVENT_START:   '2026-11-27T19:00:00-06:00',   // hora de Guanajuato (UTC-6)
   EVENT_END:     '2026-11-28T02:00:00-06:00',
   VENUE:         'Jardín Hacienda San Matías, Guanajuato',
-  STORAGE_KEY:   'gala-gremio-2026-boleta',
-  VOTACION_CERRADA:     true,
-  RESULTADOS_AL_CERRAR: false
+  STORAGE_KEY:   'gala-gremio-2026-nominados',   // otra llave: lo que se votó en la votación anterior no cuenta aquí
+  EDICION:       'final',                        // gala2/final = votación real
+  VOTACION_CERRADA: false
 };
 var CERRADA = !!CONFIG.VOTACION_CERRADA;
 var PRUEBA = /[?&]prueba(?:[=&]|$)/i.test(location.search);   // ?prueba: votos aparte, no cuentan
-var TABLERO = PRUEBA ? 'prueba' : 'conteo';
+var TABLERO = PRUEBA ? 'prueba' : CONFIG.EDICION;
 var STORAGE_KEY = CONFIG.STORAGE_KEY + (PRUEBA ? '-prueba' : '');
 
 /* ----- Las 8 categorías que se votan (lámina de CANIRAC, 17 nov 2026) ----- */
@@ -553,6 +546,18 @@ var CATS = [
   { id:'pequeno',     name:'Mérito al Pequeño Establecimiento',               short:'Pequeño establecimiento', desc:'Reconocimiento a los pequeños negocios que con menos de 8 mesas, hacen de su esfuerzo y perseverancia, una notable contribución al desarrollo económico local.' },
   { id:'productor',   name:'Mérito al Productor Gastronómico',                short:'Productor gastronómico',  desc:'Reconocimiento a productores que destacan por la calidad de sus productos, compromiso e impulso a la economía local.' }
 ];
+
+/* ----- Los 4 nominados de cada categoría (en la boleta aparecen en orden alfabético, sin revelar el resultado anterior) ----- */
+var NOMINADOS = {
+  excelencia:  ['Amatxi', 'Hacienda San Matías', 'Casa Valadez', 'La Vaca Argentina'],
+  experiencia: ['Casa Valadez', 'Amatxi', 'El Faro', 'Emma Restaurante'],
+  cafeteria:   ['Yessi Cafetería y Repostería', 'La Vie en Rose', 'Macanela', 'Casa Cuévano'],
+  identidad:   ['Casa Valadez', 'Tras Lomita', 'Hotel Embajadoras', 'Nuevo Campo Viejo'],
+  revelacion:  ['El Faro', 'Hacienda San Matías', 'Ixaliano', 'Nuevo Campo Viejo'],
+  compromiso:  ['Escarola', 'Hacienda San Matías', 'Casa Valadez', 'Sr. Spaguetti'],
+  pequeno:     ['Sr. Spaguetti', 'Munchick', 'Delica Mitsu', 'Club Café'],
+  productor:   ['Dulcería La Catrina', 'Supérales', 'La Antojería', 'Mezquilate']
+};
 
 /* ----- Restaurantes afiliados: [nombre, número de logo]  (0 = sin logo → muestra monograma) -----
    El número de logo corresponde a la posición del logo en la lona (1 a 74); del 75 al 79 se agregaron el 17 nov 2026. */
@@ -632,7 +637,11 @@ var RESTAURANTS = [
   ['Pizza Baez Centro', 68],
   ['Pizza Baez Euquerio', 68],
   ['El Embarcadero', 56],
-  ['Trattoria Terraza', 79]
+  ['Trattoria Terraza', 79],
+  /* Agregados el 22 nov 2026 para la votación de nominados (pueden votar; sin logo, muestran monograma) */
+  ['Selvática', 0],
+  ['Palato Cocina Italiana', 0],
+  ['Canta Corazón', 0]
 ];
 
 /* ==============================================================
@@ -664,6 +673,15 @@ var RESTS = RESTAURANTS.map(function (r) {
   return { id: norm(name).replace(/ /g, '-'), name: name, logo: r[1], mono: mono.toUpperCase(), n: norm(name) };
 }).sort(function (a, b) { return a.name.localeCompare(b.name, 'es', { sensitivity: 'base', ignorePunctuation: true }); });
 var REST_BY_ID = {}; RESTS.forEach(function (r) { REST_BY_ID[r.id] = r; });
+var NOM_IDS = {};
+CATS.forEach(function (c) {
+  NOM_IDS[c.id] = (NOMINADOS[c.id] || []).map(function (n) { return norm(n).replace(/ /g, '-'); }).filter(function (id) { return REST_BY_ID[id]; });
+});
+var esNominado = function (catId, id) { return (NOM_IDS[catId] || []).indexOf(id) !== -1; };
+/* Restaurante afiliado a partir de lo que se escribió (sin importar acentos ni mayúsculas) */
+function afiliado(nombre) { var k = norm(nombre || ''); for (var i = 0; i < RESTS.length; i++) { if (RESTS[i].n === k) return RESTS[i]; } return null; }
+/* Nombre completo: al menos nombre y apellido */
+function nombreCompleto(n) { n = String(n || '').trim().replace(/\s+/g, ' '); return n.length >= 5 && n.split(' ').length >= 2; }
 
 /* Estilos de cada logo (máscara + proporción), definidos una sola vez */
 (function installLogoStyles() {
@@ -672,14 +690,6 @@ var REST_BY_ID = {}; RESTS.forEach(function (r) { REST_BY_ID[r.id] = r; });
 })();
 var logoHTML = function (n, extra) { return '<span class="logo lg' + n + '"' + (extra || '') + '></span>'; };
 var markHTML = function (r) { return r.logo ? logoHTML(r.logo) : '<span class="mono" aria-hidden="true">' + esc(r.mono) + '</span>'; };
-
-/* ==============================================================
-   Resultados: estructura de las 7 tarjetas (el contenido se llena en renderResults)
-   ============================================================== */
-$('#resGrid').innerHTML = CATS.map(function (c, i) {
-  return '<article class="res-card reveal" data-cat="' + c.id + '" aria-labelledby="res-h-' + c.id + '">' +
-    '<header class="res-head"><b class="gold">' + pad(i + 1) + '</b><h3 id="res-h-' + c.id + '">' + esc(c.name) + '</h3></header><div class="res-body"></div></article>';
-}).join('');
 
 /* ==============================================================
    Navegación y aparición al hacer scroll
@@ -702,19 +712,19 @@ window.addEventListener('scroll', onScroll, { passive: true }); onScroll();
 /* ==============================================================
    VOTACIÓN
    ============================================================== */
-var state = { step: 0, view: 'cat', votes: {}, voter: { name: '', est: '' }, sent: null, yaVoto: false };
+var state = { step: 0, view: 'cat', votes: {}, voter: { name: '', est: '' }, sent: null };
 (function load() {
   try {
     var s = JSON.parse(store.get(STORAGE_KEY) || 'null');
-    if (s) { state.votes = s.votes || {}; state.voter = s.voter || state.voter; state.sent = (s.sent && !s.sent.demo) ? s.sent : null; state.yaVoto = !!(s.yaVoto || state.sent); }   // boletas del modo local anterior (demo) no se enviaron: se descartan
+    if (s) { state.votes = s.votes || {}; state.voter = s.voter || state.voter; state.sent = s.sent || null; }
   } catch (e) {}
-  Object.keys(state.votes).forEach(function (k) { if (!REST_BY_ID[state.votes[k]]) delete state.votes[k]; });
+  Object.keys(state.votes).forEach(function (k) { if (!esNominado(k, state.votes[k])) delete state.votes[k]; });   // solo nominados
   if (state.sent) state.view = 'thanks';
   else if (!tieneDatos()) state.view = 'datos';
 })();
-var save = function () { store.set(STORAGE_KEY, JSON.stringify({ votes: state.votes, voter: state.voter, sent: state.sent, yaVoto: state.yaVoto })); };
-/* Nombre y restaurante de quien vota: obligatorios antes de votar */
-function tieneDatos() { return String(state.voter.name || '').trim().length >= 2 && String(state.voter.est || '').trim().length >= 2; }
+var save = function () { store.set(STORAGE_KEY, JSON.stringify({ votes: state.votes, voter: state.voter, sent: state.sent })); };
+/* Nombre completo y restaurante afiliado de quien vota: obligatorios antes de votar */
+function tieneDatos() { return nombreCompleto(state.voter.name) && !!afiliado(state.voter.est); }
 var count = function () { return CATS.filter(function (c) { return state.votes[c.id]; }).length; };
 var announce = function (t) { var l = $('#live'); l.textContent = ''; setTimeout(function () { l.textContent = t; }, 30); };
 
@@ -725,8 +735,8 @@ var el = {
   viewDatos: $('#viewDatos'), viewCat: $('#viewCat'), viewReview: $('#viewReview'), viewThanks: $('#viewThanks'),
   datosForm: $('#datosForm'), vName: $('#vName'), vEst: $('#vEst'), datosMsg: $('#datosMsg'), reviewWho: $('#reviewWho'),
   count: $('#stageCount'), title: $('#stageTitle'), desc: $('#stageDesc'), top: $('#stageTop'), app: $('#ballotApp'),
-  reviewList: $('#reviewList'), thanksList: $('#thanksList'), form: $('#voterForm'),
-  formMsg: $('#formMsg'), submit: $('#submitBtn'), demoNote: $('#demoNote'), thanksDemo: $('#thanksDemo'), thanksMsg: $('#thanksMsg')
+  reviewList: $('#reviewList'), form: $('#voterForm'), datosBtn: $('#datosBtn'),
+  formMsg: $('#formMsg'), submit: $('#submitBtn'), demoNote: $('#demoNote'), thanksDemo: $('#thanksDemo')
 };
 
 /* ----- Tarjetas de restaurantes (se crean una sola vez y se reutilizan en cada categoría) ----- */
@@ -746,11 +756,11 @@ function applyFilter() {
   var tokens = norm(el.q.value).split(' ').filter(Boolean);
   vis = [];
   cards.forEach(function (c) {
-    var ok = tokens.every(function (t) { return c._n.indexOf(t) !== -1; });
+    var ok = esNominado(CATS[state.step].id, c.dataset.id) && tokens.every(function (t) { return c._n.indexOf(t) !== -1; });
     c.hidden = !ok; if (ok) vis.push(c);
   });
   var n = vis.length;
-  el.resultCount.textContent = tokens.length ? (n === 1 ? '1 resultado' : n + ' resultados') : RESTS.length + ' restaurantes';
+  el.resultCount.textContent = n === 1 ? '1 nominado' : n + ' nominados';
   el.qClear.hidden = !el.q.value;
   el.track.hidden = n === 0; el.empty.hidden = n > 0;
   if (!n) el.empty.innerHTML = 'No encontramos <strong>«' + esc(el.q.value.trim()) + '»</strong>. Revisa la ortografía o prueba con otra palabra.';
@@ -801,6 +811,7 @@ function showView(v) {
   state.view = v;
   el.viewDatos.hidden = v !== 'datos'; el.viewCat.hidden = v !== 'cat'; el.viewReview.hidden = v !== 'review'; el.viewThanks.hidden = v !== 'thanks';
   el.chips.hidden = v === 'thanks' || v === 'datos';
+  el.app.classList.toggle('is-done', v === 'thanks'); $('#votar').classList.toggle('is-done', v === 'thanks');
   if (v === 'datos') renderDatos();
   if (v === 'cat') renderCategory();
   if (v === 'review') renderReview();
@@ -834,12 +845,9 @@ function renderReview() {
   el.submit.disabled = n === 0;
   el.demoNote.hidden = !PRUEBA;
 }
-function renderThanks() {
-  var who = String(state.voter.name || '').trim().split(/\s+/)[0];
-  el.thanksMsg.textContent = (who ? who + ', tus ' : 'Tus ') + 'votos quedaron registrados. Gracias por ser parte del gremio restaurantero.';
+function renderThanks() {   // solo «Voto registrado · ¡Gracias por tu voto!»: sin resumen ni resultados
   el.thanksDemo.hidden = !PRUEBA;
-  el.thanksList.innerHTML = CATS.map(function (c, i) { return reviewItem(i, false); }).join('');
-  $$('.rv', el.thanksList).forEach(function (b) { b.style.cursor = 'default'; b.tabIndex = -1; });
+  $('#live').textContent = '';
 }
 function ensureVisible() {
   var r = el.app.getBoundingClientRect();
@@ -933,12 +941,22 @@ function failDatos(msg, campo) {
     inp.removeAttribute('aria-invalid'); el.datosMsg.hidden = true;
   });
 });
+var YA_VOTO = 'Este restaurante ya registró su voto. Cada restaurante afiliado puede votar una sola vez.';
 el.datosForm.addEventListener('submit', function (e) {
   e.preventDefault();
   state.voter = { name: el.vName.value, est: el.vEst.value }; save();
-  if (state.voter.name.trim().length < 2) return failDatos('Escribe tu nombre para poder votar.', el.vName);
-  if (state.voter.est.trim().length < 2) return failDatos('Escribe el restaurante que vota.', el.vEst);
-  goStep(Object.keys(state.votes).length ? state.step : 0);
+  if (!nombreCompleto(state.voter.name)) return failDatos('Escribe tu nombre completo (nombre y apellido).', el.vName);
+  var r = afiliado(state.voter.est);
+  if (!r) return failDatos('Elige de la lista el restaurante afiliado a CANIRAC que representas.', el.vEst);
+  state.voter = { name: state.voter.name.trim().replace(/\s+/g, ' '), est: r.name }; el.vEst.value = r.name; save();
+  /* ¿Ese restaurante ya votó? Se revisa antes de empezar (y la base de datos lo vuelve a impedir al enviar) */
+  el.datosBtn.disabled = true; el.datosBtn.textContent = 'Revisando…';
+  var seguir = function () { el.datosBtn.disabled = false; el.datosBtn.innerHTML = 'Comenzar a votar &rarr;'; };
+  nubeYaVoto(r.id).then(function (ya) {
+    seguir();
+    if (ya) return failDatos(YA_VOTO, el.vEst);
+    goStep(Object.keys(state.votes).length ? state.step : 0);
+  }, function () { seguir(); goStep(Object.keys(state.votes).length ? state.step : 0); });   // sin conexión: se valida al enviar
 });
 el.reviewWho.addEventListener('click', function (e) { if (e.target.closest && e.target.closest('#editDatos')) { showView('datos'); ensureVisible(); el.vName.focus(); } });
 
@@ -954,16 +972,22 @@ function fail(msg) {
 el.form.addEventListener('submit', function (e) {
   e.preventDefault();
   if (!count()) return fail('Elige al menos un restaurante antes de enviar.');
-  if (!tieneDatos()) { showView('datos'); return failDatos('Escribe tu nombre y el restaurante que vota.'); }
+  if (!tieneDatos()) { showView('datos'); return failDatos('Escribe tu nombre completo y elige tu restaurante afiliado.'); }
+  var r = afiliado(state.voter.est);
   el.submit.disabled = true; el.submit.textContent = 'Enviando…';
   var lento = setTimeout(function () { el.submit.textContent = 'Enviando… esperando señal'; }, 8000);
-  var done = function () { clearTimeout(lento); state.sent = { at: new Date().toISOString() }; state.yaVoto = true; save(); showView('thanks'); mostrarResultados(); ensureVisible(); };
-  var error = function () { clearTimeout(lento); el.submit.disabled = false; renderReview(); fail('No pudimos enviar tu voto. Revisa tu conexión e inténtalo de nuevo.'); };
-  nubeVotar(boletaVotos(), { nombre: state.voter.name.trim().slice(0, 80), restaurante: state.voter.est.trim().slice(0, 90) }).then(done, error);
-});
-$('#again').addEventListener('click', function () {
-  state.votes = {}; state.sent = null; state.voter = { name: '', est: '' }; state.step = 0; save();
-  showView('datos'); ensureVisible(); el.vName.focus();
+  var done = function () { clearTimeout(lento); state.sent = { at: new Date().toISOString(), restaurante: r.id }; save(); showView('thanks'); window.scrollTo(0, 0); };
+  var error = function (err) {
+    clearTimeout(lento);
+    var normal = function () { el.submit.disabled = false; renderReview(); fail('No pudimos enviar tu voto. Revisa tu conexión e inténtalo de nuevo.'); };
+    if (!err || err.code !== 'permission-denied') return normal();
+    /* La base de datos lo rechazó: ¿porque este restaurante ya votó? */
+    nubeYaVoto(r.id).then(function (ya) {
+      if (!ya) return normal();
+      renderReview(); el.submit.disabled = true; fail(YA_VOTO);
+    }, normal);
+  };
+  nubeVotar(boletaVotos(), { nombre: state.voter.name.trim().slice(0, 80), restaurante: r.name, restauranteId: r.id }).then(done, error);
 });
 
 /* ==============================================================
@@ -990,109 +1014,29 @@ function nubeLista() {
   }
   return nube.carga;
 }
-function tableroRef(fs) { return fs.collection('gala').doc(TABLERO); }
-/* Tablero vacío con las 8 categorías actuales (las reglas de Firestore piden exactamente estas llaves al crearlo) */
-function tableroInicial() { var c = {}; CATS.forEach(function (k) { c[k.id] = {}; }); return { total: 0, ultima: '', c: c }; }
+/* Boleta en gala2/{tablero}/votos/{restaurante} + aviso en gala2/{tablero}/votaron/{restaurante}, en un solo envío.
+   Las reglas solo dejan crear ambos una vez por restaurante y solo con los nominados de cada categoría. */
+function gala2(fs) { return fs.collection('gala2').doc(TABLERO); }
 function nubeVotar(votos, quien) {
   if (CERRADA) return Promise.reject(new Error('La votación está cerrada'));
   return nubeLista().then(function (fs) {
-    var ref = tableroRef(fs);
-    var enviar = function () {
-      var FV = firebase.firestore.FieldValue, boleta = fs.collection('gala_votos').doc(), suma = { total: FV.increment(1), ultima: boleta.id };
-      Object.keys(votos).forEach(function (k) { suma['c.' + k + '.' + votos[k]] = FV.increment(1); });
-      var lote = fs.batch();
-      lote.set(boleta, { tablero: TABLERO, votos: votos, nombre: quien.nombre, restaurante: quien.restaurante, enviado: FV.serverTimestamp() });
-      lote.update(ref, suma);
-      return lote.commit();
-    };
-    return enviar().catch(function (e) {
-      /* Si el conteo todavía no existe, se crea vacío y se reintenta una vez */
-      return ref.get().then(function (s) {
-        if (s.exists) throw e;
-        return fs.runTransaction(function (t) { return t.get(ref).then(function (x) { if (!x.exists) t.set(ref, tableroInicial()); }); }).then(enviar);
-      });
-    });
+    var FV = firebase.firestore.FieldValue, base = gala2(fs), lote = fs.batch();
+    lote.set(base.collection('votos').doc(quien.restauranteId), { nombre: quien.nombre, restaurante: quien.restaurante, votos: votos, enviado: FV.serverTimestamp() });
+    lote.set(base.collection('votaron').doc(quien.restauranteId), { enviado: FV.serverTimestamp() });
+    return lote.commit();
   });
 }
-function nubeEscuchar(alCambiar, alFallar) {
-  var activo = true, quitar = null;
-  nubeLista().then(function (fs) {
-    if (!activo) return;
-    quitar = tableroRef(fs).onSnapshot(function (s) { alCambiar(s.exists ? s.data() : null, s.metadata.fromCache); }, alFallar);
-  }, alFallar);
-  return function () { activo = false; if (quitar) quitar(); };
-}
-
-/* ==============================================================
-   RESULTADOS en vivo: aparecen después de votar y se actualizan solos para todos
-   ============================================================== */
-var RES_TOP = 4;   // solo se muestran los 4 restaurantes con más votos de cada categoría
-var res = { tally: null, loaded: 0, failed: false, offline: false, sig: {}, quitar: null };
-var resEl = { sec: $('#resultados'), grid: $('#resGrid'), refresh: $('#resRefresh'), demo: $('#resDemo') };
-resEl.demo.hidden = !PRUEBA;
-
-function tallyDe(d) {
-  var t = { total: Math.max(0, +((d && d.total) || 0)), cats: {} };
-  CATS.forEach(function (c) { t.cats[c.id] = (d && d.c && d.c[c.id]) || {}; });
-  return t;
-}
-/* Ranking de una categoría: solo restaurantes de la lista, de más a menos votos (empates comparten lugar) */
-function entriesFor(c) {
-  var raw = res.tally.cats[c.id] || {};
-  var list = Object.keys(raw).filter(function (id) { return REST_BY_ID[id] && +raw[id] > 0; })
-    .map(function (id) { return { rest: REST_BY_ID[id], n: +raw[id] }; });
-  list.sort(function (a, b) { return b.n - a.n || a.rest.name.localeCompare(b.rest.name, 'es', { sensitivity: 'base' }); });
-  var rank = 0, prev = -1;
-  list.forEach(function (e, i) { if (e.n !== prev) { rank = i + 1; prev = e.n; } e.rank = rank; });
-  return list;
-}
-var votosTxt = function (n) { return n + (n === 1 ? ' voto' : ' votos'); };
-/* Los 4 con más votos: nombre, votos y barra (proporcional al primero) */
-function cardHTML(list) {
-  if (!list.length) return '<p class="res-none">Aún no hay votos en esta categoría.</p>';
-  var top = list[0];
-  return '<ul class="res-list" role="list">' + list.slice(0, RES_TOP).map(function (e) {
-    return '<li class="res-row"><span class="nm">' + esc(e.rest.name) + '</span><span class="ct">' + votosTxt(e.n) + '</span>' +
-      '<span class="bar" aria-hidden="true"><b style="--w:' + (e.n / top.n * 100).toFixed(1) + '%"></b></span></li>';
-  }).join('') + '</ul>';
-}
-function renderResults() {
-  CATS.forEach(function (c) {
-    var card = $('[data-cat="' + c.id + '"]', resEl.grid), body = $('.res-body', card);
-    var list = res.tally ? entriesFor(c) : null;
-    var sig = list ? JSON.stringify(list.slice(0, RES_TOP).map(function (e) { return [e.rest.id, e.n, e.rank]; })) : (res.failed ? 'fail' : 'load');
-    if (res.sig[c.id] === sig) return;   // sin cambios: no se vuelve a dibujar
-    res.sig[c.id] = sig;
-    body.innerHTML = list ? cardHTML(list) : '<p class="res-none">' + (res.failed ? 'No pudimos cargar los resultados. Toca «Actualizar» para reintentar.' : 'Cargando resultados…') + '</p>';
+/* ¿Ese restaurante ya votó? (solo dice sí o no; los votos no se pueden leer desde la página) */
+function nubeYaVoto(restauranteId) {
+  return nubeLista().then(function (fs) {
+    return gala2(fs).collection('votaron').doc(restauranteId).get().then(function (d) { return d.exists; });
   });
 }
-function dejarDeEscuchar() { if (res.quitar) { res.quitar(); res.quitar = null; } }
-function escucharResultados() {
-  dejarDeEscuchar();
-  res.failed = false; resEl.refresh.disabled = true;
-  res.quitar = nubeEscuchar(function (d, cache) {
-    res.tally = tallyDe(d); res.loaded = Date.now(); res.failed = false; res.offline = !!cache;
-    resEl.refresh.disabled = false; renderResults();
-  }, function () {
-    res.failed = true; res.quitar = null; resEl.refresh.disabled = false; renderResults();
-  });
-}
-function mostrarResultados() {
-  resEl.sec.hidden = false;
-  if (document.visibilityState !== 'hidden' && !res.quitar) escucharResultados();
-}
-/* Solo se escucha mientras la página está a la vista (ahorra lecturas del plan gratis de Firebase) */
-document.addEventListener('visibilitychange', function () {
-  if (resEl.sec.hidden) return;
-  if (document.visibilityState === 'hidden') dejarDeEscuchar(); else if (!res.quitar) escucharResultados();
-});
-resEl.refresh.addEventListener('click', escucharResultados);
-renderResults();
 
 /* ==============================================================
    Arranque
    ============================================================== */
-/* Votación cerrada: sin boleta ni envío; aviso y, si se configuró, los resultados finales para todos */
+/* Votación cerrada: sin boleta ni envío, solo el aviso (los resultados nunca se muestran en la página) */
 function cerrarVotacion() {
   $('#votar').classList.add('is-closed');
   $('#votar .eyebrow').textContent = CONFIG.EVENT_NAME;
@@ -1100,18 +1044,9 @@ function cerrarVotacion() {
   $('#votar .sec-lead').textContent = 'Gracias a todos los que eligieron a sus favoritos en las 8 categorías.';
   el.app.hidden = true;
   $('#closedPanel').hidden = false;
-  if (!CONFIG.RESULTADOS_AL_CERRAR) return;
-  $('#closedActions').hidden = false;
-  $('#resultados .eyebrow').textContent = 'Resultados finales';
-  $('#resultados .sec-lead').textContent = 'Así quedaron las votaciones en cada categoría.';
-  resEl.refresh.hidden = true;
-  mostrarResultados();
 }
 if (CERRADA) cerrarVotacion();
-else {
-  showView(state.view);
-  if (state.yaVoto) mostrarResultados();
-}
+else showView(state.view);
 }
 if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', main); else main();
 })();
