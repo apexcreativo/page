@@ -1156,6 +1156,14 @@ function decidir() {
     return datosRevisando(true);
   }
   datosRevisando(false);
+  /* Se reinició la votación (el equipo borró los votos de este restaurante): este celular también empieza de cero */
+  if (!marca.existe && votoAqui(id)) {
+    delete state.mios[id];
+    if (state.terminado && state.terminado.restaurante === id) state.terminado = null;
+    state.votes = {};
+    save();
+    if (v === 'thanks') v = 'carga';
+  }
   var pend = CATS.filter(function (c) { return marca.votadas.indexOf(c.id) < 0; });
   if (!pend.length) {   // ya votó en todas las categorías abiertas
     ACTUAL = null;
