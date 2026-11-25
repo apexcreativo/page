@@ -14,7 +14,10 @@ const TEAM_MEMBERS = [
   { id: 'ale', codigo: 'APEX CEO1', nombre: 'Alejandra', rol: 'Dirección General & Estrategia' },
   { id: 'pablo', codigo: 'APEX CEO2', nombre: 'Pablo', rol: 'Dirección Operativa & Modelos' },
   { id: 'mitzi', codigo: 'APEX EQ1', nombre: 'Mitzi', rol: 'Levantamiento, Edición y Foto/Video' },
-  { id: 'extra', codigo: 'APEX EQ2', nombre: 'Colaborador adicional', rol: 'Producción & Apoyo' }
+  { id: 'extra', codigo: 'APEX EQ2', nombre: 'Colaborador adicional', rol: 'Producción & Apoyo' },
+  // Usuario de trabajo para CANIRAC (24 nov 2026): solo ve la votación de CANIRAC, sus resultados y abre o cierra sus categorías.
+  // No ve la lista de clientes ni otras pestañas, y las reglas de Firestore no le dejan leer ni cambiar nada más.
+  { id: 'canirac-ale', codigo: 'CANIRAC_ALE', nombre: 'CANIRAC_ALE', rol: 'Votación CANIRAC · resultados y abrir/cerrar categorías', soloVotacion: 'canirac' }
 ];
 
 // Proyecto de Firebase del portal. Estos datos son públicos por diseño:
@@ -182,11 +185,25 @@ async function loginAsTeam(memberId, pin) {
   if (!member || !pinLimpio) return { success: false, message: 'Selecciona tu nombre e ingresa tu PIN.' };
   try {
     await nubeAbrirSesion({ rol: 'equipo', miembro: memberId, pin: pinLimpio });
-    await nubeCargarDatosConReintento();
+    if (member.soloVotacion) await nubeCargarSoloVotacion(member.soloVotacion);
+    else await nubeCargarDatosConReintento();
   } catch (err) {
     console.warn('Acceso de equipo rechazado:', err);
     nube.sesion = null;
     return { success: false, message: nubeMensajeError(err, 'PIN incorrecto para el colaborador seleccionado.') };
+  }
+  if (member.soloVotacion) {
+    // Solo la votación de CANIRAC: sin lista de clientes ni otras pestañas
+    nube.sesion.soloVotacion = member.soloVotacion;
+    state.currentRole = 'votacion';
+    state.currentTeamMember = member;
+    state.activeClientSlug = member.soloVotacion;
+    state.activeTab = 'gala';
+    state.galaEdicion = 'nominados';
+    state.galaFiltro = 'reales';
+    state.galaBuscar = '';
+    openPortalWorkspace();
+    return { success: true };
   }
   state.currentRole = 'team';
   state.currentTeamMember = member;
@@ -281,6 +298,10 @@ function renderPortalWorkspace() {
       roleBadge.textContent = `Modo Equipo: ${state.currentTeamMember ? (state.currentTeamMember.codigo || state.currentTeamMember.nombre) : 'Apex'}`;
       roleBadge.style.background = 'rgba(192, 132, 252, 0.2)';
       roleBadge.style.color = '#e9d5ff';
+    } else if (state.currentRole === 'votacion') {
+      roleBadge.textContent = `Votación CANIRAC: ${state.currentTeamMember ? state.currentTeamMember.codigo : ''}`;
+      roleBadge.style.background = 'rgba(217, 184, 68, 0.2)';
+      roleBadge.style.color = '#f4e3a1';
     } else {
       roleBadge.textContent = `Portal Cliente: ${activeClient.nombre}`;
       roleBadge.style.background = 'rgba(16, 185, 129, 0.2)';
@@ -320,6 +341,13 @@ function renderPortalWorkspace() {
   const galaVisible = galaPermitido();
   if (tabGala) tabGala.hidden = !galaVisible;
   if (state.activeTab === 'gala' && !galaVisible) state.activeTab = 'resultados';
+  // Usuario que solo ve la votación de CANIRAC: ninguna otra pestaña
+  const soloVotacion = state.currentRole === 'votacion';
+  ['resultados', 'planeacion', 'parrilla', 'pagos'].forEach(tab => {
+    const b = document.querySelector(`.portal-tab[data-tab="${tab}"]`);
+    if (b) b.hidden = soloVotacion;
+  });
+  if (soloVotacion) state.activeTab = 'gala';
 
   // Si el cliente estaba en una pestaña de equipo, mandarlo a la primera pestaña (resultados)
   if (state.currentRole === 'client' && (state.activeTab === 'tareas' || state.activeTab === 'ajustes')) {
@@ -1328,6 +1356,11 @@ function handleKpiImageUpload(input) {
 async function actualizarDesdeNube() {
   const btn = document.getElementById('btnActualizarNube');
   if (btn && btn.disabled) return;
+  if (state.currentRole === 'votacion') {   // solo la votación: se vuelve a leer en vivo
+    galaActualizar();
+    nubeEstado('actualizado');
+    return;
+  }
   const texto = btn ? btn.textContent : '';
   if (btn) {
     btn.disabled = true;
@@ -3255,6 +3288,28 @@ function renderAjustes() {
         </div>
       </div>
 
+      <!-- Usuarios que solo ven la votación de CANIRAC (24 nov 2026) -->
+      <div class="editor-card">
+        <h4 style="font-family:var(--font-display);font-size:16px;color:var(--text-strong);margin-bottom:6px;">Usuario de la votación CANIRAC</h4>
+        <p style="font-size:12.5px;color:var(--text-muted);margin-bottom:14px;">
+          Entra en «Acceso Equipo» con su nombre y su PIN. Solo ve la pestaña «Votación Gala» de CANIRAC: resultados en vivo y abrir o cerrar categorías. No ve la lista de clientes ni las demás pestañas, y no puede cambiar nada más.
+        </p>
+        <div style="display:flex;flex-direction:column;gap:8px;">
+          ${TEAM_MEMBERS.filter(m => m.soloVotacion).map(m => `
+            <div style="display:flex;align-items:center;justify-content:space-between;background:var(--bg-surface-elevated);padding:10px 14px;border-radius:var(--radius-md);border:1px solid var(--border-subtle);flex-wrap:wrap;gap:8px;">
+              <div>
+                <strong style="color:var(--text-strong);font-size:14px;">${escapeHtml(m.codigo)}</strong>
+                <span class="mono" style="font-size:11px;color:var(--text-dim);margin-left:8px;">${nube.pinesEquipo[m.id] ? 'PIN: ' + escapeHtml(nube.pinesEquipo[m.id]) : 'Sin PIN: todavía no puede entrar'}</span>
+              </div>
+              <div style="display:flex;gap:6px;">
+                <button class="btn btn-sm btn-secondary" onclick="asignarPinVotacion('${m.id}')">${nube.pinesEquipo[m.id] ? 'Cambiar PIN' : 'Asignar PIN'}</button>
+                ${nube.pinesEquipo[m.id] ? `<button class="btn btn-sm btn-secondary" style="color:#f87171;" onclick="quitarPinVotacion('${m.id}')">Quitar acceso</button>` : ''}
+              </div>
+            </div>
+          `).join('')}
+        </div>
+      </div>
+
       <!-- Respaldos y Seguridad -->
       <div class="editor-card">
         <h4 style="font-family:var(--font-display);font-size:16px;color:var(--text-strong);margin-bottom:8px;">Respaldo y Seguridad de Datos</h4>
@@ -3269,6 +3324,29 @@ function renderAjustes() {
       </div>
     </div>
   `;
+}
+
+// PIN del usuario que solo ve la votación de CANIRAC: se guarda en la nube junto con los del equipo
+function asignarPinVotacion(id) {
+  const m = TEAM_MEMBERS.find(x => x.id === id && x.soloVotacion);
+  if (!m || state.currentRole !== 'team') return;
+  const pin = prompt(`PIN para ${m.codigo} (solo podrá ver la votación de CANIRAC):`, nube.pinesEquipo[id] || '');
+  if (pin === null) return;
+  const limpio = String(pin).trim();
+  if (!/^\d{4,8}$/.test(limpio)) { alert('El PIN debe tener de 4 a 8 números.'); return; }
+  nube.pinesEquipo = Object.assign({}, nube.pinesEquipo, { [id]: limpio });
+  saveDatabase();
+  renderAjustes();
+}
+function quitarPinVotacion(id) {
+  const m = TEAM_MEMBERS.find(x => x.id === id && x.soloVotacion);
+  if (!m || state.currentRole !== 'team' || !nube.pinesEquipo[id]) return;
+  if (!confirm(`¿Quitarle el acceso a ${m.codigo}? Ya no podrá entrar hasta que le asignes un PIN nuevo.`)) return;
+  const pines = Object.assign({}, nube.pinesEquipo);
+  delete pines[id];
+  nube.pinesEquipo = pines;
+  saveDatabase();
+  renderAjustes();
 }
 
 function addNewClientPrompt() {
@@ -3520,6 +3598,25 @@ async function nubeAbrirSesion(datos) {
     : { rol: 'equipo', miembro: datos.miembro };
 }
 
+// Usuario que solo ve la votación: solo el nombre de su cliente (de la lista pública). Nada de los demás clientes.
+async function nubeCargarSoloVotacion(slug) {
+  const nuevo = loadDatabase();
+  try {
+    const cfg = await nube.fs.collection('portal').doc('config').get();
+    const c = cfg.exists ? (cfg.data() || {}) : {};
+    if (Array.isArray(c.clientes) && c.clientes.length) nuevo.clientes = c.clientes.map(x => Object.assign({}, x));
+  } catch (err) {
+    console.warn('No se pudo leer el nombre del cliente:', err);
+  }
+  nuevo.clientes = nuevo.clientes.filter(x => x.slug === slug);
+  if (!nuevo.clientes.length) nuevo.clientes = [{ slug, nombre: 'CANIRAC', sector: 'Cámara Restaurantera', pais: 'México', avatar: '', color: '#0b2447' }];
+  nuevo.colaboradores = [];
+  db = nuevo;
+  nube.ultimo = {};
+  nube.pinesEquipo = {};
+  nube.ultimaCarga = Date.now();
+}
+
 // Trae de la nube todo lo que la sesión puede ver y lo deja en `db`
 async function nubeCargarDatos() {
   const s = nube.sesion;
@@ -3596,7 +3693,7 @@ async function nubeCargarDatosConReintento() {
 function nubeConstruirDocs(d) {
   const s = nube.sesion;
   const docs = {};
-  if (!s) return docs;
+  if (!s || s.soloVotacion) return docs;   // el usuario de la votación no escribe nada
   const equipo = s.rol === 'equipo';
 
   if (equipo) {
@@ -3642,7 +3739,7 @@ function nubeConstruirDocs(d) {
 }
 
 function nubeProgramarGuardado() {
-  if (!nube.sesion) return;
+  if (!nube.sesion || nube.sesion.soloVotacion) return;
   clearTimeout(nube.timer);
   nube.timer = setTimeout(() => {
     nube.timer = null;
@@ -3659,7 +3756,7 @@ async function nubeGuardarYa() {
 }
 
 async function nubeSincronizar() {
-  if (!nube.sesion || !nube.fs) return;
+  if (!nube.sesion || !nube.fs || nube.sesion.soloVotacion) return;
   if (nube.guardando) {
     nube.pendiente = true;
     return nube.promesa;
@@ -3723,7 +3820,7 @@ async function nubeSincronizar() {
 
 // Al volver a la pestaña o cambiar de sección se traen los cambios de los demás
 async function nubeRefrescar(forzar) {
-  if (!nube.sesion || nube.guardando || nube.timer) return;
+  if (!nube.sesion || nube.sesion.soloVotacion || nube.guardando || nube.timer) return;   // la votación se actualiza sola, en vivo
   if (!forzar && Date.now() - nube.ultimaCarga < 15000) return;
   try {
     await nubeCargarDatosConReintento();
@@ -3857,14 +3954,23 @@ const galaIdRest = n => galaNorm(n).replace(/ /g, '-');
 function galaNombreRest(id) { return GALA_NOMBRE_REST[id] || (id ? String(id).replace(/-/g, ' ') : ''); }
 
 const galaDatos = { boletas: null, error: '', quitar: null, actualizado: 0, fuente: '' };
+// Qué categorías están abiertas (documento gala2/{final|prueba}). Si el documento no existe, todas están abiertas.
+const galaEstado = { tablero: '', quitar: null, cargado: false, existe: false, abiertas: null, cambiado: null, por: '', error: '', guardando: false };
 
 function galaPermitido() {
-  return state.currentRole === 'team' && state.activeClientSlug === GALA_CLIENTE;
+  return (state.currentRole === 'team' || state.currentRole === 'votacion') && state.activeClientSlug === GALA_CLIENTE;
 }
 function galaDejarDeEscuchar() {
   if (galaDatos.quitar) {
     try { galaDatos.quitar(); } catch (e) { /* sin acción */ }
     galaDatos.quitar = null;
+  }
+  galaDejarDeEscucharEstado();
+}
+function galaDejarDeEscucharEstado() {
+  if (galaEstado.quitar) {
+    try { galaEstado.quitar(); } catch (e) { /* sin acción */ }
+    galaEstado.quitar = null;
   }
 }
 // De dónde se leen las boletas: la votación de nominados (real o de prueba) o la votación anterior
@@ -3875,9 +3981,13 @@ function galaFuente() {
 }
 // Escucha la colección en vivo mientras la pestaña está abierta
 function galaEscuchar() {
+  galaEscucharEstado();
   const fuente = galaFuente();
   if (galaDatos.quitar && galaDatos.fuente === fuente.clave) return;
-  galaDejarDeEscuchar();
+  if (galaDatos.quitar) {
+    try { galaDatos.quitar(); } catch (e) { /* sin acción */ }
+    galaDatos.quitar = null;
+  }
   if (galaDatos.fuente !== fuente.clave) galaDatos.boletas = null;
   galaDatos.fuente = fuente.clave;
   if (!nube.fs) {
@@ -3891,16 +4001,20 @@ function galaEscuchar() {
     snap.forEach(doc => {
       const x = doc.data() || {};
       const fecha = x.enviado && typeof x.enviado.toDate === 'function' ? x.enviado.toDate() : null;
+      // Desde el 24 nov cada restaurante agrega categorías a su boleta conforme se abren: "actualizado" es su último voto
+      const despues = x.actualizado && typeof x.actualizado.toDate === 'function' ? x.actualizado.toDate() : null;
       lista.push({
         id: doc.id,
         tablero: fuente.tablero || (x.tablero === 'prueba' ? 'prueba' : 'conteo'),
         nombre: String(x.nombre || '').trim(),
         restaurante: String(x.restaurante || '').trim(),
         votos: x.votos && typeof x.votos === 'object' ? x.votos : {},
-        fecha
+        votantes: x.votantes && typeof x.votantes === 'object' ? x.votantes : {},
+        fecha,
+        ultima: despues && (!fecha || despues > fecha) ? despues : fecha
       });
     });
-    lista.sort((a, b) => (b.fecha ? b.fecha.getTime() : 0) - (a.fecha ? a.fecha.getTime() : 0));
+    lista.sort((a, b) => (b.ultima ? b.ultima.getTime() : 0) - (a.ultima ? a.ultima.getTime() : 0));
     galaDatos.boletas = lista;
     galaDatos.error = '';
     galaDatos.actualizado = Date.now();
@@ -3914,6 +4028,132 @@ function galaEscuchar() {
       : 'No se pudieron cargar las boletas. Revisa tu internet y toca «Actualizar».';
     if (state.activeTab === 'gala' && galaPermitido()) galaPintar();
   });
+}
+// ---- Abrir y cerrar categorías (24 nov 2026) ----
+// El documento gala2/final (votación real) o gala2/prueba (pruebas) guarda { abiertas: { categoría: true|false }, cambiado, por }.
+// canirac.html lo lee en vivo: lo que se cambie aquí se ve al instante en la página, sin volver a subirla a GitHub.
+function galaTableroEstado() { return state.galaFiltro === 'pruebas' ? 'prueba' : 'final'; }
+// Abren y cierran categorías: el equipo APEX y CANIRAC_ALE
+function galaPuedeAbrir() { return state.currentRole === 'team' || state.currentRole === 'votacion'; }
+function galaEscucharEstado() {
+  if (state.galaEdicion === 'anterior' || !galaPuedeAbrir()) { galaDejarDeEscucharEstado(); return; }
+  const t = galaTableroEstado();
+  if (galaEstado.quitar && galaEstado.tablero === t) return;
+  galaDejarDeEscucharEstado();
+  Object.assign(galaEstado, { tablero: t, cargado: false, existe: false, abiertas: null, cambiado: null, por: '', error: '' });
+  if (!nube.fs) {
+    galaEstado.error = 'No hay conexión con la nube. Revisa tu internet y toca «Actualizar».';
+    return;
+  }
+  galaEstado.quitar = nube.fs.collection('gala2').doc(t).onSnapshot(d => {
+    if (galaEstado.tablero !== t) return;
+    const x = d.exists ? (d.data() || {}) : null;
+    const a = {};
+    GALA_CATEGORIAS.forEach(c => { a[c.id] = x ? !!(x.abiertas && x.abiertas[c.id] === true) : true; });
+    Object.assign(galaEstado, {
+      cargado: true, existe: d.exists, abiertas: a, error: '',
+      cambiado: x && x.cambiado && typeof x.cambiado.toDate === 'function' ? x.cambiado.toDate() : null,
+      por: x ? String(x.por || '').trim() : ''
+    });
+    if (state.activeTab === 'gala' && galaPermitido()) galaPintarControl();
+  }, err => {
+    if (galaEstado.tablero !== t) return;
+    console.warn('No se pudo leer qué categorías están abiertas:', err);
+    galaEstado.quitar = null;
+    galaEstado.error = String((err && err.code) || '').indexOf('permission-denied') !== -1
+      ? 'No hay permiso para leer qué categorías están abiertas. Revisa que las reglas de Firestore estén actualizadas.'
+      : 'No se pudo leer qué categorías están abiertas. Revisa tu internet y toca «Actualizar».';
+    if (state.activeTab === 'gala' && galaPermitido()) galaPintarControl();
+  });
+}
+function galaQuien() {
+  const m = state.currentTeamMember;
+  return String(m ? (m.nombre || m.codigo || m.id || 'Equipo APEX') : 'Equipo APEX').trim().slice(0, 60);
+}
+async function galaGuardarAbiertas(abiertas) {
+  if (!nube.fs || galaEstado.guardando || !galaEstado.cargado) return;
+  const t = galaEstado.tablero;
+  const limpio = {};
+  GALA_CATEGORIAS.forEach(c => { limpio[c.id] = !!abiertas[c.id]; });
+  galaEstado.guardando = true;
+  galaEstado.error = '';
+  galaPintarControl();
+  try {
+    await nube.fs.collection('gala2').doc(t).set({ abiertas: limpio, cambiado: firebase.firestore.FieldValue.serverTimestamp(), por: galaQuien() });
+  } catch (err) {
+    console.warn('No se pudo cambiar qué categorías están abiertas:', err);
+    galaEstado.error = String((err && err.code) || '').indexOf('permission-denied') !== -1
+      ? 'Tu sesión no tiene permiso para abrir o cerrar categorías. Cierra sesión y vuelve a entrar con tu PIN de equipo.'
+      : 'No se pudo guardar el cambio. Revisa tu internet e inténtalo de nuevo.';
+  }
+  galaEstado.guardando = false;
+  galaPintarControl();
+}
+function galaCambiarCategoria(id) {
+  if (!galaEstado.abiertas) return;
+  const a = Object.assign({}, galaEstado.abiertas);
+  a[id] = !a[id];
+  galaGuardarAbiertas(a);
+}
+function galaCambiarTodas(abrir) {
+  if (!galaEstado.abiertas) return;
+  const prueba = galaEstado.tablero === 'prueba' ? ' de prueba' : '';
+  if (!confirm(abrir
+    ? `¿Abrir las 8 categorías${prueba}? Se podrá votar en todas.`
+    : `¿Cerrar las 8 categorías${prueba}? Nadie podrá votar hasta que abras alguna.`)) return;
+  const a = {};
+  GALA_CATEGORIAS.forEach(c => { a[c.id] = !!abrir; });
+  galaGuardarAbiertas(a);
+}
+function galaPintarControl() {
+  const cont = document.getElementById('galaControl');
+  if (!cont) return;
+  const nominados = state.galaEdicion !== 'anterior';
+  cont.hidden = !nominados || !galaPuedeAbrir();   // abrir y cerrar: equipo APEX y CANIRAC_ALE
+  if (cont.hidden) return;
+  const prueba = galaEstado.tablero === 'prueba';
+  const a = galaEstado.abiertas;
+  const cuantas = a ? GALA_CATEGORIAS.filter(c => a[c.id]).length : 0;
+  const resumen = !a ? '' : cuantas === GALA_CATEGORIAS.length ? 'Todas abiertas' : cuantas === 0 ? 'Todas cerradas · votación en pausa' : `${cuantas} de ${GALA_CATEGORIAS.length} abiertas`;
+  // Votos que ya tiene cada categoría (de las boletas que se están viendo: reales o de prueba)
+  const cuenta = {};
+  const boletasListas = galaDatos.boletas !== null && galaDatos.fuente === 'nominados-' + galaEstado.tablero;
+  if (boletasListas) galaBoletas(false).forEach(b => GALA_CATEGORIAS.forEach(c => { if (b.votos[c.id]) cuenta[c.id] = (cuenta[c.id] || 0) + 1; }));
+  const desactivar = !a || galaEstado.guardando ? ' disabled' : '';
+  const filas = GALA_CATEGORIAS.map((c, i) => {
+    const abierta = !!(a && a[c.id]);
+    const n = cuenta[c.id] || 0;
+    return `
+      <li class="gl-cf${abierta ? ' abierta' : ''}">
+        <span class="gl-cf-num">${String(i + 1).padStart(2, '0')}</span>
+        <span class="gl-cf-txt"><b>${escapeHtml(c.nombre)}</b><small>${boletasListas ? `${n} ${n === 1 ? 'voto' : 'votos'}` : '&nbsp;'}</small></span>
+        <button type="button" class="gl-switch" role="switch" aria-checked="${abierta ? 'true' : 'false'}" aria-label="${escapeHtml(c.nombre)}: ${abierta ? 'abierta' : 'cerrada'}"${desactivar} onclick="galaCambiarCategoria('${c.id}')">
+          <span class="gl-sw" aria-hidden="true"></span><span class="gl-sw-txt">${!a ? '…' : abierta ? 'Abierta' : 'Cerrada'}</span>
+        </button>
+      </li>`;
+  }).join('');
+  let pie;
+  if (galaEstado.guardando) pie = 'Guardando el cambio…';
+  else if (!galaEstado.cargado) pie = galaEstado.error ? '' : 'Cargando…';
+  else if (!galaEstado.existe) pie = 'Todavía no se ha cambiado nada: las 8 categorías están abiertas, como hasta hoy.';
+  else pie = `Último cambio: ${galaFecha(galaEstado.cambiado, true)}${galaEstado.por ? ' · ' + escapeHtml(galaEstado.por) : ''}`;
+  cont.innerHTML = `
+    <div class="gl-bloque-head">
+      <div class="gl-control-tit">
+        <h4>Abrir y cerrar categorías${prueba ? ' <span class="gl-etq-prueba">Prueba</span>' : ''}</h4>
+        <small>${prueba
+          ? 'Solo para la página de prueba (canirac.html?prueba): no cambia la votación real.'
+          : 'Votación real · lo que cambies aquí se ve al instante en la página de votación.'}</small>
+      </div>
+      <div class="gl-control-acc">
+        ${resumen ? `<span class="gl-resumen${cuantas ? '' : ' pausa'}">${resumen}</span>` : ''}
+        <button type="button" class="btn btn-sm btn-secondary"${desactivar} onclick="galaCambiarTodas(true)">Abrir todas</button>
+        <button type="button" class="btn btn-sm btn-secondary"${desactivar} onclick="galaCambiarTodas(false)">Cerrar todas</button>
+      </div>
+    </div>
+    ${galaEstado.error ? `<p class="gl-aviso gl-aviso-error">${escapeHtml(galaEstado.error)}</p>` : ''}
+    <ul class="gl-cfs">${filas}</ul>
+    ${pie ? `<p class="gl-control-pie" role="status">${pie}</p>` : ''}`;
 }
 function galaActualizar() {
   galaDejarDeEscuchar();
@@ -3985,6 +4225,8 @@ function renderGala() {
           </div>
         </div>
 
+        <section class="gl-bloque gl-control" id="galaControl" aria-label="Abrir y cerrar categorías"></section>
+
         <div class="pg-totales" id="galaTotales"></div>
 
         <section class="gl-bloque">
@@ -4017,7 +4259,7 @@ function galaPintar() {
   if (ea) { ea.classList.toggle('activo', !nominados); ea.setAttribute('aria-pressed', !nominados ? 'true' : 'false'); }
   document.getElementById('galaTitulo').textContent = nominados ? 'Votación de nominados' : 'Votación anterior (cerrada)';
   document.getElementById('galaSub').textContent = nominados
-    ? '4 nominados por categoría y un solo voto por restaurante afiliado. Aquí se guarda quién votó, por qué restaurante y por quién votó en cada categoría. Los resultados solo los ve el equipo APEX.'
+    ? '4 nominados por categoría. Cada restaurante afiliado vota una sola vez en cada categoría, cuando está abierta. Aquí se guarda quién votó, por qué restaurante y por quién votó en cada categoría. Los resultados solo los ve el equipo APEX.'
     : 'Primera votación, cerrada el ' + galaFecha(new Date(GALA_CIERRE), true) + ' Se conserva como historial y no se mezcla con la votación de nominados.';
   document.getElementById('galaResTitulo').textContent = nominados ? 'Resultados por categoría' : 'Resultados finales por categoría';
   document.getElementById('galaResNota').textContent = nominados ? 'Los 4 nominados de cada categoría · solo equipo APEX' : 'Todos los restaurantes con votos';
@@ -4032,13 +4274,13 @@ function galaPintar() {
   document.getElementById('galaTotalTxt').textContent = (lista.length === 1 ? 'boleta' : 'boletas') + (reales ? '' : ' de prueba');
   const conNombre = lista.filter(b => b.nombre).length;
   const restaurantes = new Set(lista.map(b => galaNorm(b.restaurante)).filter(Boolean)).size;
-  const ultima = lista.find(b => b.fecha);
+  const ultima = lista.find(b => b.ultima);
   const completas = lista.filter(b => GALA_CATEGORIAS.every(c => b.votos[c.id])).length;
   document.getElementById('galaTotales').innerHTML = nominados ? `
-    <div class="pg-total"><span>Restaurantes que votaron</span><b>${cargando ? '—' : lista.length}</b><small>un solo voto por restaurante</small></div>
+    <div class="pg-total"><span>Restaurantes que votaron</span><b>${cargando ? '—' : lista.length}</b><small>en al menos una categoría</small></div>
     <div class="pg-total"><span>Faltan por votar</span><b>${cargando ? '—' : Math.max(0, GALA2_TOTAL_AFILIADOS - lista.length)}</b><small>de ${GALA2_TOTAL_AFILIADOS} restaurantes afiliados</small></div>
     <div class="pg-total"><span>Boletas completas</span><b>${cargando ? '—' : completas}</b><small>con las 8 categorías</small></div>
-    <div class="pg-total"><span>Última boleta</span><b class="gl-total-fecha">${ultima ? galaFecha(ultima.fecha, true) : '—'}</b><small>hora del centro de México</small></div>` : `
+    <div class="pg-total"><span>Último voto</span><b class="gl-total-fecha">${ultima ? galaFecha(ultima.ultima, true) : '—'}</b><small>hora del centro de México</small></div>` : `
     <div class="pg-total"><span>Boletas</span><b>${cargando ? '—' : lista.length}</b><small>${reales ? 'cuentan en los resultados' : 'no cuentan en los resultados'}</small></div>
     <div class="pg-total"><span>Con nombre</span><b>${cargando ? '—' : conNombre}</b><small>${lista.length - conNombre > 0 ? (lista.length - conNombre) + ' sin nombre (antes del 17 nov)' : 'todas con nombre'}</small></div>
     <div class="pg-total"><span>Restaurantes que votaron</span><b>${cargando ? '—' : restaurantes}</b><small>según lo que escribió cada persona</small></div>
@@ -4047,6 +4289,7 @@ function galaPintar() {
   if (desc) desc.disabled = !lista.length;
   galaPintarRegistro();
   galaPintarResultados(lista);
+  galaPintarControl();
 }
 
 function galaPintarRegistro() {
@@ -4061,22 +4304,36 @@ function galaPintarRegistro() {
   }
   if (!lista.length) { cont.innerHTML = `<p class="gl-aviso">Ninguna boleta coincide con «${escapeHtml(state.galaBuscar.trim())}».</p>`; return; }
   const cab = GALA_CATEGORIAS.map(c => `<th scope="col" title="${escapeHtml(c.nombre)}">${escapeHtml(c.corto)}</th>`).join('');
-  const filas = lista.map((b, i) => `
+  const filas = lista.map((b, i) => {
+    const otros = galaOtrosVotantes(b);
+    return `
     <tr>
       <td class="gl-num">${lista.length - i}</td>
-      <td class="gl-fecha">${galaFecha(b.fecha, true)}</td>
-      <td class="gl-nombre">${b.nombre ? escapeHtml(b.nombre) : '<span class="gl-vacio" title="Boleta anterior al 17 nov: todavía no se pedía el nombre">—</span>'}</td>
+      <td class="gl-fecha">${galaFecha(b.ultima, true)}</td>
+      <td class="gl-nombre">${b.nombre ? escapeHtml(b.nombre) : '<span class="gl-vacio" title="Boleta anterior al 17 nov: todavía no se pedía el nombre">—</span>'}${otros.length ? `<small class="gl-otros">También votó: ${escapeHtml(otros.join(', '))}</small>` : ''}</td>
       <td class="gl-rest">${b.restaurante ? escapeHtml(b.restaurante) : '<span class="gl-vacio">—</span>'}</td>
-      ${GALA_CATEGORIAS.map(c => b.votos[c.id] ? `<td>${escapeHtml(galaNombreRest(b.votos[c.id]))}</td>` : '<td><span class="gl-vacio">—</span></td>').join('')}
-    </tr>`).join('');
+      ${GALA_CATEGORIAS.map(c => b.votos[c.id] ? `<td${b.votantes[c.id] ? ` title="Votó: ${escapeHtml(b.votantes[c.id])}"` : ''}>${escapeHtml(galaNombreRest(b.votos[c.id]))}</td>` : '<td><span class="gl-vacio">—</span></td>').join('')}
+    </tr>`;
+  }).join('');
   cont.innerHTML = `
     <p class="gl-cuenta">${lista.length === todas.length ? `${todas.length} ${todas.length === 1 ? 'boleta' : 'boletas'}, de la más reciente a la más antigua` : `${lista.length} de ${todas.length} boletas`}</p>
     <div class="gl-tabla-wrap">
       <table class="gl-tabla">
-        <thead><tr><th scope="col" class="gl-num">#</th><th scope="col">Fecha y hora</th><th scope="col">Nombre</th><th scope="col">Restaurante que vota</th>${cab}</tr></thead>
+        <thead><tr><th scope="col" class="gl-num">#</th><th scope="col">Último voto</th><th scope="col">Nombre</th><th scope="col">Restaurante que vota</th>${cab}</tr></thead>
         <tbody>${filas}</tbody>
       </table>
     </div>`;
+}
+
+// Otras personas del mismo restaurante que votaron en alguna categoría (desde el 24 nov se vota por categoría)
+function galaOtrosVotantes(b) {
+  const vistos = new Set([galaNorm(b.nombre)]);
+  const otros = [];
+  GALA_CATEGORIAS.forEach(c => {
+    const n = String(b.votantes[c.id] || '').trim();
+    if (n && !vistos.has(galaNorm(n))) { vistos.add(galaNorm(n)); otros.push(n); }
+  });
+  return otros;
 }
 
 function galaPintarResultados(lista) {
@@ -4111,12 +4368,15 @@ function galaDescargar() {
   if (!lista.length) return;
   const celda = v => '"' + String(v == null ? '' : v).replace(/"/g, '""') + '"';
   const zona = { timeZone: 'America/Mexico_City' };
-  const filas = [['Fecha', 'Hora', 'Nombre', 'Restaurante que vota'].concat(GALA_CATEGORIAS.map(c => c.nombre))]
+  const nominados = state.galaEdicion !== 'anterior';
+  const dia = d => d ? d.toLocaleDateString('es-MX', Object.assign({ day: '2-digit', month: '2-digit', year: 'numeric' }, zona)) : '';
+  const hora = d => d ? d.toLocaleTimeString('es-MX', Object.assign({ hour: '2-digit', minute: '2-digit', hour12: false }, zona)) : '';
+  const filas = [['Fecha', 'Hora', 'Nombre', 'Restaurante que vota'].concat(GALA_CATEGORIAS.map(c => c.nombre)).concat(nominados ? ['Último voto'] : [])]
     .concat(lista.map(b => [
-      b.fecha ? b.fecha.toLocaleDateString('es-MX', Object.assign({ day: '2-digit', month: '2-digit', year: 'numeric' }, zona)) : '',
-      b.fecha ? b.fecha.toLocaleTimeString('es-MX', Object.assign({ hour: '2-digit', minute: '2-digit', hour12: false }, zona)) : '',
-      b.nombre, b.restaurante
-    ].concat(GALA_CATEGORIAS.map(c => galaNombreRest(b.votos[c.id] || '')))));
+      dia(b.fecha), hora(b.fecha),
+      [b.nombre].concat(galaOtrosVotantes(b)).filter(Boolean).join(' / '), b.restaurante
+    ].concat(GALA_CATEGORIAS.map(c => galaNombreRest(b.votos[c.id] || '')))
+      .concat(nominados ? [b.ultima ? dia(b.ultima) + ' ' + hora(b.ultima) : ''] : [])));
   const csv = '﻿' + filas.map(f => f.map(celda).join(',')).join('\r\n');
   const hoy = new Date().toLocaleDateString('en-CA', zona);
   const a = document.createElement('a');
