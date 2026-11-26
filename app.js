@@ -17,7 +17,7 @@ const TEAM_MEMBERS = [
   { id: 'extra', codigo: 'APEX EQ2', nombre: 'Colaborador adicional', rol: 'Producción & Apoyo' },
   // Usuario de trabajo para CANIRAC (24 nov 2026): solo ve la votación de CANIRAC, sus resultados y abre o cierra sus categorías.
   // No ve la lista de clientes ni otras pestañas, y las reglas de Firestore no le dejan leer ni cambiar nada más.
-  { id: 'canirac-ale', codigo: 'CANIRAC_ALE', nombre: 'CANIRAC_ALE', rol: 'Votación CANIRAC · resultados y abrir/cerrar categorías', soloVotacion: 'canirac' }
+  { id: 'canirac-ale', codigo: 'CANIRAC_ALE', nombre: 'CANIRAC_ALE', rol: 'Votación CANIRAC · resultados, abrir/cerrar categorías y reiniciar', soloVotacion: 'canirac' }
 ];
 
 // Proyecto de Firebase del portal. Estos datos son públicos por diseño:
@@ -3292,7 +3292,7 @@ function renderAjustes() {
       <div class="editor-card">
         <h4 style="font-family:var(--font-display);font-size:16px;color:var(--text-strong);margin-bottom:6px;">Usuario de la votación CANIRAC</h4>
         <p style="font-size:12.5px;color:var(--text-muted);margin-bottom:14px;">
-          Entra en «Acceso Equipo» con su nombre y su PIN. Solo ve la pestaña «Votación Gala» de CANIRAC: resultados en vivo y abrir o cerrar categorías. No ve la lista de clientes ni las demás pestañas, y no puede cambiar nada más.
+          Entra en «Acceso Equipo» con su nombre y su PIN. Solo ve la pestaña «Votación Gala» de CANIRAC: resultados en vivo, abrir o cerrar categorías y reiniciar la votación. No ve la lista de clientes ni las demás pestañas, y no puede cambiar nada más.
         </p>
         <div style="display:flex;flex-direction:column;gap:8px;">
           ${TEAM_MEMBERS.filter(m => m.soloVotacion).map(m => `
@@ -3956,6 +3956,8 @@ function galaNombreRest(id) { return GALA_NOMBRE_REST[id] || (id ? String(id).re
 const galaDatos = { boletas: null, error: '', quitar: null, actualizado: 0, fuente: '' };
 // Si el registro y cada categoría están abiertos (documento gala2/{final|prueba}). Si el documento no existe, todo está abierto.
 const galaEstado = { tablero: '', quitar: null, cargado: false, existe: false, abiertas: null, cambiado: null, por: '', error: '', guardando: false };
+// Reiniciar la votación (26 nov 2026): borra todos los registros y votos del tablero que se ve
+const galaReinicio = { activo: false, tablero: '', msg: '', error: '' };
 
 function galaPermitido() {
   return (state.currentRole === 'team' || state.currentRole === 'votacion') && state.activeClientSlug === GALA_CLIENTE;
@@ -4167,7 +4169,65 @@ function galaPintarControl() {
     </div>
     ${galaEstado.error ? `<p class="gl-aviso gl-aviso-error">${escapeHtml(galaEstado.error)}</p>` : ''}
     <ul class="gl-cfs">${filas}</ul>
-    ${pie ? `<p class="gl-control-pie" role="status">${pie}</p>` : ''}`;
+    ${pie ? `<p class="gl-control-pie" role="status">${pie}</p>` : ''}
+    ${galaReinicioHtml(prueba)}`;
+}
+// Botón para empezar de cero (equipo APEX y CANIRAC_ALE): borra registros y votos del tablero que se ve
+function galaReinicioHtml(prueba) {
+  const r = galaReinicio, mismo = r.tablero === galaEstado.tablero;
+  const ocupado = r.activo || galaEstado.guardando;
+  return `
+    <div class="gl-reinicio">
+      <div class="gl-reinicio-txt">
+        <b>Empezar de cero${prueba ? ' (prueba)' : ''}</b>
+        <small>Borra todos los registros y votos de la votación${prueba ? ' de prueba' : ' real'}: todos tendrán que registrarse otra vez. Antes se descarga una copia en Excel. No se puede deshacer.</small>
+      </div>
+      <button type="button" class="btn btn-sm gl-btn-borrar" id="galaBtnReiniciar"${ocupado ? ' disabled' : ''} onclick="galaReiniciar()">${r.activo ? 'Borrando…' : '🗑️ Reiniciar votación'}</button>
+    </div>
+    ${mismo && r.msg ? `<p class="gl-aviso gl-aviso-ok" role="status">${escapeHtml(r.msg)}</p>` : ''}
+    ${mismo && r.error ? `<p class="gl-aviso gl-aviso-error" role="alert">${escapeHtml(r.error)}</p>` : ''}`;
+}
+async function galaReiniciar() {
+  if (!galaPuedeAbrir() || galaReinicio.activo || state.galaEdicion === 'anterior') return;
+  const t = galaTableroEstado(), prueba = t === 'prueba';
+  if (!nube.fs) { alert('No hay conexión con la nube. Revisa tu internet y toca «Actualizar».'); return; }
+  if (galaDatos.boletas === null || galaDatos.fuente !== 'nominados-' + t) { alert('Espera a que carguen los registros y vuelve a intentarlo.'); return; }
+  const lista = galaBoletas(false);
+  if (!lista.length) { alert(`La votación${prueba ? ' de prueba' : ''} ya está en cero: no hay registros ni votos.`); return; }
+  const votos = lista.reduce((n, b) => n + GALA_CATEGORIAS.filter(c => b.votos[c.id]).length, 0);
+  const resp = prompt(`REINICIAR LA VOTACIÓN${prueba ? ' DE PRUEBA' : ' REAL'}\n\n`
+    + `Se van a borrar ${lista.length} ${lista.length === 1 ? 'registro' : 'registros'} y ${votos} ${votos === 1 ? 'voto' : 'votos'}. Todos tendrán que registrarse otra vez.\n`
+    + 'Antes se descarga una copia en Excel. No se puede deshacer.\n\nEscribe BORRAR para confirmar:');
+  if (resp === null) return;
+  if (String(resp).trim().toUpperCase() !== 'BORRAR') { alert('No se borró nada: para confirmar hay que escribir BORRAR.'); return; }
+  galaDescargar(lista, '-copia-antes-de-reiniciar');   // copia de todo (sin la búsqueda)
+  Object.assign(galaReinicio, { activo: true, tablero: t, msg: '', error: '' });
+  galaPintarControl();
+  let borrados = 0;
+  try {
+    const base = nube.fs.collection('gala2').doc(t);
+    const [sv, sm] = await Promise.all([base.collection('votos').get(), base.collection('votaron').get()]);
+    const ids = [];
+    sv.forEach(d => { if (ids.indexOf(d.id) < 0) ids.push(d.id); });
+    sm.forEach(d => { if (ids.indexOf(d.id) < 0) ids.push(d.id); });
+    // Cada restaurante se borra completo (boleta + aviso) en un solo envío, de 6 en 6
+    const uno = async id => {
+      const lote = nube.fs.batch();
+      lote.delete(base.collection('votos').doc(id));
+      lote.delete(base.collection('votaron').doc(id));
+      await lote.commit();
+      borrados++;
+    };
+    for (let i = 0; i < ids.length; i += 6) await Promise.all(ids.slice(i, i + 6).map(uno));
+    galaReinicio.msg = `Listo: la votación${prueba ? ' de prueba' : ''} quedó en cero. Se borraron ${borrados} ${borrados === 1 ? 'registro' : 'registros'} con sus votos.`;
+  } catch (err) {
+    console.warn('No se pudo reiniciar la votación:', err);
+    galaReinicio.error = String((err && err.code) || '').indexOf('permission-denied') !== -1
+      ? 'Tu sesión no tiene permiso para borrar. Cierra sesión y vuelve a entrar con tu PIN.'
+      : `No se pudo borrar todo (se borraron ${borrados}). Revisa tu internet y vuelve a tocar «Reiniciar votación».`;
+  }
+  galaReinicio.activo = false;
+  galaPintarControl();
 }
 function galaActualizar() {
   galaDejarDeEscuchar();
@@ -4177,6 +4237,7 @@ function galaActualizar() {
 }
 function galaFiltrar(filtro) {
   state.galaFiltro = filtro === 'pruebas' ? 'pruebas' : 'reales';
+  if (!galaReinicio.activo) Object.assign(galaReinicio, { msg: '', error: '' });
   galaEscuchar();
   galaPintar();
 }
@@ -4380,9 +4441,10 @@ function galaPintarResultados(lista) {
   }).join('');
 }
 
-// Descarga lo que se ve en el registro (reales o de prueba, con la búsqueda) en CSV que abre Excel
-function galaDescargar() {
-  const lista = galaBoletas(true);
+// Descarga lo que se ve en el registro (reales o de prueba, con la búsqueda) en CSV que abre Excel.
+// Con listaFija (copia antes de reiniciar) descarga esa lista completa, con el sufijo en el nombre del archivo.
+function galaDescargar(listaFija, sufijo) {
+  const lista = Array.isArray(listaFija) ? listaFija : galaBoletas(true);
   if (!lista.length) return;
   const celda = v => '"' + String(v == null ? '' : v).replace(/"/g, '""') + '"';
   const zona = { timeZone: 'America/Mexico_City' };
@@ -4399,7 +4461,7 @@ function galaDescargar() {
   const hoy = new Date().toLocaleDateString('en-CA', zona);
   const a = document.createElement('a');
   a.href = URL.createObjectURL(new Blob([csv], { type: 'text/csv;charset=utf-8' }));
-  a.download = `${state.galaEdicion === 'anterior' ? 'votacion-gala-canirac' : 'votacion-nominados-canirac'}-${hoy}${state.galaFiltro === 'pruebas' ? '-pruebas' : ''}.csv`;
+  a.download = `${state.galaEdicion === 'anterior' ? 'votacion-gala-canirac' : 'votacion-nominados-canirac'}-${hoy}${state.galaFiltro === 'pruebas' ? '-pruebas' : ''}${Array.isArray(listaFija) && sufijo ? sufijo : ''}.csv`;
   document.body.appendChild(a);
   a.click();
   setTimeout(() => { URL.revokeObjectURL(a.href); a.remove(); }, 500);

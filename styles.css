@@ -2942,6 +2942,15 @@ img, svg {
 .gl-switch:focus-visible { outline: 2px solid var(--border-focus); outline-offset: 2px; }
 .gl-switch:disabled { opacity: 0.6; cursor: progress; }
 .gl-control-pie { margin: 12px 0 0; font-size: 13px; color: var(--text-dim); }
+/* Empezar de cero (26 nov 2026) */
+.gl-reinicio { margin-top: 16px; padding: 14px 16px; border: 1px dashed rgba(184, 31, 64, 0.45); border-radius: 14px; background: #fff7f8; display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 12px; }
+.gl-reinicio-txt { min-width: 0; flex: 1 1 280px; display: flex; flex-direction: column; gap: 3px; }
+.gl-reinicio-txt b { font-family: var(--font-display); font-size: 14px; font-weight: 700; color: #8f1730; }
+.gl-reinicio-txt small { font-size: 12.5px; line-height: 1.45; color: var(--text-dim); }
+.gl-btn-borrar { border: 1px solid rgba(184, 31, 64, 0.55); background: #ffffff; color: #b81f40; font-weight: 700; white-space: nowrap; }
+.gl-btn-borrar:hover:not(:disabled) { background: #b81f40; border-color: #b81f40; color: #ffffff; }
+.gl-btn-borrar:disabled { opacity: 0.6; cursor: progress; }
+.gl-aviso-ok { color: #047857; font-weight: 600; }
 @media (prefers-reduced-motion: reduce) { .gl-sw, .gl-sw::after, .gl-cf { transition: none; } }
 .gl-cat { border: 1px solid var(--border-subtle); border-radius: 16px; padding: 16px; background: #fbf7fb; }
 .gl-cat header { display: flex; align-items: baseline; gap: 10px; margin-bottom: 10px; }
