@@ -3954,7 +3954,7 @@ const galaIdRest = n => galaNorm(n).replace(/ /g, '-');
 function galaNombreRest(id) { return GALA_NOMBRE_REST[id] || (id ? String(id).replace(/-/g, ' ') : ''); }
 
 const galaDatos = { boletas: null, error: '', quitar: null, actualizado: 0, fuente: '' };
-// Qué categorías están abiertas (documento gala2/{final|prueba}). Si el documento no existe, todas están abiertas.
+// Si el registro y cada categoría están abiertos (documento gala2/{final|prueba}). Si el documento no existe, todo está abierto.
 const galaEstado = { tablero: '', quitar: null, cargado: false, existe: false, abiertas: null, cambiado: null, por: '', error: '', guardando: false };
 
 function galaPermitido() {
@@ -4011,7 +4011,8 @@ function galaEscuchar() {
         votos: x.votos && typeof x.votos === 'object' ? x.votos : {},
         votantes: x.votantes && typeof x.votantes === 'object' ? x.votantes : {},
         fecha,
-        ultima: despues && (!fecha || despues > fecha) ? despues : fecha
+        ultima: despues && (!fecha || despues > fecha) ? despues : fecha,
+        voto: despues || (x.votos && typeof x.votos === 'object' && Object.keys(x.votos).length ? fecha : null)
       });
     });
     lista.sort((a, b) => (b.ultima ? b.ultima.getTime() : 0) - (a.ultima ? a.ultima.getTime() : 0));
@@ -4030,7 +4031,7 @@ function galaEscuchar() {
   });
 }
 // ---- Abrir y cerrar categorías (24 nov 2026) ----
-// El documento gala2/final (votación real) o gala2/prueba (pruebas) guarda { abiertas: { categoría: true|false }, cambiado, por }.
+// El documento gala2/final (votación real) o gala2/prueba (pruebas) guarda { abiertas: { registro|categoría: true|false }, cambiado, por }.
 // canirac.html lo lee en vivo: lo que se cambie aquí se ve al instante en la página, sin volver a subirla a GitHub.
 function galaTableroEstado() { return state.galaFiltro === 'pruebas' ? 'prueba' : 'final'; }
 // Abren y cierran categorías: el equipo APEX y CANIRAC_ALE
@@ -4050,6 +4051,7 @@ function galaEscucharEstado() {
     const x = d.exists ? (d.data() || {}) : null;
     const a = {};
     GALA_CATEGORIAS.forEach(c => { a[c.id] = x ? !!(x.abiertas && x.abiertas[c.id] === true) : true; });
+    a.registro = x ? !(x.abiertas && x.abiertas.registro === false) : true;   // registro obligatorio antes de votar (26 nov): solo cerrado si se cerró aquí
     Object.assign(galaEstado, {
       cargado: true, existe: d.exists, abiertas: a, error: '',
       cambiado: x && x.cambiado && typeof x.cambiado.toDate === 'function' ? x.cambiado.toDate() : null,
@@ -4073,7 +4075,7 @@ function galaQuien() {
 async function galaGuardarAbiertas(abiertas) {
   if (!nube.fs || galaEstado.guardando || !galaEstado.cargado) return;
   const t = galaEstado.tablero;
-  const limpio = {};
+  const limpio = { registro: !!abiertas.registro };
   GALA_CATEGORIAS.forEach(c => { limpio[c.id] = !!abiertas[c.id]; });
   galaEstado.guardando = true;
   galaEstado.error = '';
@@ -4099,9 +4101,9 @@ function galaCambiarTodas(abrir) {
   if (!galaEstado.abiertas) return;
   const prueba = galaEstado.tablero === 'prueba' ? ' de prueba' : '';
   if (!confirm(abrir
-    ? `¿Abrir las 8 categorías${prueba}? Se podrá votar en todas.`
-    : `¿Cerrar las 8 categorías${prueba}? Nadie podrá votar hasta que abras alguna.`)) return;
-  const a = {};
+    ? `¿Abrir el registro y las 8 categorías${prueba}? Se podrá registrar y votar en todas.`
+    : `¿Cerrar el registro y las 8 categorías${prueba}? Nadie podrá registrarse ni votar hasta que vuelvas a abrir.`)) return;
+  const a = { registro: !!abrir };
   GALA_CATEGORIAS.forEach(c => { a[c.id] = !!abrir; });
   galaGuardarAbiertas(a);
 }
@@ -4114,13 +4116,24 @@ function galaPintarControl() {
   const prueba = galaEstado.tablero === 'prueba';
   const a = galaEstado.abiertas;
   const cuantas = a ? GALA_CATEGORIAS.filter(c => a[c.id]).length : 0;
+  const registro = !!(a && a.registro);
   const resumen = !a ? '' : cuantas === GALA_CATEGORIAS.length ? 'Todas abiertas' : cuantas === 0 ? 'Todas cerradas · votación en pausa' : `${cuantas} de ${GALA_CATEGORIAS.length} abiertas`;
+  const resumenReg = !a ? '' : registro ? 'Registro abierto' : 'Registro cerrado';
   // Votos que ya tiene cada categoría (de las boletas que se están viendo: reales o de prueba)
   const cuenta = {};
   const boletasListas = galaDatos.boletas !== null && galaDatos.fuente === 'nominados-' + galaEstado.tablero;
   if (boletasListas) galaBoletas(false).forEach(b => GALA_CATEGORIAS.forEach(c => { if (b.votos[c.id]) cuenta[c.id] = (cuenta[c.id] || 0) + 1; }));
   const desactivar = !a || galaEstado.guardando ? ' disabled' : '';
-  const filas = GALA_CATEGORIAS.map((c, i) => {
+  const nReg = boletasListas ? galaBoletas(false).length : 0;
+  const filaRegistro = `
+      <li class="gl-cf gl-cf--registro${registro ? ' abierta' : ''}">
+        <span class="gl-cf-num">00</span>
+        <span class="gl-cf-txt"><b>Registro</b><small>Obligatorio antes de votar${boletasListas ? ` · ${nReg} ${nReg === 1 ? 'registrado' : 'registrados'}` : ''}</small></span>
+        <button type="button" class="gl-switch" role="switch" aria-checked="${registro ? 'true' : 'false'}" aria-label="Registro: ${registro ? 'abierto' : 'cerrado'}"${desactivar} onclick="galaCambiarCategoria('registro')">
+          <span class="gl-sw" aria-hidden="true"></span><span class="gl-sw-txt">${!a ? '…' : registro ? 'Abierto' : 'Cerrado'}</span>
+        </button>
+      </li>`;
+  const filas = filaRegistro + GALA_CATEGORIAS.map((c, i) => {
     const abierta = !!(a && a[c.id]);
     const n = cuenta[c.id] || 0;
     return `
@@ -4135,7 +4148,7 @@ function galaPintarControl() {
   let pie;
   if (galaEstado.guardando) pie = 'Guardando el cambio…';
   else if (!galaEstado.cargado) pie = galaEstado.error ? '' : 'Cargando…';
-  else if (!galaEstado.existe) pie = 'Todavía no se ha cambiado nada: las 8 categorías están abiertas, como hasta hoy.';
+  else if (!galaEstado.existe) pie = 'Todavía no se ha cambiado nada: el registro y las 8 categorías están abiertos.';
   else pie = `Último cambio: ${galaFecha(galaEstado.cambiado, true)}${galaEstado.por ? ' · ' + escapeHtml(galaEstado.por) : ''}`;
   cont.innerHTML = `
     <div class="gl-bloque-head">
@@ -4146,6 +4159,7 @@ function galaPintarControl() {
           : 'Votación real · lo que cambies aquí se ve al instante en la página de votación.'}</small>
       </div>
       <div class="gl-control-acc">
+        ${resumenReg ? `<span class="gl-resumen${registro ? '' : ' pausa'}">${resumenReg}</span>` : ''}
         ${resumen ? `<span class="gl-resumen${cuantas ? '' : ' pausa'}">${resumen}</span>` : ''}
         <button type="button" class="btn btn-sm btn-secondary"${desactivar} onclick="galaCambiarTodas(true)">Abrir todas</button>
         <button type="button" class="btn btn-sm btn-secondary"${desactivar} onclick="galaCambiarTodas(false)">Cerrar todas</button>
@@ -4259,7 +4273,7 @@ function galaPintar() {
   if (ea) { ea.classList.toggle('activo', !nominados); ea.setAttribute('aria-pressed', !nominados ? 'true' : 'false'); }
   document.getElementById('galaTitulo').textContent = nominados ? 'Votación de nominados' : 'Votación anterior (cerrada)';
   document.getElementById('galaSub').textContent = nominados
-    ? '4 nominados por categoría. Cada restaurante afiliado vota una sola vez en cada categoría, cuando está abierta. Aquí se guarda quién votó, por qué restaurante y por quién votó en cada categoría. Los resultados solo los ve el equipo APEX.'
+    ? '4 nominados por categoría. Cada restaurante afiliado primero se registra y después vota una sola vez en cada categoría, cuando está abierta. Aquí se guarda quién se registró, quién votó, por qué restaurante y por quién votó en cada categoría. Los resultados solo los ve el equipo APEX.'
     : 'Primera votación, cerrada el ' + galaFecha(new Date(GALA_CIERRE), true) + ' Se conserva como historial y no se mezcla con la votación de nominados.';
   document.getElementById('galaResTitulo').textContent = nominados ? 'Resultados por categoría' : 'Resultados finales por categoría';
   document.getElementById('galaResNota').textContent = nominados ? 'Los 4 nominados de cada categoría · solo equipo APEX' : 'Todos los restaurantes con votos';
@@ -4271,16 +4285,18 @@ function galaPintar() {
   const lista = galaBoletas(false);
   const cargando = galaDatos.boletas === null && !galaDatos.error;
   document.getElementById('galaTotal').textContent = cargando || galaDatos.error ? '—' : String(lista.length);
-  document.getElementById('galaTotalTxt').textContent = (lista.length === 1 ? 'boleta' : 'boletas') + (reales ? '' : ' de prueba');
+  document.getElementById('galaTotalTxt').textContent = (nominados ? (lista.length === 1 ? 'registrado' : 'registrados') : (lista.length === 1 ? 'boleta' : 'boletas')) + (reales ? '' : ' de prueba');
   const conNombre = lista.filter(b => b.nombre).length;
   const restaurantes = new Set(lista.map(b => galaNorm(b.restaurante)).filter(Boolean)).size;
   const ultima = lista.find(b => b.ultima);
   const completas = lista.filter(b => GALA_CATEGORIAS.every(c => b.votos[c.id])).length;
+  const yaVotaron = lista.filter(b => GALA_CATEGORIAS.some(c => b.votos[c.id])).length;
+  const ultimoVoto = lista.reduce((m, b) => b.voto && (!m || b.voto > m) ? b.voto : m, null);
   document.getElementById('galaTotales').innerHTML = nominados ? `
-    <div class="pg-total"><span>Restaurantes que votaron</span><b>${cargando ? '—' : lista.length}</b><small>en al menos una categoría</small></div>
-    <div class="pg-total"><span>Faltan por votar</span><b>${cargando ? '—' : Math.max(0, GALA2_TOTAL_AFILIADOS - lista.length)}</b><small>de ${GALA2_TOTAL_AFILIADOS} restaurantes afiliados</small></div>
+    <div class="pg-total"><span>Registrados</span><b>${cargando ? '—' : lista.length}</b><small>de ${GALA2_TOTAL_AFILIADOS} restaurantes afiliados</small></div>
+    <div class="pg-total"><span>Ya votaron</span><b>${cargando ? '—' : yaVotaron}</b><small>en al menos una categoría</small></div>
     <div class="pg-total"><span>Boletas completas</span><b>${cargando ? '—' : completas}</b><small>con las 8 categorías</small></div>
-    <div class="pg-total"><span>Último voto</span><b class="gl-total-fecha">${ultima ? galaFecha(ultima.ultima, true) : '—'}</b><small>hora del centro de México</small></div>` : `
+    <div class="pg-total"><span>Último voto</span><b class="gl-total-fecha">${ultimoVoto ? galaFecha(ultimoVoto, true) : '—'}</b><small>hora del centro de México</small></div>` : `
     <div class="pg-total"><span>Boletas</span><b>${cargando ? '—' : lista.length}</b><small>${reales ? 'cuentan en los resultados' : 'no cuentan en los resultados'}</small></div>
     <div class="pg-total"><span>Con nombre</span><b>${cargando ? '—' : conNombre}</b><small>${lista.length - conNombre > 0 ? (lista.length - conNombre) + ' sin nombre (antes del 17 nov)' : 'todas con nombre'}</small></div>
     <div class="pg-total"><span>Restaurantes que votaron</span><b>${cargando ? '—' : restaurantes}</b><small>según lo que escribió cada persona</small></div>
@@ -4299,18 +4315,20 @@ function galaPintarRegistro() {
   if (galaDatos.boletas === null) { cont.innerHTML = '<p class="gl-aviso">Cargando boletas…</p>'; return; }
   const todas = galaBoletas(false), lista = galaBoletas(true);
   if (!todas.length) {
-    cont.innerHTML = `<p class="gl-aviso">${state.galaFiltro === 'pruebas' ? 'No hay boletas de prueba.' : 'Todavía no hay votos.'}</p>`;
+    cont.innerHTML = `<p class="gl-aviso">${state.galaFiltro === 'pruebas' ? 'No hay boletas de prueba.' : state.galaEdicion !== 'anterior' ? 'Todavía no hay registros.' : 'Todavía no hay votos.'}</p>`;
     return;
   }
   if (!lista.length) { cont.innerHTML = `<p class="gl-aviso">Ninguna boleta coincide con «${escapeHtml(state.galaBuscar.trim())}».</p>`; return; }
   const cab = GALA_CATEGORIAS.map(c => `<th scope="col" title="${escapeHtml(c.nombre)}">${escapeHtml(c.corto)}</th>`).join('');
+  const nominados = state.galaEdicion !== 'anterior';
   const filas = lista.map((b, i) => {
     const otros = galaOtrosVotantes(b);
+    const sinVotos = nominados && !GALA_CATEGORIAS.some(c => b.votos[c.id]);
     return `
     <tr>
       <td class="gl-num">${lista.length - i}</td>
       <td class="gl-fecha">${galaFecha(b.ultima, true)}</td>
-      <td class="gl-nombre">${b.nombre ? escapeHtml(b.nombre) : '<span class="gl-vacio" title="Boleta anterior al 17 nov: todavía no se pedía el nombre">—</span>'}${otros.length ? `<small class="gl-otros">También votó: ${escapeHtml(otros.join(', '))}</small>` : ''}</td>
+      <td class="gl-nombre">${b.nombre ? escapeHtml(b.nombre) : '<span class="gl-vacio" title="Boleta anterior al 17 nov: todavía no se pedía el nombre">—</span>'}${otros.length ? `<small class="gl-otros">También votó: ${escapeHtml(otros.join(', '))}</small>` : ''}${sinVotos ? '<small class="gl-otros">Registrado · todavía no vota</small>' : ''}</td>
       <td class="gl-rest">${b.restaurante ? escapeHtml(b.restaurante) : '<span class="gl-vacio">—</span>'}</td>
       ${GALA_CATEGORIAS.map(c => b.votos[c.id] ? `<td${b.votantes[c.id] ? ` title="Votó: ${escapeHtml(b.votantes[c.id])}"` : ''}>${escapeHtml(galaNombreRest(b.votos[c.id]))}</td>` : '<td><span class="gl-vacio">—</span></td>').join('')}
     </tr>`;
@@ -4319,7 +4337,7 @@ function galaPintarRegistro() {
     <p class="gl-cuenta">${lista.length === todas.length ? `${todas.length} ${todas.length === 1 ? 'boleta' : 'boletas'}, de la más reciente a la más antigua` : `${lista.length} de ${todas.length} boletas`}</p>
     <div class="gl-tabla-wrap">
       <table class="gl-tabla">
-        <thead><tr><th scope="col" class="gl-num">#</th><th scope="col">Último voto</th><th scope="col">Nombre</th><th scope="col">Restaurante que vota</th>${cab}</tr></thead>
+        <thead><tr><th scope="col" class="gl-num">#</th><th scope="col">${nominados ? 'Última actividad' : 'Último voto'}</th><th scope="col">Nombre</th><th scope="col">Restaurante que vota</th>${cab}</tr></thead>
         <tbody>${filas}</tbody>
       </table>
     </div>`;
@@ -4371,12 +4389,12 @@ function galaDescargar() {
   const nominados = state.galaEdicion !== 'anterior';
   const dia = d => d ? d.toLocaleDateString('es-MX', Object.assign({ day: '2-digit', month: '2-digit', year: 'numeric' }, zona)) : '';
   const hora = d => d ? d.toLocaleTimeString('es-MX', Object.assign({ hour: '2-digit', minute: '2-digit', hour12: false }, zona)) : '';
-  const filas = [['Fecha', 'Hora', 'Nombre', 'Restaurante que vota'].concat(GALA_CATEGORIAS.map(c => c.nombre)).concat(nominados ? ['Último voto'] : [])]
+  const filas = [(nominados ? ['Fecha de registro', 'Hora de registro'] : ['Fecha', 'Hora']).concat(['Nombre', 'Restaurante que vota']).concat(GALA_CATEGORIAS.map(c => c.nombre)).concat(nominados ? ['Último voto'] : [])]
     .concat(lista.map(b => [
       dia(b.fecha), hora(b.fecha),
       [b.nombre].concat(galaOtrosVotantes(b)).filter(Boolean).join(' / '), b.restaurante
     ].concat(GALA_CATEGORIAS.map(c => galaNombreRest(b.votos[c.id] || '')))
-      .concat(nominados ? [b.ultima ? dia(b.ultima) + ' ' + hora(b.ultima) : ''] : [])));
+      .concat(nominados ? [b.voto ? dia(b.voto) + ' ' + hora(b.voto) : ''] : [])));
   const csv = '﻿' + filas.map(f => f.map(celda).join(',')).join('\r\n');
   const hoy = new Date().toLocaleDateString('en-CA', zona);
   const a = document.createElement('a');

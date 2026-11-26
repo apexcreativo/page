@@ -312,6 +312,9 @@ html:not(.js) .reveal{opacity:1;transform:none}
 /* Categoría por categoría: el avance solo se muestra (no se salta ni se regresa: cada voto ya quedó guardado) */
 .ballot-nota{margin:-4px 0 12px;font-size:.8rem;color:var(--ink-faint)}
 div.bl{cursor:default}
+.bl--registro{margin-bottom:6px;border-color:var(--line)}
+.bl--registro .no{font-size:1.1rem}
+.thanks .lead-fin{font-size:1.15rem;color:var(--gold-100)}
 div.bl:hover{background:transparent}
 div.bl[aria-current="step"]{background:rgba(217,184,68,.13)}
 span.chip{cursor:default}
@@ -412,7 +415,7 @@ span.chip{cursor:default}
       <p class="eyebrow">Votación</p>
       <h2 class="sec-title gold" id="votar-title">Vota por tus favoritos</h2>
       <div class="orn" aria-hidden="true"><i></i><svg><use href="#star"/></svg><i></i></div>
-      <p class="sec-lead">Vota categoría por categoría: elige a tu favorito entre los 4 nominados y toca «Enviar voto y continuar». Cada restaurante afiliado vota una sola vez en cada categoría.</p>
+      <p class="sec-lead">Primero regístrate con tu nombre completo y tu restaurante afiliado. Después vota categoría por categoría: elige a tu favorito entre los 4 nominados y toca «Enviar voto y continuar». Cada restaurante afiliado vota una sola vez en cada categoría.</p>
     </header>
 
     <!-- Votación cerrada (CONFIG.VOTACION_CERRADA) -->
@@ -422,7 +425,7 @@ span.chip{cursor:default}
       <p class="lead">Todos los votos quedaron registrados. Gracias por ser parte del gremio restaurantero.</p>
     </div>
 
-    <!-- Sin boleta por ahora: cargando, ninguna categoría abierta (se abren desde el portal de APEX) o sin conexión -->
+    <!-- Sin boleta por ahora: cargando, registro completo (esperando la primera categoría), ninguna categoría abierta (se abren desde el portal de APEX) o sin conexión -->
     <div class="closed estado" id="estadoPanel" hidden>
       <div class="thanks-ico"><svg aria-hidden="true"><use id="estadoIco" href="#i-reloj"/></svg></div>
       <h3 class="stage-title gold" id="estadoTitulo">Cargando la votación…</h3>
@@ -445,9 +448,11 @@ span.chip{cursor:default}
         <!-- Vista: datos de quien vota (obligatorios antes de cada boleta) -->
         <div id="viewDatos" hidden>
           <header class="stage-head">
-            <p class="stage-count">Antes de votar</p>
-            <p class="stage-desc">Escribe tu nombre completo y elige el restaurante afiliado a CANIRAC que representas. Cada restaurante puede votar una sola vez en cada categoría.</p>
+            <p class="stage-count">Paso obligatorio antes de votar</p>
+            <h3 class="stage-title">Registro</h3>
+            <p class="stage-desc">Escribe tu nombre completo y elige el restaurante afiliado a CANIRAC que representas. Sin registro no se puede votar: regístrate antes de que inicien las categorías. Cada restaurante vota una sola vez en cada categoría.</p>
           </header>
+          <p class="aviso-cat registro-nota" id="registroNota" hidden></p>
           <form class="voter" id="datosForm" novalidate>
             <div class="field"><label for="vName">Nombre completo</label><input id="vName" name="nombre" type="text" autocomplete="name" maxlength="80" required></div>
             <div class="field field--lista"><label for="vEst" id="vEstLabel">Restaurante afiliado a CANIRAC</label>
@@ -457,7 +462,7 @@ span.chip{cursor:default}
             <p class="form-msg" id="datosMsg" role="alert" hidden></p>
             <div class="stage-actions">
               <span class="spacer"></span>
-              <button class="btn btn--gold" id="datosBtn" type="submit">Comenzar a votar &rarr;</button>
+              <button class="btn btn--gold" id="datosBtn" type="submit">Registrarme y continuar &rarr;</button>
             </div>
           </form>
         </div>
@@ -498,8 +503,9 @@ span.chip{cursor:default}
         <!-- Vista: gracias -->
         <div class="thanks closed" id="viewThanks" hidden>
           <div class="thanks-ico"><svg aria-hidden="true"><use href="#i-check"/></svg></div>
-          <p class="stage-count">Voto registrado</p>
-          <h3 class="stage-title gold">¡Gracias por tu voto!</h3>
+          <p class="stage-count" id="thanksEyebrow">Voto registrado</p>
+          <h3 class="stage-title gold" id="thanksTitle">¡Gracias por tu voto!</h3>
+          <p class="lead lead-fin" id="thanksLead" hidden>Gracias por participar.</p>
           <p class="demo-note" id="thanksDemo" hidden>Modo de prueba: esta boleta quedó guardada aparte y no cuenta en la votación real.</p>
         </div>
       </div>
@@ -532,12 +538,19 @@ function main() {
 
    ► CATEGORÍA POR CATEGORÍA (24 nov 2026)
      Se muestra una categoría a la vez. Quien vota elige a su favorito y toca «Enviar voto y continuar»:
-     ese voto se guarda en ese momento y aparece la siguiente categoría. Al terminar: «¡Gracias por tu voto!».
+     ese voto se guarda en ese momento y aparece la siguiente categoría. Al terminar: mensaje de cierre.
      Cada restaurante vota UNA vez en cada categoría: las reglas de Firestore solo dejan agregar categorías
      nuevas a su boleta, nunca cambiar un voto, así que un voto repetido se rechaza en la base de datos,
      no solo en la pantalla. «gala2/final/votaron/{restaurante}» dice en qué categorías ya votó.
      Qué categorías están abiertas se maneja en el portal (pestaña «Votación Gala» del cliente CANIRAC):
      esta página lo lee en vivo de «gala2/final», así que no hay que volver a subirla a GitHub.
+
+   ► REGISTRO OBLIGATORIO (26 nov 2026)
+     Antes de votar, cada persona se registra: nombre completo + restaurante afiliado. El registro se guarda
+     en la nube (boleta vacía en «gala2/final/votos/{restaurante}») y las reglas de Firestore no dejan votar
+     a un restaurante que no se registró. El registro se abre y se cierra en el portal como una categoría
+     más: con el registro cerrado solo continúan los restaurantes que ya se registraron. Al votar las 8
+     categorías aparece: «¡Las votaciones han finalizado! Gracias por participar.»
      Los resultados no se muestran en la página: el equipo APEX los ve en el portal (pestaña «Votación Gala»
      del cliente CANIRAC). La votación anterior («gala_votos» y «gala/conteo») se conserva aparte.
 
@@ -750,10 +763,14 @@ window.addEventListener('scroll', onScroll, { passive: true }); onScroll();
 })();
 
 /* ==============================================================
-   VOTACIÓN · CATEGORÍA POR CATEGORÍA (24 nov 2026)
+   VOTACIÓN · CATEGORÍA POR CATEGORÍA (24 nov 2026) · CON REGISTRO OBLIGATORIO (26 nov 2026)
+   0) Registro: nombre completo + restaurante afiliado. Se guarda en la nube (boleta vacía + aviso) y sin él no se
+      puede votar (lo exigen las reglas). El registro se abre y se cierra desde el portal como una categoría más:
+      con el registro cerrado solo continúan los restaurantes que ya se registraron.
    1) Se muestra la primera categoría con sus 4 nominados. 2) Quien vota elige uno y aparece
    «Enviar voto y continuar». 3) Ese voto se guarda en ese momento en la nube de APEX y aparece
-   la siguiente categoría. 4) Al terminar todas: «Voto registrado · ¡Gracias por tu voto!».
+   la siguiente categoría. 4) Al votar las 8: «¡Las votaciones han finalizado! Gracias por participar.»
+   Si votó todo lo abierto pero faltan categorías por abrir: «Voto registrado · ¡Gracias por tu voto!».
    Los resultados nunca se muestran aquí: el equipo APEX los ve en vivo en el portal.
    Qué categorías están abiertas lo decide el portal (documento gala2/{tablero}); si cambia, esta
    página cambia sola. Si quien vota sale a la mitad, sus votos ya quedaron guardados y al volver
@@ -774,7 +791,7 @@ var state = { view: 'carga', votes: {}, voter: { name: '', est: '' }, mios: {}, 
   Object.keys(state.votes).forEach(function (k) { if (!esNominado(k, state.votes[k])) delete state.votes[k]; });   // solo nominados
   state.confirmado = tieneDatos();
   var r = afiliado(state.voter.est);
-  if (state.terminado && r && state.terminado.restaurante === r.id) state.view = 'thanks';
+  if (state.terminado && r && state.terminado.restaurante === r.id) state.view = state.terminado.final ? 'final' : 'thanks';
 })();
 var save = function () { store.set(STORAGE_KEY, JSON.stringify({ votes: state.votes, voter: state.voter, mios: state.mios, terminado: state.terminado })); };
 /* Nombre completo y restaurante afiliado de quien vota: obligatorios antes de votar */
@@ -796,7 +813,8 @@ var el = {
   form: $('#voterForm'), datosBtn: $('#datosBtn'),
   formMsg: $('#formMsg'), submit: $('#submitBtn'), demoNote: $('#demoNote'), thanksDemo: $('#thanksDemo'),
   estado: $('#estadoPanel'), estadoIco: $('#estadoIco'), estadoTitulo: $('#estadoTitulo'), estadoTexto: $('#estadoTexto'), estadoBtn: $('#estadoBtn'),
-  aviso: $('#avisoCat')
+  aviso: $('#avisoCat'), registroNota: $('#registroNota'),
+  thanksEyebrow: $('#thanksEyebrow'), thanksTitle: $('#thanksTitle'), thanksLead: $('#thanksLead')
 };
 
 /* ----- Tarjetas de restaurantes (se crean una sola vez y se reutilizan en cada categoría) ----- */
@@ -860,22 +878,28 @@ function votadasAhora() {
   var id = restId();
   return id && marca.cargada && marca.id === id ? marca.votadas : [];
 }
+function registradoAhora() {
+  var id = restId();
+  return !!id && marca.cargada && marca.id === id && marca.existe;
+}
 function renderSide() {
-  var votadas = votadasAhora(), total = CATS.length;
+  var votadas = votadasAhora(), total = CATS.length, registrado = registradoAhora(), enRegistro = state.view === 'datos';
   var hechas = CATS.filter(function (c) { return votadas.indexOf(c.id) >= 0; }).length;
   var mios = state.mios[restId()] || {};
   el.progressText.textContent = hechas + ' de ' + total;
   el.progressBar.style.width = (total ? hechas / total * 100 : 0) + '%';
   el.progress.setAttribute('aria-valuemax', total);
   el.progress.setAttribute('aria-valuenow', hechas);
-  el.ballot.innerHTML = CATS.map(function (c, i) {
+  el.ballot.innerHTML = '<li><div class="bl bl--registro' + (registrado ? ' done' : '') + '"' + (enRegistro ? ' aria-current="step"' : '') + '>' +
+    '<span class="no">00</span><span class="nm">Registro</span><svg class="ck" aria-hidden="true"><use href="#i-check"/></svg><span class="pk">' +
+    (registrado ? esc(state.voter.name.trim()) + ' · ' + esc(state.voter.est.trim()) : enRegistro ? 'Registrándote ahora' : 'Pendiente') + '</span></div></li>' + CATS.map(function (c, i) {
     var hecha = votadas.indexOf(c.id) >= 0, actual = state.view === 'cat' && ACTUAL && ACTUAL.id === c.id;
     var mio = REST_BY_ID[mios[c.id]], elegido = actual && REST_BY_ID[state.votes[c.id]];
     var pk = hecha ? (mio ? 'Tu voto: ' + esc(mio.name) : 'Voto registrado') : actual ? (elegido ? esc(elegido.name) : 'Votando ahora') : 'Pendiente';
     return '<li><div class="bl' + (hecha ? ' done' : '') + '"' + (actual ? ' aria-current="step"' : '') + '>' +
       '<span class="no">' + pad(i + 1) + '</span><span class="nm">' + esc(c.name) + '</span><svg class="ck" aria-hidden="true"><use href="#i-check"/></svg><span class="pk">' + pk + '</span></div></li>';
   }).join('');
-  el.chips.innerHTML = CATS.map(function (c, i) {
+  el.chips.innerHTML = '<span class="chip' + (registrado ? ' done' : '') + '"><b>0</b>Registro' + (registrado ? '<svg aria-hidden="true"><use href="#i-check"/></svg>' : '') + '</span>' + CATS.map(function (c, i) {
     var hecha = votadas.indexOf(c.id) >= 0, actual = state.view === 'cat' && ACTUAL && ACTUAL.id === c.id;
     return '<span class="chip' + (hecha ? ' done' : '') + '"' + (actual ? ' aria-current="step"' : '') + '><b>' + (i + 1) + '</b>' + esc(c.short) + (hecha ? '<svg aria-hidden="true"><use href="#i-check"/></svg>' : '') + '</span>';
   }).join('');
@@ -890,17 +914,18 @@ function showView(v) {
   if (v === 'cat' && (!tieneDatos() || !ACTUAL)) v = 'datos';   // sin nombre y restaurante (o sin categoría) no se puede votar
   if (v === 'thanks' && state.view !== 'thanks') graciasDesde = ahora();
   state.view = v;
-  var panel = v === 'carga' || v === 'espera' || v === 'error';
+  var fin = v === 'thanks' || v === 'final';
+  var panel = v === 'carga' || v === 'espera' || v === 'error' || v === 'registrado';
   el.app.hidden = panel; el.estado.hidden = !panel;
   if (!panel) el.app.classList.add('in');
-  el.viewDatos.hidden = v !== 'datos'; el.viewCat.hidden = v !== 'cat'; el.viewThanks.hidden = v !== 'thanks';
+  el.viewDatos.hidden = v !== 'datos'; el.viewCat.hidden = v !== 'cat'; el.viewThanks.hidden = !fin;
   el.chips.hidden = v !== 'cat';
-  el.app.classList.toggle('is-done', v === 'thanks'); $('#votar').classList.toggle('is-done', v === 'thanks');
-  if (v === 'thanks' || panel) ocultarAviso();
+  el.app.classList.toggle('is-done', fin); $('#votar').classList.toggle('is-done', fin);
+  if (fin || panel) ocultarAviso();
   if (panel) return renderEstado(v);
   if (v === 'datos') renderDatos();
   if (v === 'cat') renderCategory();
-  if (v === 'thanks') renderThanks();
+  if (fin) renderThanks(v === 'final');
   renderSide();
 }
 function renderCategory() {
@@ -916,9 +941,21 @@ function renderDatos() {
   el.vName.value = state.voter.name || ''; el.vEst.value = state.voter.est || '';
   el.datosMsg.hidden = true; [el.vName, el.vEst].forEach(function (i) { i.removeAttribute('aria-invalid'); });
   datosRevisando(false);
+  renderBotonRegistro();
   if (afiliado(el.vEst.value)) comboCerrar(); else comboAbrir();   // sin restaurante elegido: la lista ya está desplegada
 }
-function renderThanks() {   // solo «Voto registrado · ¡Gracias por tu voto!»: sin resumen ni resultados
+/* Con el registro cerrado solo continúan los restaurantes que ya se registraron */
+function registroAbierto() { return !!estado.abiertas && estado.abiertas.registro === true; }
+function renderBotonRegistro() {
+  var abierto = registroAbierto();
+  if (!registrando) el.datosBtn.innerHTML = abierto ? 'Registrarme y continuar &rarr;' : 'Continuar &rarr;';
+  el.registroNota.hidden = abierto || !estado.cargado;
+  el.registroNota.textContent = 'El registro ya cerró: solo pueden continuar los restaurantes que se registraron a tiempo.';
+}
+function renderThanks(final) {   // sin resumen ni resultados
+  el.thanksEyebrow.hidden = !!final;
+  el.thanksTitle.textContent = final ? '¡Las votaciones han finalizado!' : '¡Gracias por tu voto!';
+  el.thanksLead.hidden = !final;
   el.thanksDemo.hidden = !PRUEBA;
   $('#live').textContent = '';
 }
@@ -926,18 +963,23 @@ function renderThanks() {   // solo «Voto registrado · ¡Gracias por tu voto!�
 var ESTADOS = {
   carga:  { ico: 'i-reloj', titulo: 'Cargando la votación…', texto: 'Un momento: estamos revisando qué categorías están abiertas.' },
   espera: { ico: 'i-reloj', titulo: 'Votación en pausa', texto: 'En este momento no hay categorías abiertas. Esta página se actualiza sola: cuando se abra una categoría, aparecerá aquí.' },
+  registrado: { ico: 'i-check', titulo: '¡Registro completo!', texto: '' },
   error:  { ico: 'i-lock', titulo: 'No pudimos conectar', texto: 'Revisa tu conexión a internet y vuelve a cargar la página.' }
 };
 var cargaLenta = null;
 function renderEstado(v) {
   var e = ESTADOS[v];
   el.estadoIco.setAttribute('href', '#' + e.ico);
-  el.estadoTitulo.textContent = e.titulo; el.estadoTexto.textContent = e.texto;
+  el.estadoTitulo.textContent = e.titulo;
+  el.estadoTexto.textContent = v === 'registrado'
+    ? 'Ya estás registrado como ' + state.voter.name.trim() + ' · ' + state.voter.est.trim() + '. Cuando se abra la primera categoría, aparecerá aquí: esta página se actualiza sola.'
+    : e.texto;
   el.estadoBtn.hidden = v !== 'error';
   el.estado.classList.toggle('is-carga', v === 'carga');
+  el.estado.classList.toggle('is-listo', v === 'registrado');
   clearTimeout(cargaLenta);
   if (v === 'carga') cargaLenta = setTimeout(function () { if (state.view === 'carga') el.estadoTexto.textContent = 'Sin señal por ahora. En cuanto haya conexión, la votación aparecerá aquí.'; }, 9000);
-  if (v === 'espera') announce(e.titulo + '. ' + e.texto);
+  if (v === 'espera' || v === 'registrado') announce(e.titulo + ' ' + el.estadoTexto.textContent);
 }
 /* Aviso corto arriba de la boleta: voto guardado, categoría que se abrió o se cerró */
 var avisoTimer = null, avisoPendiente = '';
@@ -1096,14 +1138,15 @@ function mostrarYaVoto() {
   el.datosMsg.textContent = YA_VOTO; el.datosMsg.hidden = false;
   el.vEst.setAttribute('aria-invalid', 'true');
 }
-var revisandoLento = null;
-function datosRevisando(si) {
+var revisandoLento = null, registrando = false;
+function datosRevisando(si, texto) {
   clearTimeout(revisandoLento);
   if (si) {
-    el.datosBtn.disabled = true; el.datosBtn.textContent = 'Revisando…';
-    revisandoLento = setTimeout(function () { el.datosBtn.textContent = 'Revisando… esperando señal'; }, 8000);
-  } else { el.datosBtn.disabled = false; el.datosBtn.innerHTML = 'Comenzar a votar &rarr;'; }
+    el.datosBtn.disabled = true; el.datosBtn.textContent = texto || 'Revisando…';
+    revisandoLento = setTimeout(function () { el.datosBtn.textContent = (texto || 'Revisando…') + ' esperando señal'; }, 8000);
+  } else if (!registrando) { el.datosBtn.disabled = false; el.datosBtn.innerHTML = registroAbierto() ? 'Registrarme y continuar &rarr;' : 'Continuar &rarr;'; }
 }
+var REGISTRO_CERRADO = 'El registro ya cerró y este restaurante no se registró a tiempo. Sin registro no se puede votar.';
 el.datosForm.addEventListener('submit', function (e) {
   e.preventDefault();
   comboCerrar();
@@ -1112,9 +1155,29 @@ el.datosForm.addEventListener('submit', function (e) {
   var r = afiliado(state.voter.est);
   if (!r) return failDatos('Elige de la lista el restaurante afiliado a CANIRAC que representas.', el.vEst);
   state.voter = { name: state.voter.name.trim().replace(/\s+/g, ' '), est: r.name }; el.vEst.value = r.name; save();
-  /* ¿En qué categorías ya votó ese restaurante? Se revisa antes de empezar (y la base de datos lo vuelve a impedir al guardar) */
-  state.confirmado = true;
-  decidir();
+  if (registrando) return;
+  /* Registro en la nube: si el restaurante ya estaba registrado (desde este u otro celular), solo continúa */
+  var quien = { nombre: state.voter.name.slice(0, 80), restaurante: r.name, restauranteId: r.id };
+  registrando = true; datosRevisando(true, 'Registrando…');
+  var fin = function () { registrando = false; datosRevisando(false); };
+  var sigue = function (votadas) {   // registrado: sigue con lo que confirmó la nube (sin esperar al aviso en vivo)
+    fin(); state.confirmado = true;
+    escucharMarca(r.id);
+    if (marca.id === r.id) { marca.existe = true; marca.votadas = votadas.slice(); marca.cargada = true; marca.error = false; }
+    decidir();
+  };
+  var sinSenalReg = function () { fin(); failDatos('No pudimos registrarte. Revisa tu conexión e inténtalo de nuevo.'); };
+  nubeMarca(r.id).then(function (info) {
+    if (info.existe) return sigue(info.votadas);
+    if (!registroAbierto()) { fin(); return failDatos(REGISTRO_CERRADO); }
+    nubeRegistrar(quien).then(function () { sigue([]); }, function (err) {
+      if (!err || err.code !== 'permission-denied') return sinSenalReg();
+      nubeMarca(r.id).then(function (i2) {   // ¿alguien lo registró al mismo tiempo, o se cerró el registro?
+        if (i2.existe) return sigue(i2.votadas);
+        fin(); failDatos(registroAbierto() ? 'No pudimos registrarte. Inténtalo de nuevo en un momento.' : REGISTRO_CERRADO);
+      }, sinSenalReg);
+    });
+  }, sinSenalReg);
 });
 el.who.addEventListener('click', function (e) { if (e.target.closest && e.target.closest('#editDatos') && !enviando) { state.confirmado = false; showView('datos'); ensureVisible(); el.vName.focus(); } });
 
@@ -1130,16 +1193,16 @@ function decidir() {
   if (CERRADA) return;
   if (enviando) { decidirLuego = true; return; }   // se vuelve a revisar al terminar de guardar
   if (estado.error) return showView('error');
-  if (!estado.cargado) return showView(state.view === 'thanks' ? 'thanks' : 'carga');
+  if (!estado.cargado) return showView(state.view === 'thanks' || state.view === 'final' ? state.view : 'carga');
   var v = state.view;
   CATS = CATS_TODAS.filter(function (c) { return estado.abiertas[c.id] === true; });
   var aviso = avisoPendiente; avisoPendiente = '';
-  if (!CATS.length) { ACTUAL = null; return showView(v === 'thanks' ? 'thanks' : 'espera'); }
   var id = restId();
   if (id) escucharMarca(id);
-  if (!id) {   // falta (o está escribiendo) su nombre y restaurante
+  if (!id) {   // todavía no se registra (o está escribiendo sus datos)
     ACTUAL = null;
-    if (v === 'datos') renderSide(); else showView('datos');
+    if (!registroAbierto() && !CATS.length) return showView(v === 'thanks' || v === 'final' ? v : 'espera');
+    if (v === 'datos') { renderSide(); renderBotonRegistro(); } else showView('datos');
     if (aviso) mostrarAviso(aviso);
     return;
   }
@@ -1147,24 +1210,37 @@ function decidir() {
     state.confirmado = false;
     if (v !== 'datos') showView('datos');
     datosRevisando(false);
-    el.datosMsg.textContent = 'No pudimos revisar si tu restaurante ya votó. Revisa tu conexión e inténtalo de nuevo.'; el.datosMsg.hidden = false;
+    el.datosMsg.textContent = 'No pudimos revisar tu registro. Revisa tu conexión e inténtalo de nuevo.'; el.datosMsg.hidden = false;
     return;
   }
-  if (!marca.cargada) {   // revisando qué votó ya ese restaurante
-    if (v === 'thanks' || v === 'carga') return showView(v);
+  if (!marca.cargada) {   // revisando si ya se registró y qué votó
+    if (v === 'thanks' || v === 'final' || v === 'carga' || v === 'registrado') return showView(v);
     if (v !== 'datos') showView('datos');
     return datosRevisando(true);
   }
   datosRevisando(false);
-  /* Se reinició la votación (el equipo borró los votos de este restaurante): este celular también empieza de cero */
-  if (!marca.existe && votoAqui(id)) {
-    delete state.mios[id];
-    if (state.terminado && state.terminado.restaurante === id) state.terminado = null;
-    state.votes = {};
-    save();
-    if (v === 'thanks') v = 'carga';
+  if (!marca.existe) {   // el restaurante no está registrado (o el equipo reinició la votación): primero el registro
+    if (votoAqui(id)) {   // este celular había votado: empieza de cero
+      delete state.mios[id];
+      if (state.terminado && state.terminado.restaurante === id) state.terminado = null;
+      state.votes = {};
+      save();
+    }
+    state.confirmado = false; ACTUAL = null;
+    if (!registroAbierto() && !CATS.length) return showView('espera');
+    if (v === 'datos') { renderSide(); renderBotonRegistro(); } else showView('datos');
+    if (aviso) mostrarAviso(aviso);
+    return;
   }
-  var pend = CATS.filter(function (c) { return marca.votadas.indexOf(c.id) < 0; });
+  var votadas = marca.votadas;
+  var lasOcho = CATS_TODAS.every(function (c) { return votadas.indexOf(c.id) >= 0; });
+  if (lasOcho && (v === 'thanks' || v === 'final' || votoAqui(id))) { ACTUAL = null; return showView('final'); }   // terminó las 8: cierre
+  if (!CATS.length) {   // ninguna categoría abierta por ahora
+    ACTUAL = null;
+    if (!votadas.length) return showView('registrado');   // ya se registró: espera a que se abra la primera categoría
+    return showView(v === 'thanks' ? 'thanks' : 'espera');
+  }
+  var pend = CATS.filter(function (c) { return votadas.indexOf(c.id) < 0; });
   if (!pend.length) {   // ya votó en todas las categorías abiertas
     ACTUAL = null;
     if (v === 'thanks' || votoAqui(id)) return showView('thanks');
@@ -1181,14 +1257,17 @@ function decidir() {
   var otra = !ACTUAL || ACTUAL.id !== pend[0].id;
   ACTUAL = pend[0];
   if (v === 'cat' && !otra) { renderSide(); el.count.textContent = CATS.length === 1 ? 'Categoría abierta' : 'Categoría ' + (CATS.indexOf(ACTUAL) + 1) + ' de ' + CATS.length; }
-  else { showView('cat'); if (v === 'datos') ensureVisible(); }
-  if (aviso) mostrarAviso(aviso);
+  else { showView('cat'); if (v === 'datos' || v === 'registrado') ensureVisible(); }
+  if (v === 'registrado') mostrarAviso('¡Comienza la votación! Elige a tu favorito y toca «Enviar voto y continuar».');
+  else if (aviso) mostrarAviso(aviso);
 }
 /* Qué cambió en las categorías abiertas (para el aviso de arriba de la boleta) */
 function avisarCambios(antes, ahora2) {
   var abre = CATS_TODAS.filter(function (c) { return !antes[c.id] && ahora2[c.id]; }).map(function (c) { return c.id; });
   var cierra = CATS_TODAS.filter(function (c) { return antes[c.id] && !ahora2[c.id]; }).map(function (c) { return c.id; });
   var partes = [];
+  if (!registradoAhora() && !antes.registro && ahora2.registro) partes.push('Se abrió el registro.');   // solo le importa a quien no se ha registrado
+  if (!registradoAhora() && antes.registro && !ahora2.registro) partes.push('Se cerró el registro.');
   if (abre.length) partes.push(abre.length > 2 ? 'Se abrieron ' + abre.length + ' categorías.' : 'Se abrió la votación de ' + nombresCats(abre) + '.');
   if (cierra.length) partes.push(cierra.length > 2 ? 'Se cerraron ' + cierra.length + ' categorías.' : 'Se cerró la votación de ' + nombresCats(cierra) + '.');
   avisoPendiente = partes.join(' ');
@@ -1220,9 +1299,10 @@ el.form.addEventListener('submit', function (e) {
     state.mios[r.id] = state.mios[r.id] || {}; state.mios[r.id][cat.id] = eleccion;
     if (marca.id === r.id) { marca.existe = true; if (marca.votadas.indexOf(cat.id) < 0) marca.votadas.push(cat.id); }
     var quedan = CATS.filter(function (c) { return marca.votadas.indexOf(c.id) < 0; });
-    if (!quedan.length) {   // terminó todas: solo «¡Gracias!»
-      state.terminado = { restaurante: r.id, at: new Date().toISOString() };
-      save(); ACTUAL = null; showView('thanks'); window.scrollTo(0, 0);
+    var todas = CATS_TODAS.every(function (c) { return marca.votadas.indexOf(c.id) >= 0; });
+    if (!quedan.length) {   // terminó lo abierto: «¡Gracias!»; si ya votó las 8, el cierre
+      state.terminado = { restaurante: r.id, at: new Date().toISOString(), final: todas };
+      save(); ACTUAL = null; showView(todas ? 'final' : 'thanks'); window.scrollTo(0, 0);
       decidir();   // por si se abrió otra categoría mientras se guardaba
       return;
     }
@@ -1230,24 +1310,24 @@ el.form.addEventListener('submit', function (e) {
     avisoPendiente = 'Listo: tu voto en ' + nombresCats([cat.id]) + ' quedó guardado.';
     decidir(); ensureVisible();
   };
-  var intentar = function (existe, reintento) {
+  var intentar = function () {
     var votos = {}; votos[cat.id] = eleccion;
-    nubeVotar(votos, quien, existe).then(listo, function (err) {
-      if (!err || err.code !== 'permission-denied') return sinSenal();
-      /* La base de datos lo rechazó: ¿se cerró la categoría o este restaurante ya votó en ella desde otro celular? */
+    nubeVotar(votos, quien).then(listo, function (err) {
+      if (!err || (err.code !== 'permission-denied' && err.code !== 'not-found')) return sinSenal();
+      /* La base de datos lo rechazó: ¿se cerró la categoría, ya votó en ella desde otro celular o se reinició la votación? */
       nubeMarca(r.id).then(function (info) {
         if (marca.id === r.id) { marca.existe = info.existe; marca.votadas = info.votadas; marca.cargada = true; }
         var ya = info.votadas.indexOf(cat.id) >= 0;
         var abierta = !!estado.abiertas && estado.abiertas[cat.id] === true;
-        if (!ya && abierta && !reintento && info.existe !== existe) return intentar(info.existe, true);
         terminar();
+        if (!info.existe) { avisoPendiente = 'Tu registro ya no aparece (la votación se reinició). Regístrate de nuevo para votar.'; return decidir(); }
         if (ya) { delete state.votes[cat.id]; save(); avisoPendiente = 'Tu restaurante ya había votado en ' + nombresCats([cat.id]) + '. Cada restaurante vota una sola vez en cada categoría.'; return decidir(); }
         if (!abierta) { avisoPendiente = 'Se cerró la votación de ' + nombresCats([cat.id]) + ' antes de que se guardara tu voto.'; return decidir(); }
         fail('No pudimos guardar tu voto. Inténtalo de nuevo en un momento.');
       }, sinSenal);
     });
   };
-  intentar(marca.id === r.id && marca.cargada ? marca.existe : false, false);
+  intentar();
 });
 
 /* ==============================================================
@@ -1282,6 +1362,7 @@ function escucharEstado() {
       if (d.metadata && d.metadata.fromCache) return;   // solo lo que confirma la nube; sin señal se queda lo último
       var x = d.exists ? (d.data() || {}) : null, a = {};
       CATS_TODAS.forEach(function (c) { a[c.id] = x ? !!(x.abiertas && x.abiertas[c.id] === true) : true; });
+      a.registro = x ? !(x.abiertas && x.abiertas.registro === false) : true;   // el registro solo está cerrado si se cerró en el portal
       var antes = estado.abiertas;
       estado.abiertas = a; estado.cargado = true; estado.error = false;
       if (antes) avisarCambios(antes, a);
@@ -1322,23 +1403,27 @@ function nubeMarca(id) {
     return gala2(fs).collection('votaron').doc(id).get({ source: 'server' }).then(leerMarca);
   });
 }
-/* Primer voto de ese restaurante: crea su boleta y su aviso. Después solo AGREGA la categoría nueva a los dos, en un solo envío.
-   Las reglas solo aceptan categorías abiertas, con sus nominados, y nunca cambian un voto ya guardado. */
-function nubeVotar(votos, quien, existe) {
+/* Registro: crea la boleta del restaurante VACÍA (nombre de quien se registra) y su aviso sin categorías, en un solo envío.
+   Las reglas solo lo aceptan con el registro abierto y una sola vez por restaurante. */
+function nubeRegistrar(quien) {
   if (CERRADA) return Promise.reject(new Error('La votación está cerrada'));
   return nubeLista().then(function (fs) {
     var FV = firebase.firestore.FieldValue, base = gala2(fs), lote = fs.batch();
-    var cats = Object.keys(votos), boleta = base.collection('votos').doc(quien.restauranteId), aviso = base.collection('votaron').doc(quien.restauranteId);
-    if (!existe) {
-      var votantes = {}; cats.forEach(function (k) { votantes[k] = quien.nombre; });
-      lote.set(boleta, { nombre: quien.nombre, restaurante: quien.restaurante, votos: votos, votantes: votantes, enviado: FV.serverTimestamp() });
-      lote.set(aviso, { enviado: FV.serverTimestamp(), cats: cats });
-    } else {
-      var cambios = { actualizado: FV.serverTimestamp() };
-      cats.forEach(function (k) { cambios['votos.' + k] = votos[k]; cambios['votantes.' + k] = quien.nombre; });
-      lote.update(boleta, cambios);
-      lote.update(aviso, { cats: FV.arrayUnion.apply(FV, cats), actualizado: FV.serverTimestamp() });
-    }
+    lote.set(base.collection('votos').doc(quien.restauranteId), { nombre: quien.nombre, restaurante: quien.restaurante, votos: {}, votantes: {}, enviado: FV.serverTimestamp() });
+    lote.set(base.collection('votaron').doc(quien.restauranteId), { enviado: FV.serverTimestamp(), cats: [] });
+    return lote.commit();
+  });
+}
+/* Cada voto AGREGA su categoría a la boleta y al aviso, en un solo envío. Las reglas solo aceptan categorías abiertas,
+   con sus nominados, de restaurantes registrados, y nunca cambian un voto ya guardado. */
+function nubeVotar(votos, quien) {
+  if (CERRADA) return Promise.reject(new Error('La votación está cerrada'));
+  return nubeLista().then(function (fs) {
+    var FV = firebase.firestore.FieldValue, base = gala2(fs), lote = fs.batch();
+    var cats = Object.keys(votos), cambios = { actualizado: FV.serverTimestamp() };
+    cats.forEach(function (k) { cambios['votos.' + k] = votos[k]; cambios['votantes.' + k] = quien.nombre; });
+    lote.update(base.collection('votos').doc(quien.restauranteId), cambios);
+    lote.update(base.collection('votaron').doc(quien.restauranteId), { cats: FV.arrayUnion.apply(FV, cats), actualizado: FV.serverTimestamp() });
     return lote.commit();
   });
 }
@@ -1356,7 +1441,7 @@ function cerrarVotacion() {
   $('#closedPanel').hidden = false;
 }
 if (CERRADA) cerrarVotacion();
-else { showView(state.view === 'thanks' ? 'thanks' : 'carga'); escucharEstado(); }
+else { showView(state.view === 'thanks' || state.view === 'final' ? state.view : 'carga'); escucharEstado(); }
 }
 if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', main); else main();
 })();
